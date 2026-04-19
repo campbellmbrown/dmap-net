@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch DMap",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/DMap/bin/Debug/net10.0/DMap.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/DMap",
+            "stopAtEntry": false,
+            "console": "internalConsole"
+        }
+    ]
+}
