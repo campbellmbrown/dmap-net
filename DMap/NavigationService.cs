@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 
 using Avalonia.Controls;
 
@@ -27,7 +26,7 @@ internal sealed class NavigationService : INavigator
             StartViewModel m  => new StartView { DataContext = m },
             DmViewModel m     => new DmView { DataContext = m },
             PlayerViewModel m => new PlayerView { DataContext = m },
-            _                 => throw new UnreachableException(),
+            _                 => throw new ArgumentOutOfRangeException(nameof(vm), vm.GetType().Name, "No view registered for ViewModel"),
         };
     }
 }
