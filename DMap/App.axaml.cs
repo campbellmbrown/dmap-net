@@ -1,9 +1,11 @@
+using System;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data.Core;
-using Avalonia.Data.Core.Plugins;
-using System.Linq;
 using Avalonia.Markup.Xaml;
+using DMap.Services.Brushes;
+using DMap.Services.Fog;
+using DMap.Services.Networking;
 using DMap.ViewModels;
 using DMap.Views;
 
@@ -20,10 +22,38 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            var mainVm = new MainWindowViewModel();
             desktop.MainWindow = new MainWindow
             {
-                DataContext = new MainWindowViewModel(),
+                DataContext = mainVm,
             };
+
+            var args = desktop.Args ?? Array.Empty<string>();
+            var roleIndex = Array.IndexOf(args, "--role");
+            if (roleIndex >= 0 && roleIndex + 1 < args.Length)
+            {
+                var role = args[roleIndex + 1].ToLowerInvariant();
+                if (role == "dm")
+                {
+                    var fogService = new FogMaskService();
+                    var brush = new CircleBrush();
+                    var hostService = new DmHostService();
+                    var discoveryService = new DiscoveryService();
+                    var vm = new DmViewModel(mainVm, fogService, brush);
+                    vm.InitializeNetworking(hostService, discoveryService);
+                    mainVm.NavigateTo(vm);
+                }
+                else if (role == "player")
+                {
+                    var fogService = new FogMaskService();
+                    var discoveryService = new DiscoveryService();
+                    var clientService = new PlayerClientService();
+                    var vm = new PlayerViewModel(mainVm, fogService);
+                    vm.InitializeNetworking(discoveryService, clientService);
+                    _ = vm.StartDiscoveryAsync();
+                    mainVm.NavigateTo(vm);
+                }
+            }
         }
 
         base.OnFrameworkInitializationCompleted();

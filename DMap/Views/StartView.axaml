@@ -1,0 +1,19 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DMap.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="DMap.Views.StartView"
+             x:DataType="vm:StartViewModel">
+
+    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="20">
+        <TextBlock Text="DMap" FontSize="48" FontWeight="Bold" HorizontalAlignment="Center" />
+        <TextBlock Text="D&amp;D Map Tool" FontSize="16" HorizontalAlignment="Center" Opacity="0.6" />
+        <Button Content="Dungeon Master" Command="{Binding StartAsDmCommand}"
+                Width="200" Height="60" HorizontalContentAlignment="Center" />
+        <Button Content="Player" Command="{Binding StartAsPlayerCommand}"
+                Width="200" Height="60" HorizontalContentAlignment="Center" />
+    </StackPanel>
+
+</UserControl>

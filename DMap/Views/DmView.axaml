@@ -1,0 +1,54 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DMap.ViewModels"
+             xmlns:controls="using:DMap.Controls"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="1024" d:DesignHeight="768"
+             x:Class="DMap.Views.DmView"
+             x:DataType="vm:DmViewModel">
+
+    <DockPanel>
+        <!-- Toolbar -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8"
+                    Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                    Margin="0" Height="40">
+            <Button Content="Load Map" Command="{Binding LoadMapCommand}" Margin="4" VerticalAlignment="Center" />
+            <Button Content="+" Command="{Binding ZoomInCommand}" Width="32" Margin="2" VerticalAlignment="Center" />
+            <Button Content="-" Command="{Binding ZoomOutCommand}" Width="32" Margin="2" VerticalAlignment="Center" />
+            <Button Content="Reset" Command="{Binding ResetViewCommand}" Margin="2" VerticalAlignment="Center" />
+            <Separator Width="1" Margin="8,4" />
+            <TextBlock Text="{Binding ConnectedPlayers, StringFormat='Players: {0}'}"
+                       VerticalAlignment="Center" Margin="8,0" />
+        </StackPanel>
+
+        <!-- Sidebar -->
+        <Border DockPanel.Dock="Left" Width="180"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                Padding="12">
+            <StackPanel Spacing="12">
+                <TextBlock Text="Brush Settings" FontWeight="SemiBold" />
+
+                <TextBlock Text="{Binding BrushDiameter, StringFormat='Diameter: {0}'}" />
+                <Slider Minimum="10" Maximum="300" Value="{Binding BrushDiameter}"
+                        TickFrequency="1" IsSnapToTickEnabled="True" />
+
+                <TextBlock Text="{Binding BrushSoftness, StringFormat='Softness: {0:F2}'}" />
+                <Slider Minimum="0" Maximum="1" Value="{Binding BrushSoftness}"
+                        TickFrequency="0.01" IsSnapToTickEnabled="True" />
+            </StackPanel>
+        </Border>
+
+        <!-- Map Canvas -->
+        <controls:MapCanvas x:Name="MapCanvas"
+                            MapImage="{Binding MapImage}"
+                            FogMask="{Binding FogMask}"
+                            ZoomLevel="{Binding ZoomLevel, Mode=TwoWay}"
+                            OffsetX="{Binding OffsetX, Mode=TwoWay}"
+                            OffsetY="{Binding OffsetY, Mode=TwoWay}"
+                            IsDmMode="True"
+                            FogOpacity="128"
+                            BrushDiameter="{Binding BrushDiameter}" />
+    </DockPanel>
+
+</UserControl>

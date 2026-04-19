@@ -1,0 +1,59 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DMap.ViewModels"
+             xmlns:controls="using:DMap.Controls"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="DMap.Views.PlayerView"
+             x:DataType="vm:PlayerViewModel">
+
+    <Panel>
+        <!-- Discovery / Connection Panel (shown when not connected) -->
+        <StackPanel IsVisible="{Binding !IsConnected}"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Spacing="16" Width="400">
+            <TextBlock Text="DMap Player" FontSize="32" FontWeight="Bold" HorizontalAlignment="Center" />
+            <TextBlock Text="{Binding StatusText}" HorizontalAlignment="Center" Opacity="0.7" />
+
+            <ListBox ItemsSource="{Binding DiscoveredDms}"
+                     SelectedItem="{Binding SelectedDm}"
+                     MinHeight="120" MaxHeight="300">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding TcpEndPoint}" Opacity="0.5" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                <Button Content="Connect" Command="{Binding ConnectCommand}" Width="120" />
+                <Button Content="Disconnect" Command="{Binding DisconnectCommand}" Width="120" />
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Map Display (shown when connected) -->
+        <DockPanel IsVisible="{Binding IsConnected}">
+            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8"
+                        Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                        Height="40">
+                <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Margin="12,0" />
+                <Button Content="Disconnect" Command="{Binding DisconnectCommand}"
+                        Margin="8,4" VerticalAlignment="Center" />
+            </StackPanel>
+
+            <controls:MapCanvas x:Name="MapCanvas"
+                                MapImage="{Binding MapImage}"
+                                FogMask="{Binding FogMask}"
+                                ZoomLevel="{Binding ZoomLevel, Mode=TwoWay}"
+                                OffsetX="{Binding OffsetX, Mode=TwoWay}"
+                                OffsetY="{Binding OffsetY, Mode=TwoWay}"
+                                IsDmMode="False"
+                                FogOpacity="255" />
+        </DockPanel>
+    </Panel>
+
+</UserControl>

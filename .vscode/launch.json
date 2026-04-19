@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch DMap",
+            "name": "DMap (Start Screen)",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
@@ -11,6 +11,34 @@
             "cwd": "${workspaceFolder}/DMap",
             "stopAtEntry": false,
             "console": "internalConsole"
+        },
+        {
+            "name": "DMap (DM)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/DMap/bin/Debug/net10.0/DMap.dll",
+            "args": ["--role", "dm"],
+            "cwd": "${workspaceFolder}/DMap",
+            "stopAtEntry": false,
+            "console": "internalConsole"
+        },
+        {
+            "name": "DMap (Player)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/DMap/bin/Debug/net10.0/DMap.dll",
+            "args": ["--role", "player"],
+            "cwd": "${workspaceFolder}/DMap",
+            "stopAtEntry": false,
+            "console": "internalConsole"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "DMap (DM + Player)",
+            "configurations": ["DMap (DM)", "DMap (Player)"]
         }
     ]
 }
