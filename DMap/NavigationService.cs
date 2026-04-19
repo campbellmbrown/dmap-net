@@ -18,15 +18,15 @@ internal sealed class NavigationService : INavigator
 
     public void NavigateTo(ViewModelBase vm)
     {
-        if (_mainVm.Content is IDisposable disposable)
+        if (_mainVm.Content?.DataContext is IDisposable disposable)
             disposable.Dispose();
 
         _mainVm.Content = vm switch
         {
-            StartViewModel m  => new StartView { DataContext = m },
-            DmViewModel m     => new DmView { DataContext = m },
+            StartViewModel m => new StartView { DataContext = m },
+            DmViewModel m => new DmView { DataContext = m },
             PlayerViewModel m => new PlayerView { DataContext = m },
-            _                 => throw new ArgumentOutOfRangeException(nameof(vm), vm.GetType().Name, "No view registered for ViewModel"),
+            _ => throw new ArgumentOutOfRangeException(nameof(vm), vm.GetType().Name, "No view registered for ViewModel"),
         };
     }
 }
