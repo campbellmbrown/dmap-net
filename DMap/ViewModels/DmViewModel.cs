@@ -3,20 +3,21 @@ using System.IO;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
+
 using Avalonia;
 using Avalonia.Media.Imaging;
-using Avalonia.Platform;
+
 using DMap.Models;
 using DMap.Services.Brushes;
 using DMap.Services.Fog;
 using DMap.Services.Networking;
+
 using ReactiveUI;
 
 namespace DMap.ViewModels;
 
 public class DmViewModel : ViewModelBase, IDisposable
 {
-    private readonly MainWindowViewModel _host;
     private readonly IFogMaskService _fogService;
     private readonly IBrush _brush;
 

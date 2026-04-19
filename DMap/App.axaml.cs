@@ -1,8 +1,9 @@
 using System;
-using System.Linq;
+
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+
 using DMap.Services.Brushes;
 using DMap.Services.Fog;
 using DMap.Services.Networking;

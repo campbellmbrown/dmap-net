@@ -1,5 +1,7 @@
 using System;
+
 using Avalonia;
+
 using DMap.Models;
 
 namespace DMap.Services.Brushes;

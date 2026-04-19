@@ -2,18 +2,20 @@ using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Reactive;
+
 using Avalonia;
 using Avalonia.Media.Imaging;
+
 using DMap.Models;
 using DMap.Services.Fog;
 using DMap.Services.Networking;
+
 using ReactiveUI;
 
 namespace DMap.ViewModels;
 
 public class PlayerViewModel : ViewModelBase, IDisposable
 {
-    private readonly MainWindowViewModel _host;
     private readonly IFogMaskService _fogService;
 
     private IDiscoveryService? _discoveryService;

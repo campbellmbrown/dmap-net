@@ -1,8 +1,11 @@
 using System;
 using System.Reactive.Disposables;
+
 using Avalonia.Controls;
+
 using DMap.Controls;
 using DMap.ViewModels;
+
 using ReactiveUI;
 using ReactiveUI.Avalonia;
 

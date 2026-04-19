@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+
 using DMap.Models;
 
 namespace DMap.Services.Networking;
@@ -11,7 +12,7 @@ namespace DMap.Services.Networking;
 public sealed class DiscoveryService : IDiscoveryService
 {
     private const int DiscoveryPort = 19876;
-    private static readonly byte[] Magic = "DMAP"u8.ToArray();
+    private static readonly byte[] _magic = "DMAP"u8.ToArray();
 
     private UdpClient? _udpClient;
     private CancellationTokenSource? _cts;
@@ -86,11 +87,11 @@ public sealed class DiscoveryService : IDiscoveryService
         var name = Environment.MachineName;
         var nameBytes = Encoding.UTF8.GetBytes(name);
 
-        var packet = new byte[Magic.Length + 16 + 4 + 4 + nameBytes.Length];
+        var packet = new byte[_magic.Length + 16 + 4 + 4 + nameBytes.Length];
         var offset = 0;
 
-        Buffer.BlockCopy(Magic, 0, packet, offset, Magic.Length);
-        offset += Magic.Length;
+        Buffer.BlockCopy(_magic, 0, packet, offset, _magic.Length);
+        offset += _magic.Length;
 
         session.SessionId.TryWriteBytes(packet.AsSpan(offset));
         offset += 16;
@@ -108,16 +109,16 @@ public sealed class DiscoveryService : IDiscoveryService
 
     private static DiscoveredDm? ParseBroadcastPacket(byte[] data, IPEndPoint sender)
     {
-        if (data.Length < Magic.Length + 16 + 4 + 4)
+        if (data.Length < _magic.Length + 16 + 4 + 4)
             return null;
 
-        for (var i = 0; i < Magic.Length; i++)
+        for (var i = 0; i < _magic.Length; i++)
         {
-            if (data[i] != Magic[i])
+            if (data[i] != _magic[i])
                 return null;
         }
 
-        var offset = Magic.Length;
+        var offset = _magic.Length;
 
         var sessionId = new Guid(data.AsSpan(offset, 16));
         offset += 16;

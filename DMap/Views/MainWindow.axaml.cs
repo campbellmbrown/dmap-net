@@ -1,5 +1,6 @@
-using ReactiveUI.Avalonia;
 using DMap.ViewModels;
+
+using ReactiveUI.Avalonia;
 
 namespace DMap.Views;
 

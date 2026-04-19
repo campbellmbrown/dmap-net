@@ -1,6 +1,8 @@
-﻿using Avalonia;
-using ReactiveUI.Avalonia;
 using System;
+
+using Avalonia;
+
+using ReactiveUI.Avalonia;
 
 namespace DMap;
 

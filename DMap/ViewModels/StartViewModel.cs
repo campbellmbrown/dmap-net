@@ -1,7 +1,9 @@
 using System.Reactive;
+
 using DMap.Services.Brushes;
 using DMap.Services.Fog;
 using DMap.Services.Networking;
+
 using ReactiveUI;
 
 namespace DMap.ViewModels;
