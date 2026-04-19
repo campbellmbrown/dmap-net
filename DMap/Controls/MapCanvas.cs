@@ -17,6 +17,14 @@ public class BrushStrokeEventArgs : EventArgs
     public int MapY { get; init; }
 }
 
+public class RectangleStrokeEventArgs : EventArgs
+{
+    public int MapX1 { get; init; }
+    public int MapY1 { get; init; }
+    public int MapX2 { get; init; }
+    public int MapY2 { get; init; }
+}
+
 public class MapCanvas : Control
 {
     public static readonly StyledProperty<Bitmap?> MapImageProperty =
@@ -42,6 +50,9 @@ public class MapCanvas : Control
 
     public static readonly StyledProperty<int> BrushDiameterProperty =
         AvaloniaProperty.Register<MapCanvas, int>(nameof(BrushDiameter), 50);
+
+    public static readonly StyledProperty<ToolType> ActiveToolProperty =
+        AvaloniaProperty.Register<MapCanvas, ToolType>(nameof(ActiveTool), ToolType.CircleBrush);
 
     public Bitmap? MapImage
     {
@@ -91,12 +102,22 @@ public class MapCanvas : Control
         set => SetValue(BrushDiameterProperty, value);
     }
 
+    public ToolType ActiveTool
+    {
+        get => GetValue(ActiveToolProperty);
+        set => SetValue(ActiveToolProperty, value);
+    }
+
     public event EventHandler<BrushStrokeEventArgs>? BrushStrokeApplied;
+    public event EventHandler<RectangleStrokeEventArgs>? RectangleStrokeApplied;
 
     private WriteableBitmap? _fogBitmap;
     private bool _isPanning;
     private Point _lastPanPoint;
     private bool _isPainting;
+    private Point _lastPaintPosition;
+    private bool _isDraggingRectangle;
+    private Point _rectangleDragStart;
     private Point _lastMousePosition;
 
     static MapCanvas()
@@ -104,7 +125,7 @@ public class MapCanvas : Control
         AffectsRender<MapCanvas>(
             MapImageProperty, FogMaskProperty, ZoomLevelProperty,
             OffsetXProperty, OffsetYProperty, FogOpacityProperty,
-            BrushDiameterProperty);
+            BrushDiameterProperty, ActiveToolProperty);
     }
 
     public MapCanvas()
@@ -203,14 +224,22 @@ public class MapCanvas : Control
             }
         }
 
-        // Draw brush cursor in DM mode
         if (IsDmMode && IsPointerOver)
         {
-            var brushRadius = BrushDiameter * zoom / 2.0;
-            var cursorCenter = _lastMousePosition;
+            var tool = ActiveTool;
 
-            var pen = new Pen(Brushes.White, 1.5);
-            context.DrawEllipse(null, pen, cursorCenter, brushRadius, brushRadius);
+            if (tool == ToolType.CircleBrush)
+            {
+                var brushRadius = BrushDiameter * zoom / 2.0;
+                context.DrawEllipse(null, new Pen(Brushes.White, 1.5), _lastMousePosition, brushRadius, brushRadius);
+            }
+
+            if (tool == ToolType.Rectangle && _isDraggingRectangle)
+            {
+                var rect = MakeRect(_rectangleDragStart, _lastMousePosition);
+                context.FillRectangle(new SolidColorBrush(Color.FromArgb(50, 255, 255, 255)), rect);
+                context.DrawRectangle(null, new Pen(Brushes.White, 1.5), rect);
+            }
         }
     }
 
@@ -229,8 +258,18 @@ public class MapCanvas : Control
 
         if (point.Properties.IsLeftButtonPressed && IsDmMode)
         {
-            _isPainting = true;
-            RaiseBrushStroke(point.Position);
+            if (ActiveTool == ToolType.CircleBrush)
+            {
+                _isPainting = true;
+                _lastPaintPosition = point.Position;
+                RaiseBrushStroke(point.Position);
+            }
+            else if (ActiveTool == ToolType.Rectangle)
+            {
+                _isDraggingRectangle = true;
+                _rectangleDragStart = point.Position;
+            }
+
             e.Handled = true;
         }
     }
@@ -253,11 +292,11 @@ public class MapCanvas : Control
 
         if (_isPainting && IsDmMode)
         {
-            RaiseBrushStroke(point.Position);
+            InterpolateBrushStrokes(_lastPaintPosition, point.Position);
+            _lastPaintPosition = point.Position;
             e.Handled = true;
         }
 
-        // Invalidate to update brush cursor position
         if (IsDmMode)
             InvalidateVisual();
     }
@@ -265,6 +304,15 @@ public class MapCanvas : Control
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
         base.OnPointerReleased(e);
+
+        if (_isDraggingRectangle)
+        {
+            var point = e.GetCurrentPoint(this);
+            FireRectangleStroke(_rectangleDragStart, point.Position);
+            _isDraggingRectangle = false;
+            InvalidateVisual();
+        }
+
         _isPanning = false;
         _isPainting = false;
     }
@@ -279,11 +327,26 @@ public class MapCanvas : Control
         var newZoom = Math.Clamp(oldZoom * zoomFactor, 0.1, 10.0);
 
         // Zoom centered on mouse position
-        OffsetX = mousePos.X - (mousePos.X - OffsetX) * (newZoom / oldZoom);
-        OffsetY = mousePos.Y - (mousePos.Y - OffsetY) * (newZoom / oldZoom);
+        OffsetX = mousePos.X - ((mousePos.X - OffsetX) * (newZoom / oldZoom));
+        OffsetY = mousePos.Y - ((mousePos.Y - OffsetY) * (newZoom / oldZoom));
         ZoomLevel = newZoom;
 
         e.Handled = true;
+    }
+
+    private void InterpolateBrushStrokes(Point from, Point to)
+    {
+        var dx = to.X - from.X;
+        var dy = to.Y - from.Y;
+        var distance = Math.Sqrt((dx * dx) + (dy * dy));
+        var stepSize = Math.Max(1.0, BrushDiameter * ZoomLevel * 0.5);
+        var steps = (int)Math.Ceiling(distance / stepSize);
+
+        for (var i = 1; i <= steps; i++)
+        {
+            var t = (double)i / steps;
+            RaiseBrushStroke(new Point(from.X + (dx * t), from.Y + (dy * t)));
+        }
     }
 
     private void RaiseBrushStroke(Point screenPos)
@@ -294,4 +357,24 @@ public class MapCanvas : Control
 
         BrushStrokeApplied?.Invoke(this, new BrushStrokeEventArgs { MapX = mapX, MapY = mapY });
     }
+
+    private void FireRectangleStroke(Point screenStart, Point screenEnd)
+    {
+        var zoom = ZoomLevel;
+        var mapX1 = (int)((screenStart.X - OffsetX) / zoom);
+        var mapY1 = (int)((screenStart.Y - OffsetY) / zoom);
+        var mapX2 = (int)((screenEnd.X - OffsetX) / zoom);
+        var mapY2 = (int)((screenEnd.Y - OffsetY) / zoom);
+
+        RectangleStrokeApplied?.Invoke(this, new RectangleStrokeEventArgs
+        {
+            MapX1 = mapX1,
+            MapY1 = mapY1,
+            MapX2 = mapX2,
+            MapY2 = mapY2,
+        });
+    }
+
+    private static Rect MakeRect(Point a, Point b) =>
+        new(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y), Math.Abs(b.X - a.X), Math.Abs(b.Y - a.Y));
 }

@@ -29,6 +29,29 @@ public sealed class FogMaskService : IFogMaskService
         return dirtyRect;
     }
 
+    public PixelRect ApplyRectangle(int x1, int y1, int x2, int y2)
+    {
+        if (Mask is null)
+            throw new InvalidOperationException("Fog mask not initialized.");
+
+        var minX = Math.Max(0, Math.Min(x1, x2));
+        var minY = Math.Max(0, Math.Min(y1, y2));
+        var maxX = Math.Min(Mask.Width - 1, Math.Max(x1, x2));
+        var maxY = Math.Min(Mask.Height - 1, Math.Max(y1, y2));
+
+        for (var y = minY; y <= maxY; y++)
+        {
+            for (var x = minX; x <= maxX; x++)
+            {
+                Mask[x, y] = 255;
+            }
+        }
+
+        var dirtyRect = new PixelRect(minX, minY, maxX - minX + 1, maxY - minY + 1);
+        MaskChanged?.Invoke(this, dirtyRect);
+        return dirtyRect;
+    }
+
     public void Replace(FogMask mask)
     {
         Mask = mask;

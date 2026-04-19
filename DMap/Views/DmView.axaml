@@ -9,33 +9,54 @@
              x:DataType="vm:DmViewModel">
 
     <DockPanel>
-        <!-- Toolbar -->
+        <!-- Top bar: fixed controls + tool-specific settings -->
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8"
                     Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
                     Margin="0" Height="40">
-            <Button Content="Load Map" Command="{Binding LoadMapCommand}" Margin="4" VerticalAlignment="Center" />
-            <Button Content="+" Command="{Binding ZoomInCommand}" Width="32" Margin="2" VerticalAlignment="Center" />
-            <Button Content="-" Command="{Binding ZoomOutCommand}" Width="32" Margin="2" VerticalAlignment="Center" />
-            <Button Content="Reset" Command="{Binding ResetViewCommand}" Margin="2" VerticalAlignment="Center" />
-            <Separator Width="1" Margin="8,4" />
+            <Button Content="Load Map" Command="{Binding LoadMapCommand}" Margin="4,0,0,0" VerticalAlignment="Center" />
+            <Button Content="+" Command="{Binding ZoomInCommand}" Width="32" VerticalAlignment="Center" />
+            <Button Content="-" Command="{Binding ZoomOutCommand}" Width="32" VerticalAlignment="Center" />
+            <Button Content="Reset" Command="{Binding ResetViewCommand}" VerticalAlignment="Center" />
+            <Separator Width="1" Margin="4,6" />
             <TextBlock Text="{Binding ConnectedPlayers, StringFormat='Players: {0}'}"
-                       VerticalAlignment="Center" Margin="8,0" />
+                       VerticalAlignment="Center" />
+            <Separator Width="1" Margin="4,6" />
+
+            <!-- Circle brush settings -->
+            <StackPanel Orientation="Horizontal" Spacing="8"
+                        IsVisible="{Binding IsCircleBrushSelected}"
+                        VerticalAlignment="Center">
+                <TextBlock Text="{Binding BrushDiameter, StringFormat='Diameter: {0}'}" VerticalAlignment="Center" />
+                <Slider Minimum="10" Maximum="300" Value="{Binding BrushDiameter}"
+                        TickFrequency="1" IsSnapToTickEnabled="True"
+                        Width="120" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding BrushSoftness, StringFormat='Softness: {0:F2}'}" VerticalAlignment="Center" />
+                <Slider Minimum="0" Maximum="1" Value="{Binding BrushSoftness}"
+                        TickFrequency="0.01" IsSnapToTickEnabled="True"
+                        Width="100" VerticalAlignment="Center" />
+            </StackPanel>
         </StackPanel>
 
-        <!-- Sidebar -->
-        <Border DockPanel.Dock="Left" Width="180"
-                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                Padding="12">
-            <StackPanel Spacing="12">
-                <TextBlock Text="Brush Settings" FontWeight="SemiBold" />
-
-                <TextBlock Text="{Binding BrushDiameter, StringFormat='Diameter: {0}'}" />
-                <Slider Minimum="10" Maximum="300" Value="{Binding BrushDiameter}"
-                        TickFrequency="1" IsSnapToTickEnabled="True" />
-
-                <TextBlock Text="{Binding BrushSoftness, StringFormat='Softness: {0:F2}'}" />
-                <Slider Minimum="0" Maximum="1" Value="{Binding BrushSoftness}"
-                        TickFrequency="0.01" IsSnapToTickEnabled="True" />
+        <!-- Side tool bar -->
+        <Border DockPanel.Dock="Left" Width="52"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+            <StackPanel Spacing="4" Margin="4,8,4,0">
+                <Panel>
+                    <Border Background="#30FFFFFF" CornerRadius="4"
+                            IsVisible="{Binding IsCircleBrushSelected}" />
+                    <Button Content="⬤" Command="{Binding SelectCircleBrushCommand}"
+                            Background="Transparent" Width="44" Height="44"
+                            HorizontalContentAlignment="Center"
+                            ToolTip.Tip="Circle Brush" />
+                </Panel>
+                <Panel>
+                    <Border Background="#30FFFFFF" CornerRadius="4"
+                            IsVisible="{Binding IsRectangleSelected}" />
+                    <Button Content="▭" Command="{Binding SelectRectangleCommand}"
+                            Background="Transparent" Width="44" Height="44"
+                            HorizontalContentAlignment="Center"
+                            ToolTip.Tip="Rectangle" />
+                </Panel>
             </StackPanel>
         </Border>
 
@@ -48,7 +69,8 @@
                             OffsetY="{Binding OffsetY, Mode=TwoWay}"
                             IsDmMode="True"
                             FogOpacity="128"
-                            BrushDiameter="{Binding BrushDiameter}" />
+                            BrushDiameter="{Binding BrushDiameter}"
+                            ActiveTool="{Binding SelectedTool}" />
     </DockPanel>
 
 </UserControl>

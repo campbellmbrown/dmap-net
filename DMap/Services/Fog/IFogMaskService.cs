@@ -18,6 +18,8 @@ public interface IFogMaskService
 
     PixelRect ApplyBrush(IBrush brush, int centerX, int centerY, BrushSettings settings);
 
+    PixelRect ApplyRectangle(int x1, int y1, int x2, int y2);
+
     void Replace(FogMask mask);
 
     void ApplyDelta(FogDelta delta);

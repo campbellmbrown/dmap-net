@@ -91,10 +91,27 @@ public class DmViewModel : ViewModelBase, IDisposable
         private set => this.RaiseAndSetIfChanged(ref _lastDirtyRect, value);
     }
 
+    private ToolType _selectedTool;
+    public ToolType SelectedTool
+    {
+        get => _selectedTool;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _selectedTool, value);
+            this.RaisePropertyChanged(nameof(IsCircleBrushSelected));
+            this.RaisePropertyChanged(nameof(IsRectangleSelected));
+        }
+    }
+
+    public bool IsCircleBrushSelected => _selectedTool == ToolType.CircleBrush;
+    public bool IsRectangleSelected => _selectedTool == ToolType.Rectangle;
+
     public ReactiveCommand<Unit, Unit> LoadMapCommand { get; }
     public ReactiveCommand<Unit, Unit> ZoomInCommand { get; }
     public ReactiveCommand<Unit, Unit> ZoomOutCommand { get; }
     public ReactiveCommand<Unit, Unit> ResetViewCommand { get; }
+    public ReactiveCommand<Unit, Unit> SelectCircleBrushCommand { get; }
+    public ReactiveCommand<Unit, Unit> SelectRectangleCommand { get; }
 
     // Interaction to request a file path from the view
     public Interaction<Unit, string?> ShowOpenFileDialog { get; } = new();
@@ -121,6 +138,8 @@ public class DmViewModel : ViewModelBase, IDisposable
         ZoomInCommand = ReactiveCommand.Create(() => { ZoomLevel = Math.Min(ZoomLevel * 1.2, 10.0); });
         ZoomOutCommand = ReactiveCommand.Create(() => { ZoomLevel = Math.Max(ZoomLevel / 1.2, 0.1); });
         ResetViewCommand = ReactiveCommand.Create(() => { ZoomLevel = 1.0; OffsetX = 0; OffsetY = 0; });
+        SelectCircleBrushCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.CircleBrush; });
+        SelectRectangleCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Rectangle; });
     }
 
     public void InitializeNetworking(IDmHostService hostService, IDiscoveryService discoveryService)
@@ -151,6 +170,17 @@ public class DmViewModel : ViewModelBase, IDisposable
         FogUpdated?.Invoke(this, new PixelRect(0, 0, pixelSize.Width, pixelSize.Height));
 
         await StartHostingAsync();
+    }
+
+    public void OnRectangleStroke(int x1, int y1, int x2, int y2)
+    {
+        if (_fogService.Mask is null)
+            return;
+
+        var dirtyRect = _fogService.ApplyRectangle(x1, y1, x2, y2);
+        LastDirtyRect = dirtyRect;
+        FogUpdated?.Invoke(this, dirtyRect);
+        SendFogDelta(dirtyRect);
     }
 
     public void OnBrushStroke(int mapX, int mapY)
