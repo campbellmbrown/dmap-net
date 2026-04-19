@@ -29,7 +29,7 @@ public sealed class FogMaskService : IFogMaskService
         return dirtyRect;
     }
 
-    public PixelRect ApplyRectangle(int x1, int y1, int x2, int y2)
+    public PixelRect ApplyRectangle(int x1, int y1, int x2, int y2, float softness)
     {
         if (Mask is null)
             throw new InvalidOperationException("Fog mask not initialized.");
@@ -39,11 +39,28 @@ public sealed class FogMaskService : IFogMaskService
         var maxX = Math.Min(Mask.Width - 1, Math.Max(x1, x2));
         var maxY = Math.Min(Mask.Height - 1, Math.Max(y1, y2));
 
+        var feather = softness * Math.Min(maxX - minX, maxY - minY) / 2.0f;
+
         for (var y = minY; y <= maxY; y++)
         {
             for (var x = minX; x <= maxX; x++)
             {
-                Mask[x, y] = 255;
+                byte alpha;
+                if (feather > 0)
+                {
+                    var minDist = Math.Min(
+                        Math.Min(x - minX, maxX - x),
+                        Math.Min(y - minY, maxY - y));
+                    var t = Math.Min(1.0f, minDist / feather);
+                    alpha = (byte)(255 * t);
+                }
+                else
+                {
+                    alpha = 255;
+                }
+
+                if (alpha > Mask[x, y])
+                    Mask[x, y] = alpha;
             }
         }
 

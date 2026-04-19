@@ -56,6 +56,13 @@ public class DmViewModel : ViewModelBase, IDisposable
         set => this.RaiseAndSetIfChanged(ref _brushSoftness, value);
     }
 
+    private double _rectangleSoftness = 0.0;
+    public double RectangleSoftness
+    {
+        get => _rectangleSoftness;
+        set => this.RaiseAndSetIfChanged(ref _rectangleSoftness, value);
+    }
+
     private double _offsetX;
     public double OffsetX
     {
@@ -177,7 +184,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         if (_fogService.Mask is null)
             return;
 
-        var dirtyRect = _fogService.ApplyRectangle(x1, y1, x2, y2);
+        var dirtyRect = _fogService.ApplyRectangle(x1, y1, x2, y2, (float)RectangleSoftness);
         LastDirtyRect = dirtyRect;
         FogUpdated?.Invoke(this, dirtyRect);
         SendFogDelta(dirtyRect);

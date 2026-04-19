@@ -18,7 +18,7 @@ public interface IFogMaskService
 
     PixelRect ApplyBrush(IBrush brush, int centerX, int centerY, BrushSettings settings);
 
-    PixelRect ApplyRectangle(int x1, int y1, int x2, int y2);
+    PixelRect ApplyRectangle(int x1, int y1, int x2, int y2, float softness);
 
     void Replace(FogMask mask);
 
