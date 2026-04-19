@@ -158,7 +158,7 @@ public class MapCanvas : Control
 
             for (var y = minY; y < maxY; y++)
             {
-                var row = ptr + y * stride;
+                var row = ptr + (nint)y * stride;
                 for (var x = minX; x < maxX; x++)
                 {
                     var maskValue = mask[x, y];
@@ -279,8 +279,12 @@ public class MapCanvas : Control
         var newZoom = Math.Clamp(oldZoom * zoomFactor, 0.1, 10.0);
 
         // Zoom centered on mouse position
-        OffsetX = mousePos.X - (mousePos.X - OffsetX) * (newZoom / oldZoom);
-        OffsetY = mousePos.Y - (mousePos.Y - OffsetY) * (newZoom / oldZoom);
+        if (oldZoom > 0)
+        {
+            OffsetX = mousePos.X - (mousePos.X - OffsetX) * (newZoom / oldZoom);
+            OffsetY = mousePos.Y - (mousePos.Y - OffsetY) * (newZoom / oldZoom);
+        }
+
         ZoomLevel = newZoom;
 
         e.Handled = true;
@@ -289,9 +293,19 @@ public class MapCanvas : Control
     private void RaiseBrushStroke(Point screenPos)
     {
         var zoom = ZoomLevel;
-        var mapX = (int)((screenPos.X - OffsetX) / zoom);
-        var mapY = (int)((screenPos.Y - OffsetY) / zoom);
+        if (zoom <= 0)
+            return;
 
-        BrushStrokeApplied?.Invoke(this, new BrushStrokeEventArgs { MapX = mapX, MapY = mapY });
+        var rawX = (screenPos.X - OffsetX) / zoom;
+        var rawY = (screenPos.Y - OffsetY) / zoom;
+
+        if (!double.IsFinite(rawX) || !double.IsFinite(rawY))
+            return;
+
+        BrushStrokeApplied?.Invoke(this, new BrushStrokeEventArgs
+        {
+            MapX = (int)rawX,
+            MapY = (int)rawY,
+        });
     }
 }
