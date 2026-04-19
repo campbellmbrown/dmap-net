@@ -1,7 +1,5 @@
 using System;
 
-using Avalonia.Controls;
-
 using DMap.ViewModels;
 using DMap.Views;
 
