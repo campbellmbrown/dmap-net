@@ -27,6 +27,7 @@ public partial class App : Application
         {
             var container = BuildContainer();
             var mainVm = container.Resolve<MainWindowViewModel>();
+            var navigator = container.Resolve<INavigator>();
 
             var args = desktop.Args ?? Array.Empty<string>();
             var roleIndex = Array.IndexOf(args, "--role");
@@ -35,22 +36,22 @@ public partial class App : Application
                 var role = args[roleIndex + 1].ToLowerInvariant();
                 if (role == "dm")
                 {
-                    mainVm.NavigateTo(container.Resolve<DmViewModel>());
+                    navigator.NavigateTo(container.Resolve<DmViewModel>());
                 }
                 else if (role == "player")
                 {
                     var playerVm = container.Resolve<PlayerViewModel>();
                     _ = playerVm.StartDiscoveryAsync();
-                    mainVm.NavigateTo(playerVm);
+                    navigator.NavigateTo(playerVm);
                 }
                 else
                 {
-                    mainVm.NavigateTo(container.Resolve<StartViewModel>());
+                    navigator.NavigateTo(container.Resolve<StartViewModel>());
                 }
             }
             else
             {
-                mainVm.NavigateTo(container.Resolve<StartViewModel>());
+                navigator.NavigateTo(container.Resolve<StartViewModel>());
             }
 
             desktop.MainWindow = new MainWindow
@@ -72,7 +73,8 @@ public partial class App : Application
         builder.RegisterType<DiscoveryService>().As<IDiscoveryService>();
         builder.RegisterType<PlayerClientService>().As<IPlayerClientService>();
 
-        builder.RegisterType<MainWindowViewModel>().AsSelf().As<INavigator>().SingleInstance();
+        builder.RegisterType<MainWindowViewModel>().AsSelf().SingleInstance();
+        builder.RegisterType<NavigationService>().As<INavigator>().SingleInstance();
         builder.RegisterType<StartViewModel>().AsSelf();
         builder.RegisterType<DmViewModel>().AsSelf();
         builder.RegisterType<PlayerViewModel>().AsSelf();

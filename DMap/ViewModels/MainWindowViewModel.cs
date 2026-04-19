@@ -1,24 +1,16 @@
-using System;
+using Avalonia.Controls;
 
 using ReactiveUI;
 
 namespace DMap.ViewModels;
 
-public class MainWindowViewModel : ViewModelBase, INavigator
+public class MainWindowViewModel : ViewModelBase
 {
-    private ViewModelBase? _content;
+    private Control? _content;
 
-    public ViewModelBase? Content
+    public Control? Content
     {
         get => _content;
-        private set => this.RaiseAndSetIfChanged(ref _content, value);
-    }
-
-    public void NavigateTo(ViewModelBase viewModel)
-    {
-        if (_content is IDisposable disposable)
-            disposable.Dispose();
-
-        Content = viewModel;
+        set => this.RaiseAndSetIfChanged(ref _content, value);
     }
 }
