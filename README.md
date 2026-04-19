@@ -1,5 +1,7 @@
 # DMap
 
+[![CI](https://github.com/campbellmbrown/dmap-net/actions/workflows/ci.yml/badge.svg)](https://github.com/campbellmbrown/dmap-net/actions/workflows/ci.yml)
+
 A cross-platform desktop tool for running Dungeons & Dragons map sessions. The Dungeon Master loads a map image and reveals parts of it to players in real time over the local network.
 
 ## What it does
