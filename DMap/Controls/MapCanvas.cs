@@ -294,7 +294,7 @@ public class MapCanvas : Control
         var dx = to.X - from.X;
         var dy = to.Y - from.Y;
         var distance = Math.Sqrt((dx * dx) + (dy * dy));
-        var stepSize = Math.Max(1.0, BrushDiameter * ZoomLevel * 0.5);
+        var stepSize = Math.Max(1.0, BrushDiameter * ZoomLevel * 0.1);
         var steps = (int)Math.Ceiling(distance / stepSize);
 
         for (var i = 1; i <= steps; i++)
