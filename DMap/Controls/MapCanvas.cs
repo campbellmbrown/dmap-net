@@ -97,6 +97,7 @@ public class MapCanvas : Control
     private bool _isPanning;
     private Point _lastPanPoint;
     private bool _isPainting;
+    private Point _lastPaintPosition;
     private Point _lastMousePosition;
 
     static MapCanvas()
@@ -230,6 +231,7 @@ public class MapCanvas : Control
         if (point.Properties.IsLeftButtonPressed && IsDmMode)
         {
             _isPainting = true;
+            _lastPaintPosition = point.Position;
             RaiseBrushStroke(point.Position);
             e.Handled = true;
         }
@@ -253,7 +255,8 @@ public class MapCanvas : Control
 
         if (_isPainting && IsDmMode)
         {
-            RaiseBrushStroke(point.Position);
+            InterpolateBrushStrokes(_lastPaintPosition, point.Position);
+            _lastPaintPosition = point.Position;
             e.Handled = true;
         }
 
@@ -284,6 +287,21 @@ public class MapCanvas : Control
         ZoomLevel = newZoom;
 
         e.Handled = true;
+    }
+
+    private void InterpolateBrushStrokes(Point from, Point to)
+    {
+        var dx = to.X - from.X;
+        var dy = to.Y - from.Y;
+        var distance = Math.Sqrt((dx * dx) + (dy * dy));
+        var stepSize = Math.Max(1.0, BrushDiameter * ZoomLevel * 0.5);
+        var steps = (int)Math.Ceiling(distance / stepSize);
+
+        for (var i = 1; i <= steps; i++)
+        {
+            var t = (double)i / steps;
+            RaiseBrushStroke(new Point(from.X + (dx * t), from.Y + (dy * t)));
+        }
     }
 
     private void RaiseBrushStroke(Point screenPos)
