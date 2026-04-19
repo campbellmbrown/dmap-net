@@ -4,19 +4,14 @@ using ReactiveUI;
 
 namespace DMap.ViewModels;
 
-public class MainWindowViewModel : ViewModelBase
+public class MainWindowViewModel : ViewModelBase, INavigator
 {
-    private ViewModelBase _content;
+    private ViewModelBase? _content;
 
-    public ViewModelBase Content
+    public ViewModelBase? Content
     {
         get => _content;
-        set => this.RaiseAndSetIfChanged(ref _content, value);
-    }
-
-    public MainWindowViewModel()
-    {
-        _content = new StartViewModel(this);
+        private set => this.RaiseAndSetIfChanged(ref _content, value);
     }
 
     public void NavigateTo(ViewModelBase viewModel)

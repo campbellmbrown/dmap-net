@@ -1,5 +1,7 @@
 using System;
 
+using Autofac;
+
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -23,11 +25,8 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var mainVm = new MainWindowViewModel();
-            desktop.MainWindow = new MainWindow
-            {
-                DataContext = mainVm,
-            };
+            var container = BuildContainer();
+            var mainVm = container.Resolve<MainWindowViewModel>();
 
             var args = desktop.Args ?? Array.Empty<string>();
             var roleIndex = Array.IndexOf(args, "--role");
@@ -36,27 +35,48 @@ public partial class App : Application
                 var role = args[roleIndex + 1].ToLowerInvariant();
                 if (role == "dm")
                 {
-                    var fogService = new FogMaskService();
-                    var brush = new CircleBrush();
-                    var hostService = new DmHostService();
-                    var discoveryService = new DiscoveryService();
-                    var vm = new DmViewModel(fogService, brush);
-                    vm.InitializeNetworking(hostService, discoveryService);
-                    mainVm.NavigateTo(vm);
+                    mainVm.NavigateTo(container.Resolve<DmViewModel>());
                 }
                 else if (role == "player")
                 {
-                    var fogService = new FogMaskService();
-                    var discoveryService = new DiscoveryService();
-                    var clientService = new PlayerClientService();
-                    var vm = new PlayerViewModel(fogService);
-                    vm.InitializeNetworking(discoveryService, clientService);
-                    _ = vm.StartDiscoveryAsync();
-                    mainVm.NavigateTo(vm);
+                    var playerVm = container.Resolve<PlayerViewModel>();
+                    _ = playerVm.StartDiscoveryAsync();
+                    mainVm.NavigateTo(playerVm);
+                }
+                else
+                {
+                    mainVm.NavigateTo(container.Resolve<StartViewModel>());
                 }
             }
+            else
+            {
+                mainVm.NavigateTo(container.Resolve<StartViewModel>());
+            }
+
+            desktop.MainWindow = new MainWindow
+            {
+                DataContext = mainVm,
+            };
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private static IContainer BuildContainer()
+    {
+        var builder = new ContainerBuilder();
+
+        builder.RegisterType<FogMaskService>().As<IFogMaskService>();
+        builder.RegisterType<CircleBrush>().As<IBrush>();
+        builder.RegisterType<DmHostService>().As<IDmHostService>();
+        builder.RegisterType<DiscoveryService>().As<IDiscoveryService>();
+        builder.RegisterType<PlayerClientService>().As<IPlayerClientService>();
+
+        builder.RegisterType<MainWindowViewModel>().AsSelf().As<INavigator>().SingleInstance();
+        builder.RegisterType<StartViewModel>().AsSelf();
+        builder.RegisterType<DmViewModel>().AsSelf();
+        builder.RegisterType<PlayerViewModel>().AsSelf();
+
+        return builder.Build();
     }
 }

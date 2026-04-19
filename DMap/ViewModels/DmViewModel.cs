@@ -20,6 +20,8 @@ public class DmViewModel : ViewModelBase, IDisposable
 {
     private readonly IFogMaskService _fogService;
     private readonly IBrush _brush;
+    private readonly IDmHostService _hostService;
+    private readonly IDiscoveryService _discoveryService;
 
     private Bitmap? _mapImage;
     public Bitmap? MapImage
@@ -96,39 +98,26 @@ public class DmViewModel : ViewModelBase, IDisposable
     public ReactiveCommand<Unit, Unit> ZoomOutCommand { get; }
     public ReactiveCommand<Unit, Unit> ResetViewCommand { get; }
 
-    // Interaction to request a file path from the view
     public Interaction<Unit, string?> ShowOpenFileDialog { get; } = new();
 
-    // Event raised after fog is updated so the view can refresh the canvas
     public event EventHandler<PixelRect>? FogUpdated;
 
     private byte[]? _mapImageBytes;
     private MapSession? _session;
-    private IDmHostService? _hostService;
-    private IDiscoveryService? _discoveryService;
 
-    public DmViewModel()
-        : this(new FogMaskService(), new CircleBrush())
-    {
-    }
-
-    public DmViewModel(IFogMaskService fogService, IBrush brush)
+    public DmViewModel(IFogMaskService fogService, IBrush brush, IDmHostService hostService, IDiscoveryService discoveryService)
     {
         _fogService = fogService;
         _brush = brush;
+        _hostService = hostService;
+        _discoveryService = discoveryService;
+
+        _hostService.PlayerCountChanged += (_, count) => ConnectedPlayers = count;
 
         LoadMapCommand = ReactiveCommand.CreateFromTask(LoadMapAsync);
         ZoomInCommand = ReactiveCommand.Create(() => { ZoomLevel = Math.Min(ZoomLevel * 1.2, 10.0); });
         ZoomOutCommand = ReactiveCommand.Create(() => { ZoomLevel = Math.Max(ZoomLevel / 1.2, 0.1); });
         ResetViewCommand = ReactiveCommand.Create(() => { ZoomLevel = 1.0; OffsetX = 0; OffsetY = 0; });
-    }
-
-    public void InitializeNetworking(IDmHostService hostService, IDiscoveryService discoveryService)
-    {
-        _hostService = hostService;
-        _discoveryService = discoveryService;
-
-        _hostService.PlayerCountChanged += (_, count) => ConnectedPlayers = count;
     }
 
     private async Task LoadMapAsync()
@@ -169,7 +158,7 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     private void SendFogDelta(PixelRect dirtyRect)
     {
-        if (_hostService is null || _fogService.Mask is null)
+        if (_fogService.Mask is null)
             return;
 
         var delta = FogDelta.FromMask(
@@ -180,7 +169,7 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     private async Task StartHostingAsync()
     {
-        if (_hostService is null || _discoveryService is null || _session is null)
+        if (_session is null)
             return;
 
         await _hostService.StartAsync(default);
