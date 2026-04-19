@@ -29,7 +29,7 @@ public class StartViewModel : ViewModelBase
         var hostService = new DmHostService();
         var discoveryService = new DiscoveryService();
 
-        var vm = new DmViewModel(_host, fogService, brush);
+        var vm = new DmViewModel(fogService, brush);
         vm.InitializeNetworking(hostService, discoveryService);
 
         _host.NavigateTo(vm);
@@ -41,7 +41,7 @@ public class StartViewModel : ViewModelBase
         var discoveryService = new DiscoveryService();
         var clientService = new PlayerClientService();
 
-        var vm = new PlayerViewModel(_host, fogService);
+        var vm = new PlayerViewModel(fogService);
         vm.InitializeNetworking(discoveryService, clientService);
         _ = vm.StartDiscoveryAsync();
 

@@ -107,14 +107,13 @@ public class DmViewModel : ViewModelBase, IDisposable
     private IDmHostService? _hostService;
     private IDiscoveryService? _discoveryService;
 
-    public DmViewModel(MainWindowViewModel host)
-        : this(host, new FogMaskService(), new CircleBrush())
+    public DmViewModel()
+        : this(new FogMaskService(), new CircleBrush())
     {
     }
 
-    public DmViewModel(MainWindowViewModel host, IFogMaskService fogService, IBrush brush)
+    public DmViewModel(IFogMaskService fogService, IBrush brush)
     {
-        _host = host;
         _fogService = fogService;
         _brush = brush;
 

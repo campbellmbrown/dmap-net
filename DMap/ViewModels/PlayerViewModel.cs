@@ -91,14 +91,13 @@ public class PlayerViewModel : ViewModelBase, IDisposable
 
     public event EventHandler<PixelRect>? FogUpdated;
 
-    public PlayerViewModel(MainWindowViewModel host)
-        : this(host, new FogMaskService())
+    public PlayerViewModel()
+        : this(new FogMaskService())
     {
     }
 
-    public PlayerViewModel(MainWindowViewModel host, IFogMaskService fogService)
+    public PlayerViewModel(IFogMaskService fogService)
     {
-        _host = host;
         _fogService = fogService;
 
         var canConnect = this.WhenAnyValue(

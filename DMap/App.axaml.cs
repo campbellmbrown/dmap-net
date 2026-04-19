@@ -40,7 +40,7 @@ public partial class App : Application
                     var brush = new CircleBrush();
                     var hostService = new DmHostService();
                     var discoveryService = new DiscoveryService();
-                    var vm = new DmViewModel(mainVm, fogService, brush);
+                    var vm = new DmViewModel(fogService, brush);
                     vm.InitializeNetworking(hostService, discoveryService);
                     mainVm.NavigateTo(vm);
                 }
@@ -49,7 +49,7 @@ public partial class App : Application
                     var fogService = new FogMaskService();
                     var discoveryService = new DiscoveryService();
                     var clientService = new PlayerClientService();
-                    var vm = new PlayerViewModel(mainVm, fogService);
+                    var vm = new PlayerViewModel(fogService);
                     vm.InitializeNetworking(discoveryService, clientService);
                     _ = vm.StartDiscoveryAsync();
                     mainVm.NavigateTo(vm);
