@@ -19,7 +19,9 @@ namespace DMap.ViewModels;
 public class DmViewModel : ViewModelBase, IDisposable
 {
     private readonly IFogMaskService _fogService;
-    private readonly IBrush _brush;
+    private readonly IBrush _circleBrush;
+    private readonly IBrush _squareBrush;
+    private readonly IBrush _diamondBrush;
 
     private Bitmap? _mapImage;
     public Bitmap? MapImage
@@ -106,11 +108,17 @@ public class DmViewModel : ViewModelBase, IDisposable
         {
             this.RaiseAndSetIfChanged(ref _selectedTool, value);
             this.RaisePropertyChanged(nameof(IsCircleBrushSelected));
+            this.RaisePropertyChanged(nameof(IsSquareBrushSelected));
+            this.RaisePropertyChanged(nameof(IsDiamondBrushSelected));
+            this.RaisePropertyChanged(nameof(IsAnyBrushSelected));
             this.RaisePropertyChanged(nameof(IsRectangleSelected));
         }
     }
 
     public bool IsCircleBrushSelected => _selectedTool == ToolType.CircleBrush;
+    public bool IsSquareBrushSelected => _selectedTool == ToolType.SquareBrush;
+    public bool IsDiamondBrushSelected => _selectedTool == ToolType.DiamondBrush;
+    public bool IsAnyBrushSelected => _selectedTool is ToolType.CircleBrush or ToolType.SquareBrush or ToolType.DiamondBrush;
     public bool IsRectangleSelected => _selectedTool == ToolType.Rectangle;
 
     public ReactiveCommand<Unit, Unit> LoadMapCommand { get; }
@@ -118,6 +126,8 @@ public class DmViewModel : ViewModelBase, IDisposable
     public ReactiveCommand<Unit, Unit> ZoomOutCommand { get; }
     public ReactiveCommand<Unit, Unit> ResetViewCommand { get; }
     public ReactiveCommand<Unit, Unit> SelectCircleBrushCommand { get; }
+    public ReactiveCommand<Unit, Unit> SelectSquareBrushCommand { get; }
+    public ReactiveCommand<Unit, Unit> SelectDiamondBrushCommand { get; }
     public ReactiveCommand<Unit, Unit> SelectRectangleCommand { get; }
 
     // Interaction to request a file path from the view
@@ -132,20 +142,24 @@ public class DmViewModel : ViewModelBase, IDisposable
     private IDiscoveryService? _discoveryService;
 
     public DmViewModel()
-        : this(new FogMaskService(), new CircleBrush())
+        : this(new FogMaskService())
     {
     }
 
-    public DmViewModel(IFogMaskService fogService, IBrush brush)
+    public DmViewModel(IFogMaskService fogService)
     {
         _fogService = fogService;
-        _brush = brush;
+        _circleBrush = new CircleBrush();
+        _squareBrush = new SquareBrush();
+        _diamondBrush = new DiamondBrush();
 
         LoadMapCommand = ReactiveCommand.CreateFromTask(LoadMapAsync);
         ZoomInCommand = ReactiveCommand.Create(() => { ZoomLevel = Math.Min(ZoomLevel * 1.2, 10.0); });
         ZoomOutCommand = ReactiveCommand.Create(() => { ZoomLevel = Math.Max(ZoomLevel / 1.2, 0.1); });
         ResetViewCommand = ReactiveCommand.Create(() => { ZoomLevel = 1.0; OffsetX = 0; OffsetY = 0; });
         SelectCircleBrushCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.CircleBrush; });
+        SelectSquareBrushCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.SquareBrush; });
+        SelectDiamondBrushCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.DiamondBrush; });
         SelectRectangleCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Rectangle; });
     }
 
@@ -195,8 +209,14 @@ public class DmViewModel : ViewModelBase, IDisposable
         if (_fogService.Mask is null)
             return;
 
+        var brush = SelectedTool switch
+        {
+            ToolType.SquareBrush => _squareBrush,
+            ToolType.DiamondBrush => _diamondBrush,
+            _ => _circleBrush,
+        };
         var settings = new BrushSettings(BrushDiameter, (float)BrushSoftness);
-        var dirtyRect = _fogService.ApplyBrush(_brush, mapX, mapY, settings);
+        var dirtyRect = _fogService.ApplyBrush(brush, mapX, mapY, settings);
 
         LastDirtyRect = dirtyRect;
         FogUpdated?.Invoke(this, dirtyRect);
