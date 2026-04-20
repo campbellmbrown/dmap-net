@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reactive;
 
 using DMap.Models;
 using DMap.Services;
@@ -27,6 +28,8 @@ public class SettingsViewModel : ViewModelBase
     }
 
     public IReadOnlyList<AppTheme> Themes { get; } = Enum.GetValues<AppTheme>();
+
+    public ReactiveCommand<Unit, Unit> CloseCommand { get; } = ReactiveCommand.Create(() => { });
 
     public SettingsViewModel(ISettingsService settingsService, IThemeService themeService)
     {

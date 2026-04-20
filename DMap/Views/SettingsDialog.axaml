@@ -17,8 +17,8 @@
         <ComboBox ItemsSource="{Binding Themes}"
                   SelectedItem="{Binding SelectedTheme}"
                   HorizontalAlignment="Stretch" />
-        <Button x:Name="CloseButton"
-                Content="Close"
+        <Button Content="Close"
+                Command="{Binding CloseCommand}"
                 HorizontalAlignment="Right"
                 Margin="0,4,0,0" />
     </StackPanel>
