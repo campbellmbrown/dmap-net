@@ -54,7 +54,10 @@ public class MapCanvas : Control
         AvaloniaProperty.Register<MapCanvas, int>(nameof(BrushDiameter), 50);
 
     public static readonly StyledProperty<ToolType> ActiveToolProperty =
-        AvaloniaProperty.Register<MapCanvas, ToolType>(nameof(ActiveTool), ToolType.CircleBrush);
+        AvaloniaProperty.Register<MapCanvas, ToolType>(nameof(ActiveTool), ToolType.Brush);
+
+    public static readonly StyledProperty<BrushShape> BrushShapeProperty =
+        AvaloniaProperty.Register<MapCanvas, BrushShape>(nameof(BrushShape), BrushShape.Circle);
 
     public Bitmap? MapImage
     {
@@ -110,6 +113,12 @@ public class MapCanvas : Control
         set => SetValue(ActiveToolProperty, value);
     }
 
+    public BrushShape BrushShape
+    {
+        get => GetValue(BrushShapeProperty);
+        set => SetValue(BrushShapeProperty, value);
+    }
+
     public event EventHandler<BrushStrokeEventArgs>? BrushStrokeApplied;
     public event EventHandler<RectangleStrokeEventArgs>? RectangleStrokeApplied;
 
@@ -128,7 +137,7 @@ public class MapCanvas : Control
         AffectsRender<MapCanvas>(
             MapImageProperty, FogMaskProperty, ZoomLevelProperty,
             OffsetXProperty, OffsetYProperty, FogOpacityProperty,
-            BrushDiameterProperty, ActiveToolProperty);
+            BrushDiameterProperty, ActiveToolProperty, BrushShapeProperty);
     }
 
     public MapCanvas()
@@ -229,37 +238,39 @@ public class MapCanvas : Control
 
         if (IsDmMode && IsPointerOver)
         {
-            var tool = ActiveTool;
             var pen = new Pen(Brushes.White, 1.5);
 
-            if (tool == ToolType.CircleBrush)
-            {
-                var r = BrushDiameter * zoom / 2.0;
-                context.DrawEllipse(null, pen, _lastMousePosition, r, r);
-            }
-            else if (tool == ToolType.SquareBrush)
+            if (ActiveTool == ToolType.Brush)
             {
                 var r = BrushDiameter * zoom / 2.0;
                 var c = _lastMousePosition;
-                context.DrawRectangle(null, pen, new Rect(c.X - r, c.Y - r, r * 2, r * 2));
-            }
-            else if (tool == ToolType.DiamondBrush)
-            {
-                var r = BrushDiameter * zoom / 2.0;
-                var c = _lastMousePosition;
-                var geo = new StreamGeometry();
-                using (var ctx = geo.Open())
-                {
-                    ctx.BeginFigure(new Point(c.X, c.Y - r), true);
-                    ctx.LineTo(new Point(c.X + r, c.Y));
-                    ctx.LineTo(new Point(c.X, c.Y + r));
-                    ctx.LineTo(new Point(c.X - r, c.Y));
-                    ctx.EndFigure(true);
-                }
 
-                context.DrawGeometry(null, pen, geo);
+                switch (BrushShape)
+                {
+                    case BrushShape.Square:
+                        context.DrawRectangle(null, pen, new Rect(c.X - r, c.Y - r, r * 2, r * 2));
+                        break;
+
+                    case BrushShape.Diamond:
+                        var geo = new StreamGeometry();
+                        using (var ctx = geo.Open())
+                        {
+                            ctx.BeginFigure(new Point(c.X, c.Y - r), true);
+                            ctx.LineTo(new Point(c.X + r, c.Y));
+                            ctx.LineTo(new Point(c.X, c.Y + r));
+                            ctx.LineTo(new Point(c.X - r, c.Y));
+                            ctx.EndFigure(true);
+                        }
+
+                        context.DrawGeometry(null, pen, geo);
+                        break;
+
+                    default:
+                        context.DrawEllipse(null, pen, c, r, r);
+                        break;
+                }
             }
-            else if (tool == ToolType.Rectangle && _isDraggingRectangle)
+            else if (ActiveTool == ToolType.Rectangle && _isDraggingRectangle)
             {
                 var rect = MakeRect(_rectangleDragStart, _lastMousePosition);
                 context.FillRectangle(new SolidColorBrush(Color.FromArgb(50, 255, 255, 255)), rect);
@@ -283,7 +294,7 @@ public class MapCanvas : Control
 
         if (point.Properties.IsLeftButtonPressed && IsDmMode)
         {
-            if (ActiveTool is ToolType.CircleBrush or ToolType.SquareBrush or ToolType.DiamondBrush)
+            if (ActiveTool == ToolType.Brush)
             {
                 _isPainting = true;
                 InitBrushMapPos(point.Position);

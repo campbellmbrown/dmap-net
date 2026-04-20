@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reactive;
 using System.Reactive.Linq;
@@ -107,27 +108,28 @@ public class DmViewModel : ViewModelBase, IDisposable
         set
         {
             this.RaiseAndSetIfChanged(ref _selectedTool, value);
-            this.RaisePropertyChanged(nameof(IsCircleBrushSelected));
-            this.RaisePropertyChanged(nameof(IsSquareBrushSelected));
-            this.RaisePropertyChanged(nameof(IsDiamondBrushSelected));
-            this.RaisePropertyChanged(nameof(IsAnyBrushSelected));
+            this.RaisePropertyChanged(nameof(IsBrushSelected));
             this.RaisePropertyChanged(nameof(IsRectangleSelected));
         }
     }
 
-    public bool IsCircleBrushSelected => _selectedTool == ToolType.CircleBrush;
-    public bool IsSquareBrushSelected => _selectedTool == ToolType.SquareBrush;
-    public bool IsDiamondBrushSelected => _selectedTool == ToolType.DiamondBrush;
-    public bool IsAnyBrushSelected => _selectedTool is ToolType.CircleBrush or ToolType.SquareBrush or ToolType.DiamondBrush;
+    public bool IsBrushSelected => _selectedTool == ToolType.Brush;
     public bool IsRectangleSelected => _selectedTool == ToolType.Rectangle;
+
+    private BrushShape _selectedBrushShape;
+    public BrushShape SelectedBrushShape
+    {
+        get => _selectedBrushShape;
+        set => this.RaiseAndSetIfChanged(ref _selectedBrushShape, value);
+    }
+
+    public IReadOnlyList<BrushShape> BrushShapes { get; } = Enum.GetValues<BrushShape>();
 
     public ReactiveCommand<Unit, Unit> LoadMapCommand { get; }
     public ReactiveCommand<Unit, Unit> ZoomInCommand { get; }
     public ReactiveCommand<Unit, Unit> ZoomOutCommand { get; }
     public ReactiveCommand<Unit, Unit> ResetViewCommand { get; }
-    public ReactiveCommand<Unit, Unit> SelectCircleBrushCommand { get; }
-    public ReactiveCommand<Unit, Unit> SelectSquareBrushCommand { get; }
-    public ReactiveCommand<Unit, Unit> SelectDiamondBrushCommand { get; }
+    public ReactiveCommand<Unit, Unit> SelectBrushCommand { get; }
     public ReactiveCommand<Unit, Unit> SelectRectangleCommand { get; }
 
     // Interaction to request a file path from the view
@@ -157,9 +159,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         ZoomInCommand = ReactiveCommand.Create(() => { ZoomLevel = Math.Min(ZoomLevel * 1.2, 10.0); });
         ZoomOutCommand = ReactiveCommand.Create(() => { ZoomLevel = Math.Max(ZoomLevel / 1.2, 0.1); });
         ResetViewCommand = ReactiveCommand.Create(() => { ZoomLevel = 1.0; OffsetX = 0; OffsetY = 0; });
-        SelectCircleBrushCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.CircleBrush; });
-        SelectSquareBrushCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.SquareBrush; });
-        SelectDiamondBrushCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.DiamondBrush; });
+        SelectBrushCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Brush; });
         SelectRectangleCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Rectangle; });
     }
 
@@ -209,10 +209,10 @@ public class DmViewModel : ViewModelBase, IDisposable
         if (_fogService.Mask is null)
             return;
 
-        var brush = SelectedTool switch
+        var brush = SelectedBrushShape switch
         {
-            ToolType.SquareBrush => _squareBrush,
-            ToolType.DiamondBrush => _diamondBrush,
+            BrushShape.Square => _squareBrush,
+            BrushShape.Diamond => _diamondBrush,
             _ => _circleBrush,
         };
         var settings = new BrushSettings(BrushDiameter, (float)BrushSoftness);
