@@ -1,10 +1,29 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!--
-        Abyss: deep navy/dark theme.
-        FluentTheme is in Dark variant — these keys add app-specific colour overrides.
-    -->
+    <!-- Abyss: deep navy theme (Dark variant) -->
+
+    <!-- Override FluentTheme accent colours (replaces system accent / purple) -->
+    <Color x:Key="SystemAccentColor">#3D5A80</Color>
+    <Color x:Key="SystemAccentColorLight1">#4D6A90</Color>
+    <Color x:Key="SystemAccentColorLight2">#5D7AA0</Color>
+    <Color x:Key="SystemAccentColorLight3">#6D8AB0</Color>
+    <Color x:Key="SystemAccentColorDark1">#2D4A70</Color>
+    <Color x:Key="SystemAccentColorDark2">#1D3A60</Color>
+    <Color x:Key="SystemAccentColorDark3">#0D2A50</Color>
+
+    <!-- Button colours -->
+    <SolidColorBrush x:Key="ButtonBackground" Color="#141C2E" />
+    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#1C2640" />
+    <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#0C1422" />
+    <SolidColorBrush x:Key="ButtonForeground" Color="#E0E8F5" />
+    <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#EEF4FF" />
+    <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#D0D8E5" />
+    <SolidColorBrush x:Key="ButtonBorderBrush" Color="#2D4060" />
+    <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#3D5A80" />
+    <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#1D3A60" />
+
+    <!-- App-specific keys for use with {DynamicResource} in custom controls -->
     <Color x:Key="ThemeAccentColor">#3D5A80</Color>
     <SolidColorBrush x:Key="ThemeAccentBrush" Color="{StaticResource ThemeAccentColor}" />
     <SolidColorBrush x:Key="ThemeAccentSubtleBrush" Color="#1E2D40" />

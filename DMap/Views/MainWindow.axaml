@@ -9,10 +9,11 @@
         Icon="/Assets/avalonia-logo.ico"
         Title="DMap">
 
-    <Design.DataContext>
-        <vm:MainWindowViewModel/>
-    </Design.DataContext>
-
-    <ContentControl Content="{Binding Content}" />
+    <DockPanel>
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="Settings..." Command="{Binding OpenSettingsCommand}" />
+        </Menu>
+        <ContentControl Content="{Binding Content}" />
+    </DockPanel>
 
 </Window>

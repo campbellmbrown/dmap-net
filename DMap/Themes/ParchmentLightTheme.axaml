@@ -1,0 +1,32 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Parchment Light: warm aged-map theme (Light variant) -->
+
+    <!-- Override FluentTheme accent colours (replaces system accent / purple) -->
+    <Color x:Key="SystemAccentColor">#8B4513</Color>
+    <Color x:Key="SystemAccentColorLight1">#9B5523</Color>
+    <Color x:Key="SystemAccentColorLight2">#AB6533</Color>
+    <Color x:Key="SystemAccentColorLight3">#BB7543</Color>
+    <Color x:Key="SystemAccentColorDark1">#7B3503</Color>
+    <Color x:Key="SystemAccentColorDark2">#6B2500</Color>
+    <Color x:Key="SystemAccentColorDark3">#5B1500</Color>
+
+    <!-- Button colours -->
+    <SolidColorBrush x:Key="ButtonBackground" Color="#DEC898" />
+    <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#D4BC8A" />
+    <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#CAB07C" />
+    <SolidColorBrush x:Key="ButtonForeground" Color="#3B2307" />
+    <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#2A1800" />
+    <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#2A1800" />
+    <SolidColorBrush x:Key="ButtonBorderBrush" Color="#A07040" />
+    <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#8B4513" />
+    <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#7B3503" />
+
+    <!-- App-specific keys for use with {DynamicResource} in custom controls -->
+    <Color x:Key="ThemeAccentColor">#8B4513</Color>
+    <SolidColorBrush x:Key="ThemeAccentBrush" Color="{StaticResource ThemeAccentColor}" />
+    <SolidColorBrush x:Key="ThemeAccentSubtleBrush" Color="#C68B5A" />
+    <SolidColorBrush x:Key="ThemeSurfaceBrush" Color="#EDD9A3" />
+
+</ResourceDictionary>

@@ -19,13 +19,13 @@ public sealed class ThemeService : IThemeService
         if (_currentInclude is not null)
             app.Resources.MergedDictionaries.Remove(_currentInclude);
 
-        app.RequestedThemeVariant = theme is AppTheme.Parchment
+        app.RequestedThemeVariant = theme is AppTheme.ParchmentLight
             ? ThemeVariant.Light
             : ThemeVariant.Dark;
 
         var sourceUri = theme switch
         {
-            AppTheme.Parchment => new Uri("avares://DMap/Themes/ParchmentTheme.axaml"),
+            AppTheme.ParchmentLight => new Uri("avares://DMap/Themes/ParchmentLightTheme.axaml"),
             AppTheme.Abyss => new Uri("avares://DMap/Themes/AbyssTheme.axaml"),
             _ => new Uri("avares://DMap/Themes/ForestTheme.axaml"),
         };
