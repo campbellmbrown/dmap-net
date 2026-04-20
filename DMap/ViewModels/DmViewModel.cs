@@ -204,7 +204,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         SendFogDelta(dirtyRect);
     }
 
-    public void OnBrushStroke(int mapX, int mapY)
+    public void OnBrushStroke(int x1, int y1, int x2, int y2)
     {
         if (_fogService.Mask is null)
             return;
@@ -216,7 +216,7 @@ public class DmViewModel : ViewModelBase, IDisposable
             _ => _circleBrush,
         };
         var settings = new BrushSettings(BrushDiameter, (float)BrushSoftness);
-        var dirtyRect = _fogService.ApplyBrush(brush, mapX, mapY, settings);
+        var dirtyRect = _fogService.ApplyBrush(brush, x1, y1, x2, y2, settings);
 
         LastDirtyRect = dirtyRect;
         FogUpdated?.Invoke(this, dirtyRect);

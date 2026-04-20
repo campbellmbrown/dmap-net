@@ -19,12 +19,12 @@ public sealed class FogMaskService : IFogMaskService
         Mask = new FogMask(width, height);
     }
 
-    public PixelRect ApplyBrush(IBrush brush, int centerX, int centerY, BrushSettings settings)
+    public PixelRect ApplyBrush(IBrush brush, int x1, int y1, int x2, int y2, BrushSettings settings)
     {
         if (Mask is null)
             throw new InvalidOperationException("Fog mask not initialized.");
 
-        var dirtyRect = brush.Apply(Mask, centerX, centerY, settings);
+        var dirtyRect = brush.Apply(Mask, x1, y1, x2, y2, settings);
         MaskChanged?.Invoke(this, dirtyRect);
         return dirtyRect;
     }

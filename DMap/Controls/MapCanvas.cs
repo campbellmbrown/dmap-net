@@ -13,8 +13,10 @@ namespace DMap.Controls;
 
 public class BrushStrokeEventArgs : EventArgs
 {
-    public int MapX { get; init; }
-    public int MapY { get; init; }
+    public int MapX1 { get; init; }
+    public int MapY1 { get; init; }
+    public int MapX2 { get; init; }
+    public int MapY2 { get; init; }
 }
 
 public class RectangleStrokeEventArgs : EventArgs
@@ -115,7 +117,8 @@ public class MapCanvas : Control
     private bool _isPanning;
     private Point _lastPanPoint;
     private bool _isPainting;
-    private Point _lastPaintPosition;
+    private int _lastBrushMapX;
+    private int _lastBrushMapY;
     private bool _isDraggingRectangle;
     private Point _rectangleDragStart;
     private Point _lastMousePosition;
@@ -283,8 +286,8 @@ public class MapCanvas : Control
             if (ActiveTool is ToolType.CircleBrush or ToolType.SquareBrush or ToolType.DiamondBrush)
             {
                 _isPainting = true;
-                _lastPaintPosition = point.Position;
-                RaiseBrushStroke(point.Position);
+                InitBrushMapPos(point.Position);
+                RaiseBrushStroke(point.Position, point.Position);
             }
             else if (ActiveTool == ToolType.Rectangle)
             {
@@ -314,8 +317,7 @@ public class MapCanvas : Control
 
         if (_isPainting && IsDmMode)
         {
-            InterpolateBrushStrokes(_lastPaintPosition, point.Position);
-            _lastPaintPosition = point.Position;
+            RaiseBrushStroke(_lastMousePosition, point.Position);
             e.Handled = true;
         }
 
@@ -356,28 +358,35 @@ public class MapCanvas : Control
         e.Handled = true;
     }
 
-    private void InterpolateBrushStrokes(Point from, Point to)
-    {
-        var dx = to.X - from.X;
-        var dy = to.Y - from.Y;
-        var distance = Math.Sqrt((dx * dx) + (dy * dy));
-        var stepSize = Math.Max(1.0, BrushDiameter * ZoomLevel * 0.1);
-        var steps = (int)Math.Ceiling(distance / stepSize);
-
-        for (var i = 1; i <= steps; i++)
-        {
-            var t = (double)i / steps;
-            RaiseBrushStroke(new Point(from.X + (dx * t), from.Y + (dy * t)));
-        }
-    }
-
-    private void RaiseBrushStroke(Point screenPos)
+    private void InitBrushMapPos(Point screenPos)
     {
         var zoom = ZoomLevel;
-        var mapX = (int)((screenPos.X - OffsetX) / zoom);
-        var mapY = (int)((screenPos.Y - OffsetY) / zoom);
+        if (zoom <= 0)
+            return;
 
-        BrushStrokeApplied?.Invoke(this, new BrushStrokeEventArgs { MapX = mapX, MapY = mapY });
+        _lastBrushMapX = (int)((screenPos.X - OffsetX) / zoom);
+        _lastBrushMapY = (int)((screenPos.Y - OffsetY) / zoom);
+    }
+
+    private void RaiseBrushStroke(Point screenFrom, Point screenTo)
+    {
+        var zoom = ZoomLevel;
+        if (zoom <= 0)
+            return;
+
+        var mapX2 = (int)((screenTo.X - OffsetX) / zoom);
+        var mapY2 = (int)((screenTo.Y - OffsetY) / zoom);
+
+        BrushStrokeApplied?.Invoke(this, new BrushStrokeEventArgs
+        {
+            MapX1 = _lastBrushMapX,
+            MapY1 = _lastBrushMapY,
+            MapX2 = mapX2,
+            MapY2 = mapY2,
+        });
+
+        _lastBrushMapX = mapX2;
+        _lastBrushMapY = mapY2;
     }
 
     private void FireRectangleStroke(Point screenStart, Point screenEnd)
