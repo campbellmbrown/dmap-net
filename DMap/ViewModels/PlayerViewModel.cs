@@ -17,9 +17,8 @@ namespace DMap.ViewModels;
 public class PlayerViewModel : ViewModelBase, IDisposable
 {
     private readonly IFogMaskService _fogService;
-
-    private IDiscoveryService? _discoveryService;
-    private IPlayerClientService? _clientService;
+    private readonly IDiscoveryService _discoveryService;
+    private readonly IPlayerClientService _clientService;
 
     public ObservableCollection<DiscoveredDm> DiscoveredDms { get; } = new();
 
@@ -91,14 +90,18 @@ public class PlayerViewModel : ViewModelBase, IDisposable
 
     public event EventHandler<PixelRect>? FogUpdated;
 
-    public PlayerViewModel()
-        : this(new FogMaskService())
-    {
-    }
-
-    public PlayerViewModel(IFogMaskService fogService)
+    public PlayerViewModel(IFogMaskService fogService, IDiscoveryService discoveryService, IPlayerClientService clientService)
     {
         _fogService = fogService;
+        _discoveryService = discoveryService;
+        _clientService = clientService;
+
+        _discoveryService.DmDiscovered += OnDmDiscovered;
+        _clientService.SessionInfoReceived += OnSessionInfoReceived;
+        _clientService.MapImageReceived += OnMapImageReceived;
+        _clientService.FogDeltaReceived += OnFogDeltaReceived;
+        _clientService.FogFullReceived += OnFogFullReceived;
+        _clientService.Disconnected += OnDisconnected;
 
         var canConnect = this.WhenAnyValue(
             x => x.SelectedDm, x => x.IsConnected, x => x.IsConnecting,
@@ -110,25 +113,8 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         DisconnectCommand = ReactiveCommand.CreateFromTask(DisconnectAsync, canDisconnect);
     }
 
-    public void InitializeNetworking(IDiscoveryService discoveryService, IPlayerClientService clientService)
-    {
-        _discoveryService = discoveryService;
-        _clientService = clientService;
-
-        _discoveryService.DmDiscovered += OnDmDiscovered;
-
-        _clientService.SessionInfoReceived += OnSessionInfoReceived;
-        _clientService.MapImageReceived += OnMapImageReceived;
-        _clientService.FogDeltaReceived += OnFogDeltaReceived;
-        _clientService.FogFullReceived += OnFogFullReceived;
-        _clientService.Disconnected += OnDisconnected;
-    }
-
     public async System.Threading.Tasks.Task StartDiscoveryAsync()
     {
-        if (_discoveryService is null)
-            return;
-
         await _discoveryService.StartListeningAsync(default);
     }
 
@@ -148,7 +134,7 @@ public class PlayerViewModel : ViewModelBase, IDisposable
 
     private async System.Threading.Tasks.Task ConnectAsync()
     {
-        if (_clientService is null || SelectedDm is null)
+        if (SelectedDm is null)
             return;
 
         IsConnecting = true;
@@ -172,9 +158,6 @@ public class PlayerViewModel : ViewModelBase, IDisposable
 
     private async System.Threading.Tasks.Task DisconnectAsync()
     {
-        if (_clientService is null)
-            return;
-
         await _clientService.DisconnectAsync();
         IsConnected = false;
         MapImage = null;
