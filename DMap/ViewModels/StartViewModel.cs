@@ -1,7 +1,5 @@
+using System;
 using System.Reactive;
-
-using DMap.Services.Fog;
-using DMap.Services.Networking;
 
 using ReactiveUI;
 
@@ -9,40 +7,31 @@ namespace DMap.ViewModels;
 
 public class StartViewModel : ViewModelBase
 {
-    private readonly MainWindowViewModel _host;
+    private readonly INavigator _navigator;
+    private readonly Func<DmViewModel> _createDm;
+    private readonly Func<PlayerViewModel> _createPlayer;
 
     public ReactiveCommand<Unit, Unit> StartAsDmCommand { get; }
     public ReactiveCommand<Unit, Unit> StartAsPlayerCommand { get; }
 
-    public StartViewModel(MainWindowViewModel host)
+    public StartViewModel(INavigator navigator, Func<DmViewModel> createDm, Func<PlayerViewModel> createPlayer)
     {
-        _host = host;
+        _navigator = navigator;
+        _createDm = createDm;
+        _createPlayer = createPlayer;
         StartAsDmCommand = ReactiveCommand.Create(StartAsDm);
         StartAsPlayerCommand = ReactiveCommand.Create(StartAsPlayer);
     }
 
     private void StartAsDm()
     {
-        var fogService = new FogMaskService();
-        var hostService = new DmHostService();
-        var discoveryService = new DiscoveryService();
-
-        var vm = new DmViewModel(fogService);
-        vm.InitializeNetworking(hostService, discoveryService);
-
-        _host.NavigateTo(vm);
+        _navigator.NavigateTo(_createDm());
     }
 
     private void StartAsPlayer()
     {
-        var fogService = new FogMaskService();
-        var discoveryService = new DiscoveryService();
-        var clientService = new PlayerClientService();
-
-        var vm = new PlayerViewModel(fogService);
-        vm.InitializeNetworking(discoveryService, clientService);
+        var vm = _createPlayer();
         _ = vm.StartDiscoveryAsync();
-
-        _host.NavigateTo(vm);
+        _navigator.NavigateTo(vm);
     }
 }

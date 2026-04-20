@@ -24,5 +24,6 @@
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="ReactiveUI.Avalonia" Version="11.4.12" />
+    <PackageReference Include="Autofac" Version="8.1.0" />
   </ItemGroup>
 </Project>
