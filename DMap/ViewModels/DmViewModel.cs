@@ -209,7 +209,7 @@ public class DmViewModel : ViewModelBase, IDisposable
 
         var (cx1, cy1, cx2, cy2) = ConstrainToSquare(SelectedShapeType, x1, y1, x2, y2);
 
-        var dirtyRect = (SelectedShapeType == ShapeType.Ellipse || SelectedShapeType == ShapeType.Circle)
+        var dirtyRect = (SelectedShapeType is ShapeType.Ellipse or ShapeType.Circle)
             ? _fogService.ApplyEllipse(cx1, cy1, cx2, cy2, (float)ShapeSoftness)
             : _fogService.ApplyRectangle(cx1, cy1, cx2, cy2, (float)ShapeSoftness);
 
@@ -220,7 +220,7 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     private static (int, int, int, int) ConstrainToSquare(ShapeType shapeType, int x1, int y1, int x2, int y2)
     {
-        if (shapeType != ShapeType.Square && shapeType != ShapeType.Circle)
+        if (shapeType is not ShapeType.Square and not ShapeType.Circle)
             return (x1, y1, x2, y2);
 
         var side = Math.Min(Math.Abs(x2 - x1), Math.Abs(y2 - y1));

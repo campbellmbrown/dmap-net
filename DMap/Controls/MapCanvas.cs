@@ -286,7 +286,7 @@ public class MapCanvas : Control
                 var end = _lastMousePosition;
                 var shapeType = ShapeType;
 
-                if (shapeType == ShapeType.Square || shapeType == ShapeType.Circle)
+                if (shapeType is ShapeType.Square or ShapeType.Circle)
                 {
                     var side = Math.Min(Math.Abs(end.X - start.X), Math.Abs(end.Y - start.Y));
                     end = new Point(
@@ -294,7 +294,7 @@ public class MapCanvas : Control
                         start.Y + Math.Sign(end.Y - start.Y) * side);
                 }
 
-                if (shapeType == ShapeType.Ellipse || shapeType == ShapeType.Circle)
+                if (shapeType is ShapeType.Ellipse or ShapeType.Circle)
                 {
                     var cx = (start.X + end.X) / 2;
                     var cy = (start.Y + end.Y) / 2;
