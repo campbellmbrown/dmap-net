@@ -13,8 +13,18 @@ namespace DMap.Controls;
 
 public class BrushStrokeEventArgs : EventArgs
 {
-    public int MapX { get; init; }
-    public int MapY { get; init; }
+    public int MapX1 { get; init; }
+    public int MapY1 { get; init; }
+    public int MapX2 { get; init; }
+    public int MapY2 { get; init; }
+}
+
+public class ShapeStrokeEventArgs : EventArgs
+{
+    public int MapX1 { get; init; }
+    public int MapY1 { get; init; }
+    public int MapX2 { get; init; }
+    public int MapY2 { get; init; }
 }
 
 public class MapCanvas : Control
@@ -42,6 +52,15 @@ public class MapCanvas : Control
 
     public static readonly StyledProperty<int> BrushDiameterProperty =
         AvaloniaProperty.Register<MapCanvas, int>(nameof(BrushDiameter), 50);
+
+    public static readonly StyledProperty<ToolType> ActiveToolProperty =
+        AvaloniaProperty.Register<MapCanvas, ToolType>(nameof(ActiveTool), ToolType.Brush);
+
+    public static readonly StyledProperty<BrushShape> BrushShapeProperty =
+        AvaloniaProperty.Register<MapCanvas, BrushShape>(nameof(BrushShape), BrushShape.Circle);
+
+    public static readonly StyledProperty<ShapeType> ShapeTypeProperty =
+        AvaloniaProperty.Register<MapCanvas, ShapeType>(nameof(ShapeType), ShapeType.Rectangle);
 
     public Bitmap? MapImage
     {
@@ -91,12 +110,35 @@ public class MapCanvas : Control
         set => SetValue(BrushDiameterProperty, value);
     }
 
+    public ToolType ActiveTool
+    {
+        get => GetValue(ActiveToolProperty);
+        set => SetValue(ActiveToolProperty, value);
+    }
+
+    public BrushShape BrushShape
+    {
+        get => GetValue(BrushShapeProperty);
+        set => SetValue(BrushShapeProperty, value);
+    }
+
+    public ShapeType ShapeType
+    {
+        get => GetValue(ShapeTypeProperty);
+        set => SetValue(ShapeTypeProperty, value);
+    }
+
     public event EventHandler<BrushStrokeEventArgs>? BrushStrokeApplied;
+    public event EventHandler<ShapeStrokeEventArgs>? ShapeStrokeApplied;
 
     private WriteableBitmap? _fogBitmap;
     private bool _isPanning;
     private Point _lastPanPoint;
     private bool _isPainting;
+    private int _lastBrushMapX;
+    private int _lastBrushMapY;
+    private bool _isDraggingRectangle;
+    private Point _rectangleDragStart;
     private Point _lastMousePosition;
 
     static MapCanvas()
@@ -104,7 +146,8 @@ public class MapCanvas : Control
         AffectsRender<MapCanvas>(
             MapImageProperty, FogMaskProperty, ZoomLevelProperty,
             OffsetXProperty, OffsetYProperty, FogOpacityProperty,
-            BrushDiameterProperty);
+            BrushDiameterProperty, ActiveToolProperty, BrushShapeProperty,
+            ShapeTypeProperty);
     }
 
     public MapCanvas()
@@ -203,14 +246,69 @@ public class MapCanvas : Control
             }
         }
 
-        // Draw brush cursor in DM mode
         if (IsDmMode && IsPointerOver)
         {
-            var brushRadius = BrushDiameter * zoom / 2.0;
-            var cursorCenter = _lastMousePosition;
-
             var pen = new Pen(Brushes.White, 1.5);
-            context.DrawEllipse(null, pen, cursorCenter, brushRadius, brushRadius);
+
+            if (ActiveTool == ToolType.Brush)
+            {
+                var r = BrushDiameter * zoom / 2.0;
+                var c = _lastMousePosition;
+
+                switch (BrushShape)
+                {
+                    case BrushShape.Square:
+                        context.DrawRectangle(null, pen, new Rect(c.X - r, c.Y - r, r * 2, r * 2));
+                        break;
+
+                    case BrushShape.Diamond:
+                        var geo = new StreamGeometry();
+                        using (var ctx = geo.Open())
+                        {
+                            ctx.BeginFigure(new Point(c.X, c.Y - r), true);
+                            ctx.LineTo(new Point(c.X + r, c.Y));
+                            ctx.LineTo(new Point(c.X, c.Y + r));
+                            ctx.LineTo(new Point(c.X - r, c.Y));
+                            ctx.EndFigure(true);
+                        }
+
+                        context.DrawGeometry(null, pen, geo);
+                        break;
+
+                    default:
+                        context.DrawEllipse(null, pen, c, r, r);
+                        break;
+                }
+            }
+            else if (ActiveTool == ToolType.Shape && _isDraggingRectangle)
+            {
+                var start = _rectangleDragStart;
+                var end = _lastMousePosition;
+                var shapeType = ShapeType;
+
+                if (shapeType is ShapeType.Square or ShapeType.Circle)
+                {
+                    var side = Math.Min(Math.Abs(end.X - start.X), Math.Abs(end.Y - start.Y));
+                    end = new Point(
+                        start.X + Math.Sign(end.X - start.X) * side,
+                        start.Y + Math.Sign(end.Y - start.Y) * side);
+                }
+
+                if (shapeType is ShapeType.Ellipse or ShapeType.Circle)
+                {
+                    var cx = (start.X + end.X) / 2;
+                    var cy = (start.Y + end.Y) / 2;
+                    var rx = Math.Abs(end.X - start.X) / 2;
+                    var ry = Math.Abs(end.Y - start.Y) / 2;
+                    context.DrawEllipse(new SolidColorBrush(Color.FromArgb(50, 255, 255, 255)), pen, new Point(cx, cy), rx, ry);
+                }
+                else
+                {
+                    var rect = MakeRect(start, end);
+                    context.FillRectangle(new SolidColorBrush(Color.FromArgb(50, 255, 255, 255)), rect);
+                    context.DrawRectangle(null, pen, rect);
+                }
+            }
         }
     }
 
@@ -229,8 +327,18 @@ public class MapCanvas : Control
 
         if (point.Properties.IsLeftButtonPressed && IsDmMode)
         {
-            _isPainting = true;
-            RaiseBrushStroke(point.Position);
+            if (ActiveTool == ToolType.Brush)
+            {
+                _isPainting = true;
+                InitBrushMapPos(point.Position);
+                RaiseBrushStroke(point.Position);
+            }
+            else if (ActiveTool == ToolType.Shape)
+            {
+                _isDraggingRectangle = true;
+                _rectangleDragStart = point.Position;
+            }
+
             e.Handled = true;
         }
     }
@@ -257,7 +365,6 @@ public class MapCanvas : Control
             e.Handled = true;
         }
 
-        // Invalidate to update brush cursor position
         if (IsDmMode)
             InvalidateVisual();
     }
@@ -265,6 +372,15 @@ public class MapCanvas : Control
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
         base.OnPointerReleased(e);
+
+        if (_isDraggingRectangle)
+        {
+            var point = e.GetCurrentPoint(this);
+            FireShapeStroke(_rectangleDragStart, point.Position);
+            _isDraggingRectangle = false;
+            InvalidateVisual();
+        }
+
         _isPanning = false;
         _isPainting = false;
     }
@@ -281,8 +397,8 @@ public class MapCanvas : Control
         // Zoom centered on mouse position
         if (oldZoom > 0)
         {
-            OffsetX = mousePos.X - (mousePos.X - OffsetX) * (newZoom / oldZoom);
-            OffsetY = mousePos.Y - (mousePos.Y - OffsetY) * (newZoom / oldZoom);
+            OffsetX = mousePos.X - ((mousePos.X - OffsetX) * (newZoom / oldZoom));
+            OffsetY = mousePos.Y - ((mousePos.Y - OffsetY) * (newZoom / oldZoom));
         }
 
         ZoomLevel = newZoom;
@@ -290,7 +406,7 @@ public class MapCanvas : Control
         e.Handled = true;
     }
 
-    private void RaiseBrushStroke(Point screenPos)
+    private void InitBrushMapPos(Point screenPos)
     {
         var zoom = ZoomLevel;
         if (zoom <= 0)
@@ -302,10 +418,54 @@ public class MapCanvas : Control
         if (!double.IsFinite(rawX) || !double.IsFinite(rawY))
             return;
 
+        _lastBrushMapX = (int)rawX;
+        _lastBrushMapY = (int)rawY;
+    }
+
+    private void RaiseBrushStroke(Point screenTo)
+    {
+        var zoom = ZoomLevel;
+        if (zoom <= 0)
+            return;
+
+        var rawX = (screenTo.X - OffsetX) / zoom;
+        var rawY = (screenTo.Y - OffsetY) / zoom;
+
+        if (!double.IsFinite(rawX) || !double.IsFinite(rawY))
+            return;
+
+        var mapX2 = (int)rawX;
+        var mapY2 = (int)rawY;
+
         BrushStrokeApplied?.Invoke(this, new BrushStrokeEventArgs
         {
-            MapX = (int)rawX,
-            MapY = (int)rawY,
+            MapX1 = _lastBrushMapX,
+            MapY1 = _lastBrushMapY,
+            MapX2 = mapX2,
+            MapY2 = mapY2,
+        });
+
+        _lastBrushMapX = mapX2;
+        _lastBrushMapY = mapY2;
+    }
+
+    private void FireShapeStroke(Point screenStart, Point screenEnd)
+    {
+        var zoom = ZoomLevel;
+        var mapX1 = (int)((screenStart.X - OffsetX) / zoom);
+        var mapY1 = (int)((screenStart.Y - OffsetY) / zoom);
+        var mapX2 = (int)((screenEnd.X - OffsetX) / zoom);
+        var mapY2 = (int)((screenEnd.Y - OffsetY) / zoom);
+
+        ShapeStrokeApplied?.Invoke(this, new ShapeStrokeEventArgs
+        {
+            MapX1 = mapX1,
+            MapY1 = mapY1,
+            MapX2 = mapX2,
+            MapY2 = mapY2,
         });
     }
+
+    private static Rect MakeRect(Point a, Point b) =>
+        new(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y), Math.Abs(b.X - a.X), Math.Abs(b.Y - a.Y));
 }

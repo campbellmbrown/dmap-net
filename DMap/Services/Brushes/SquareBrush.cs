@@ -6,9 +6,9 @@ using DMap.Models;
 
 namespace DMap.Services.Brushes;
 
-public sealed class CircleBrush : IBrush
+public sealed class SquareBrush : IBrush
 {
-    public string Name => "Circle";
+    public string Name => "Square";
 
     public PixelRect Apply(FogMask mask, int x1, int y1, int x2, int y2, BrushSettings settings)
     {
@@ -25,26 +25,12 @@ public sealed class CircleBrush : IBrush
 
         var dx = (double)(x2 - x1);
         var dy = (double)(y2 - y1);
-        var lenSq = dx * dx + dy * dy;
 
         for (var py = minY; py <= maxY; py++)
         {
             for (var px = minX; px <= maxX; px++)
             {
-                double dist;
-                if (lenSq < 1e-10)
-                {
-                    var ex = px - x1;
-                    var ey = py - y1;
-                    dist = Math.Sqrt((ex * ex) + (ey * ey));
-                }
-                else
-                {
-                    var t = Math.Clamp(((px - x1) * dx + (py - y1) * dy) / lenSq, 0.0, 1.0);
-                    var cx = x1 + (t * dx) - px;
-                    var cy = y1 + (t * dy) - py;
-                    dist = Math.Sqrt((cx * cx) + (cy * cy));
-                }
+                var dist = ChebyshevDistToSegment(px, py, x1, y1, dx, dy);
 
                 if (dist > radius)
                     continue;
@@ -67,5 +53,35 @@ public sealed class CircleBrush : IBrush
         }
 
         return new PixelRect(minX, minY, maxX - minX + 1, maxY - minY + 1);
+    }
+
+    // Minimises max(|rx - t*dx|, |ry - t*dy|) over t ∈ [0,1].
+    // Critical points: endpoints, where the two terms are equal, and kinks of each term.
+    private static double ChebyshevDistToSegment(int px, int py, int ax, int ay, double dx, double dy)
+    {
+        var rx = px - ax;
+        var ry = py - ay;
+
+        if (Math.Abs(dx) < 1e-10 && Math.Abs(dy) < 1e-10)
+            return Math.Max(Math.Abs(rx), Math.Abs(ry));
+
+        var best = double.MaxValue;
+
+        void Try(double t)
+        {
+            t = Math.Clamp(t, 0, 1);
+            var d = Math.Max(Math.Abs(rx - (t * dx)), Math.Abs(ry - (t * dy)));
+            if (d < best) best = d;
+        }
+
+        Try(0);
+        Try(1);
+
+        if (Math.Abs(dx - dy) > 1e-10) Try((rx - ry) / (dx - dy));
+        if (Math.Abs(dx + dy) > 1e-10) Try((rx + ry) / (dx + dy));
+        if (Math.Abs(dx) > 1e-10) Try(rx / dx);
+        if (Math.Abs(dy) > 1e-10) Try(ry / dy);
+
+        return best;
     }
 }
