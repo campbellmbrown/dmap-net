@@ -59,11 +59,11 @@ public class DmViewModel : ViewModelBase, IDisposable
         set => this.RaiseAndSetIfChanged(ref _brushSoftness, value);
     }
 
-    private double _rectangleSoftness = 0.0;
-    public double RectangleSoftness
+    private double _shapeSoftness = 0.0;
+    public double ShapeSoftness
     {
-        get => _rectangleSoftness;
-        set => this.RaiseAndSetIfChanged(ref _rectangleSoftness, value);
+        get => _shapeSoftness;
+        set => this.RaiseAndSetIfChanged(ref _shapeSoftness, value);
     }
 
     private double _offsetX;
@@ -109,12 +109,12 @@ public class DmViewModel : ViewModelBase, IDisposable
         {
             this.RaiseAndSetIfChanged(ref _selectedTool, value);
             this.RaisePropertyChanged(nameof(IsBrushSelected));
-            this.RaisePropertyChanged(nameof(IsRectangleSelected));
+            this.RaisePropertyChanged(nameof(IsShapeSelected));
         }
     }
 
     public bool IsBrushSelected => _selectedTool == ToolType.Brush;
-    public bool IsRectangleSelected => _selectedTool == ToolType.Rectangle;
+    public bool IsShapeSelected => _selectedTool == ToolType.Shape;
 
     private BrushShape _selectedBrushShape;
     public BrushShape SelectedBrushShape
@@ -125,12 +125,21 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     public IReadOnlyList<BrushShape> BrushShapes { get; } = Enum.GetValues<BrushShape>();
 
+    private ShapeType _selectedShapeType;
+    public ShapeType SelectedShapeType
+    {
+        get => _selectedShapeType;
+        set => this.RaiseAndSetIfChanged(ref _selectedShapeType, value);
+    }
+
+    public IReadOnlyList<ShapeType> ShapeTypes { get; } = Enum.GetValues<ShapeType>();
+
     public ReactiveCommand<Unit, Unit> LoadMapCommand { get; }
     public ReactiveCommand<Unit, Unit> ZoomInCommand { get; }
     public ReactiveCommand<Unit, Unit> ZoomOutCommand { get; }
     public ReactiveCommand<Unit, Unit> ResetViewCommand { get; }
     public ReactiveCommand<Unit, Unit> SelectBrushCommand { get; }
-    public ReactiveCommand<Unit, Unit> SelectRectangleCommand { get; }
+    public ReactiveCommand<Unit, Unit> SelectShapeCommand { get; }
 
     // Interaction to request a file path from the view
     public Interaction<Unit, string?> ShowOpenFileDialog { get; } = new();
@@ -160,7 +169,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         ZoomOutCommand = ReactiveCommand.Create(() => { ZoomLevel = Math.Max(ZoomLevel / 1.2, 0.1); });
         ResetViewCommand = ReactiveCommand.Create(() => { ZoomLevel = 1.0; OffsetX = 0; OffsetY = 0; });
         SelectBrushCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Brush; });
-        SelectRectangleCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Rectangle; });
+        SelectShapeCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Shape; });
     }
 
     public void InitializeNetworking(IDmHostService hostService, IDiscoveryService discoveryService)
@@ -193,15 +202,29 @@ public class DmViewModel : ViewModelBase, IDisposable
         await StartHostingAsync();
     }
 
-    public void OnRectangleStroke(int x1, int y1, int x2, int y2)
+    public void OnShapeStroke(int x1, int y1, int x2, int y2)
     {
         if (_fogService.Mask is null)
             return;
 
-        var dirtyRect = _fogService.ApplyRectangle(x1, y1, x2, y2, (float)RectangleSoftness);
+        var (cx1, cy1, cx2, cy2) = ConstrainToSquare(SelectedShapeType, x1, y1, x2, y2);
+
+        var dirtyRect = (SelectedShapeType == ShapeType.Ellipse || SelectedShapeType == ShapeType.Circle)
+            ? _fogService.ApplyEllipse(cx1, cy1, cx2, cy2, (float)ShapeSoftness)
+            : _fogService.ApplyRectangle(cx1, cy1, cx2, cy2, (float)ShapeSoftness);
+
         LastDirtyRect = dirtyRect;
         FogUpdated?.Invoke(this, dirtyRect);
         SendFogDelta(dirtyRect);
+    }
+
+    private static (int, int, int, int) ConstrainToSquare(ShapeType shapeType, int x1, int y1, int x2, int y2)
+    {
+        if (shapeType != ShapeType.Square && shapeType != ShapeType.Circle)
+            return (x1, y1, x2, y2);
+
+        var side = Math.Min(Math.Abs(x2 - x1), Math.Abs(y2 - y1));
+        return (x1, y1, x1 + Math.Sign(x2 - x1) * side, y1 + Math.Sign(y2 - y1) * side);
     }
 
     public void OnBrushStroke(int x1, int y1, int x2, int y2)

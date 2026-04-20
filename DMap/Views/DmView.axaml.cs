@@ -29,9 +29,9 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
             ViewModel?.OnBrushStroke(e.MapX1, e.MapY1, e.MapX2, e.MapY2);
         };
 
-        canvas.RectangleStrokeApplied += (_, e) =>
+        canvas.ShapeStrokeApplied += (_, e) =>
         {
-            ViewModel?.OnRectangleStroke(e.MapX1, e.MapY1, e.MapX2, e.MapY2);
+            ViewModel?.OnShapeStroke(e.MapX1, e.MapY1, e.MapX2, e.MapY2);
         };
 
         this.WhenActivated(disposables =>
