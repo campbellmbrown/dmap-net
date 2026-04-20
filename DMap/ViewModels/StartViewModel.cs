@@ -1,6 +1,5 @@
 using System.Reactive;
 
-using DMap.Services.Brushes;
 using DMap.Services.Fog;
 using DMap.Services.Networking;
 
@@ -25,11 +24,10 @@ public class StartViewModel : ViewModelBase
     private void StartAsDm()
     {
         var fogService = new FogMaskService();
-        var brush = new CircleBrush();
         var hostService = new DmHostService();
         var discoveryService = new DiscoveryService();
 
-        var vm = new DmViewModel(fogService, brush);
+        var vm = new DmViewModel(fogService);
         vm.InitializeNetworking(hostService, discoveryService);
 
         _host.NavigateTo(vm);

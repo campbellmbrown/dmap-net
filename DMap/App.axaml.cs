@@ -4,7 +4,6 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 
-using DMap.Services.Brushes;
 using DMap.Services.Fog;
 using DMap.Services.Networking;
 using DMap.ViewModels;
@@ -37,10 +36,9 @@ public partial class App : Application
                 if (role == "dm")
                 {
                     var fogService = new FogMaskService();
-                    var brush = new CircleBrush();
                     var hostService = new DmHostService();
                     var discoveryService = new DiscoveryService();
-                    var vm = new DmViewModel(fogService, brush);
+                    var vm = new DmViewModel(fogService);
                     vm.InitializeNetworking(hostService, discoveryService);
                     mainVm.NavigateTo(vm);
                 }
