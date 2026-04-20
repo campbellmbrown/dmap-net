@@ -287,7 +287,7 @@ public class MapCanvas : Control
             {
                 _isPainting = true;
                 InitBrushMapPos(point.Position);
-                RaiseBrushStroke(point.Position, point.Position);
+                RaiseBrushStroke(point.Position);
             }
             else if (ActiveTool == ToolType.Rectangle)
             {
@@ -317,7 +317,7 @@ public class MapCanvas : Control
 
         if (_isPainting && IsDmMode)
         {
-            RaiseBrushStroke(_lastMousePosition, point.Position);
+            RaiseBrushStroke(point.Position);
             e.Handled = true;
         }
 
@@ -368,7 +368,7 @@ public class MapCanvas : Control
         _lastBrushMapY = (int)((screenPos.Y - OffsetY) / zoom);
     }
 
-    private void RaiseBrushStroke(Point screenFrom, Point screenTo)
+    private void RaiseBrushStroke(Point screenTo)
     {
         var zoom = ZoomLevel;
         if (zoom <= 0)
