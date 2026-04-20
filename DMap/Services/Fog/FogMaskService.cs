@@ -19,12 +19,98 @@ public sealed class FogMaskService : IFogMaskService
         Mask = new FogMask(width, height);
     }
 
-    public PixelRect ApplyBrush(IBrush brush, int centerX, int centerY, BrushSettings settings)
+    public PixelRect ApplyBrush(IBrush brush, int x1, int y1, int x2, int y2, BrushSettings settings)
     {
         if (Mask is null)
             throw new InvalidOperationException("Fog mask not initialized.");
 
-        var dirtyRect = brush.Apply(Mask, centerX, centerY, settings);
+        var dirtyRect = brush.Apply(Mask, x1, y1, x2, y2, settings);
+        MaskChanged?.Invoke(this, dirtyRect);
+        return dirtyRect;
+    }
+
+    public PixelRect ApplyRectangle(int x1, int y1, int x2, int y2, float softness)
+    {
+        if (Mask is null)
+            throw new InvalidOperationException("Fog mask not initialized.");
+
+        var minX = Math.Max(0, Math.Min(x1, x2));
+        var minY = Math.Max(0, Math.Min(y1, y2));
+        var maxX = Math.Min(Mask.Width - 1, Math.Max(x1, x2));
+        var maxY = Math.Min(Mask.Height - 1, Math.Max(y1, y2));
+
+        var feather = softness * Math.Min(maxX - minX, maxY - minY) / 2.0f;
+
+        for (var y = minY; y <= maxY; y++)
+        {
+            for (var x = minX; x <= maxX; x++)
+            {
+                byte alpha;
+                if (feather > 0)
+                {
+                    var minDist = Math.Min(
+                        Math.Min(x - minX, maxX - x),
+                        Math.Min(y - minY, maxY - y));
+                    var t = Math.Min(1.0f, minDist / feather);
+                    alpha = (byte)(255 * t);
+                }
+                else
+                {
+                    alpha = 255;
+                }
+
+                if (alpha > Mask[x, y])
+                    Mask[x, y] = alpha;
+            }
+        }
+
+        var dirtyRect = new PixelRect(minX, minY, maxX - minX + 1, maxY - minY + 1);
+        MaskChanged?.Invoke(this, dirtyRect);
+        return dirtyRect;
+    }
+
+    public PixelRect ApplyEllipse(int x1, int y1, int x2, int y2, float softness)
+    {
+        if (Mask is null)
+            throw new InvalidOperationException("Fog mask not initialized.");
+
+        var minX = Math.Max(0, Math.Min(x1, x2));
+        var minY = Math.Max(0, Math.Min(y1, y2));
+        var maxX = Math.Min(Mask.Width - 1, Math.Max(x1, x2));
+        var maxY = Math.Min(Mask.Height - 1, Math.Max(y1, y2));
+
+        var rx = (maxX - minX) / 2.0;
+        var ry = (maxY - minY) / 2.0;
+
+        if (rx < 0.5 || ry < 0.5)
+            return new PixelRect(0, 0, 0, 0);
+
+        var cx = minX + rx;
+        var cy = minY + ry;
+
+        for (var y = minY; y <= maxY; y++)
+        {
+            for (var x = minX; x <= maxX; x++)
+            {
+                var nx = (x - cx) / rx;
+                var ny = (y - cy) / ry;
+                var dist = Math.Sqrt(nx * nx + ny * ny);
+
+                if (dist > 1.0)
+                    continue;
+
+                byte alpha;
+                if (softness > 0 && dist > 1.0 - softness)
+                    alpha = (byte)(255 * (1.0 - dist) / softness);
+                else
+                    alpha = 255;
+
+                if (alpha > Mask[x, y])
+                    Mask[x, y] = alpha;
+            }
+        }
+
+        var dirtyRect = new PixelRect(minX, minY, maxX - minX + 1, maxY - minY + 1);
         MaskChanged?.Invoke(this, dirtyRect);
         return dirtyRect;
     }

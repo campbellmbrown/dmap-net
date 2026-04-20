@@ -6,7 +6,6 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 
-using DMap.Services.Brushes;
 using DMap.Services.Fog;
 using DMap.Services.Networking;
 using DMap.ViewModels;
@@ -68,7 +67,6 @@ public partial class App : Application
         var builder = new ContainerBuilder();
 
         builder.RegisterType<FogMaskService>().As<IFogMaskService>();
-        builder.RegisterType<CircleBrush>().As<IBrush>();
         builder.RegisterType<DmHostService>().As<IDmHostService>();
         builder.RegisterType<DiscoveryService>().As<IDiscoveryService>();
         builder.RegisterType<PlayerClientService>().As<IPlayerClientService>();

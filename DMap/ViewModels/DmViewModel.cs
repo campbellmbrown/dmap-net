@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reactive;
 using System.Reactive.Linq;
@@ -19,7 +20,9 @@ namespace DMap.ViewModels;
 public class DmViewModel : ViewModelBase, IDisposable
 {
     private readonly IFogMaskService _fogService;
-    private readonly IBrush _brush;
+    private readonly IBrush _circleBrush;
+    private readonly IBrush _squareBrush;
+    private readonly IBrush _diamondBrush;
     private readonly IDmHostService _hostService;
     private readonly IDiscoveryService _discoveryService;
 
@@ -58,6 +61,13 @@ public class DmViewModel : ViewModelBase, IDisposable
         set => this.RaiseAndSetIfChanged(ref _brushSoftness, value);
     }
 
+    private double _shapeSoftness = 0.0;
+    public double ShapeSoftness
+    {
+        get => _shapeSoftness;
+        set => this.RaiseAndSetIfChanged(ref _shapeSoftness, value);
+    }
+
     private double _offsetX;
     public double OffsetX
     {
@@ -93,10 +103,45 @@ public class DmViewModel : ViewModelBase, IDisposable
         private set => this.RaiseAndSetIfChanged(ref _lastDirtyRect, value);
     }
 
+    private ToolType _selectedTool;
+    public ToolType SelectedTool
+    {
+        get => _selectedTool;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _selectedTool, value);
+            this.RaisePropertyChanged(nameof(IsBrushSelected));
+            this.RaisePropertyChanged(nameof(IsShapeSelected));
+        }
+    }
+
+    public bool IsBrushSelected => _selectedTool == ToolType.Brush;
+    public bool IsShapeSelected => _selectedTool == ToolType.Shape;
+
+    private BrushShape _selectedBrushShape;
+    public BrushShape SelectedBrushShape
+    {
+        get => _selectedBrushShape;
+        set => this.RaiseAndSetIfChanged(ref _selectedBrushShape, value);
+    }
+
+    public IReadOnlyList<BrushShape> BrushShapes { get; } = Enum.GetValues<BrushShape>();
+
+    private ShapeType _selectedShapeType;
+    public ShapeType SelectedShapeType
+    {
+        get => _selectedShapeType;
+        set => this.RaiseAndSetIfChanged(ref _selectedShapeType, value);
+    }
+
+    public IReadOnlyList<ShapeType> ShapeTypes { get; } = Enum.GetValues<ShapeType>();
+
     public ReactiveCommand<Unit, Unit> LoadMapCommand { get; }
     public ReactiveCommand<Unit, Unit> ZoomInCommand { get; }
     public ReactiveCommand<Unit, Unit> ZoomOutCommand { get; }
     public ReactiveCommand<Unit, Unit> ResetViewCommand { get; }
+    public ReactiveCommand<Unit, Unit> SelectBrushCommand { get; }
+    public ReactiveCommand<Unit, Unit> SelectShapeCommand { get; }
 
     public Interaction<Unit, string?> ShowOpenFileDialog { get; } = new();
 
@@ -105,10 +150,12 @@ public class DmViewModel : ViewModelBase, IDisposable
     private byte[]? _mapImageBytes;
     private MapSession? _session;
 
-    public DmViewModel(IFogMaskService fogService, IBrush brush, IDmHostService hostService, IDiscoveryService discoveryService)
+    public DmViewModel(IFogMaskService fogService, IDmHostService hostService, IDiscoveryService discoveryService)
     {
         _fogService = fogService;
-        _brush = brush;
+        _circleBrush = new CircleBrush();
+        _squareBrush = new SquareBrush();
+        _diamondBrush = new DiamondBrush();
         _hostService = hostService;
         _discoveryService = discoveryService;
 
@@ -118,6 +165,8 @@ public class DmViewModel : ViewModelBase, IDisposable
         ZoomInCommand = ReactiveCommand.Create(() => { ZoomLevel = Math.Min(ZoomLevel * 1.2, 10.0); });
         ZoomOutCommand = ReactiveCommand.Create(() => { ZoomLevel = Math.Max(ZoomLevel / 1.2, 0.1); });
         ResetViewCommand = ReactiveCommand.Create(() => { ZoomLevel = 1.0; OffsetX = 0; OffsetY = 0; });
+        SelectBrushCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Brush; });
+        SelectShapeCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Shape; });
     }
 
     private async Task LoadMapAsync()
@@ -142,13 +191,44 @@ public class DmViewModel : ViewModelBase, IDisposable
         await StartHostingAsync();
     }
 
-    public void OnBrushStroke(int mapX, int mapY)
+    public void OnShapeStroke(int x1, int y1, int x2, int y2)
     {
         if (_fogService.Mask is null)
             return;
 
+        var (cx1, cy1, cx2, cy2) = ConstrainToSquare(SelectedShapeType, x1, y1, x2, y2);
+
+        var dirtyRect = (SelectedShapeType is ShapeType.Ellipse or ShapeType.Circle)
+            ? _fogService.ApplyEllipse(cx1, cy1, cx2, cy2, (float)ShapeSoftness)
+            : _fogService.ApplyRectangle(cx1, cy1, cx2, cy2, (float)ShapeSoftness);
+
+        LastDirtyRect = dirtyRect;
+        FogUpdated?.Invoke(this, dirtyRect);
+        SendFogDelta(dirtyRect);
+    }
+
+    private static (int, int, int, int) ConstrainToSquare(ShapeType shapeType, int x1, int y1, int x2, int y2)
+    {
+        if (shapeType is not ShapeType.Square and not ShapeType.Circle)
+            return (x1, y1, x2, y2);
+
+        var side = Math.Min(Math.Abs(x2 - x1), Math.Abs(y2 - y1));
+        return (x1, y1, x1 + Math.Sign(x2 - x1) * side, y1 + Math.Sign(y2 - y1) * side);
+    }
+
+    public void OnBrushStroke(int x1, int y1, int x2, int y2)
+    {
+        if (_fogService.Mask is null)
+            return;
+
+        var brush = SelectedBrushShape switch
+        {
+            BrushShape.Square => _squareBrush,
+            BrushShape.Diamond => _diamondBrush,
+            _ => _circleBrush,
+        };
         var settings = new BrushSettings(BrushDiameter, (float)BrushSoftness);
-        var dirtyRect = _fogService.ApplyBrush(_brush, mapX, mapY, settings);
+        var dirtyRect = _fogService.ApplyBrush(brush, x1, y1, x2, y2, settings);
 
         LastDirtyRect = dirtyRect;
         FogUpdated?.Invoke(this, dirtyRect);
