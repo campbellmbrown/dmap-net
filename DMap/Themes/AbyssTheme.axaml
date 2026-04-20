@@ -1,0 +1,13 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        Abyss: deep navy/dark theme.
+        FluentTheme is in Dark variant — these keys add app-specific colour overrides.
+    -->
+    <Color x:Key="ThemeAccentColor">#3D5A80</Color>
+    <SolidColorBrush x:Key="ThemeAccentBrush" Color="{StaticResource ThemeAccentColor}" />
+    <SolidColorBrush x:Key="ThemeAccentSubtleBrush" Color="#1E2D40" />
+    <SolidColorBrush x:Key="ThemeSurfaceBrush" Color="#0D0F1A" />
+
+</ResourceDictionary>

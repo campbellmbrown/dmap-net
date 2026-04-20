@@ -1,0 +1,13 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        Forest: dark green theme.
+        FluentTheme is already in Dark variant — these keys add app-specific colour overrides.
+    -->
+    <Color x:Key="ThemeAccentColor">#4A7C59</Color>
+    <SolidColorBrush x:Key="ThemeAccentBrush" Color="{StaticResource ThemeAccentColor}" />
+    <SolidColorBrush x:Key="ThemeAccentSubtleBrush" Color="#2E4D38" />
+    <SolidColorBrush x:Key="ThemeSurfaceBrush" Color="#1C2B1F" />
+
+</ResourceDictionary>

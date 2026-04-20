@@ -6,6 +6,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 
+using DMap.Services;
 using DMap.Services.Brushes;
 using DMap.Services.Fog;
 using DMap.Services.Networking;
@@ -26,6 +27,9 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var container = BuildContainer();
+
+            var themeService = container.Resolve<IThemeService>();
+            themeService.Apply(container.Resolve<ISettingsService>().Settings.Theme);
             var mainVm = container.Resolve<MainWindowViewModel>();
             var navigator = container.Resolve<INavigator>();
 
@@ -73,9 +77,13 @@ public partial class App : Application
         builder.RegisterType<DiscoveryService>().As<IDiscoveryService>();
         builder.RegisterType<PlayerClientService>().As<IPlayerClientService>();
 
+        builder.RegisterType<SettingsService>().As<ISettingsService>().SingleInstance();
+        builder.RegisterType<ThemeService>().As<IThemeService>().SingleInstance();
+
         builder.RegisterType<MainWindowViewModel>().AsSelf().SingleInstance();
         builder.RegisterType<NavigationService>().As<INavigator>().SingleInstance();
         builder.RegisterType<StartViewModel>().AsSelf();
+        builder.RegisterType<SettingsViewModel>().AsSelf();
         builder.RegisterType<DmViewModel>().AsSelf();
         builder.RegisterType<PlayerViewModel>().AsSelf();
 
