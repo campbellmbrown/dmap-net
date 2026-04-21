@@ -101,7 +101,17 @@ public class DmViewModel : ViewModelBase, IDisposable
     public double ZoomLevel
     {
         get => _zoomLevel;
-        set => this.RaiseAndSetIfChanged(ref _zoomLevel, value);
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _zoomLevel, value);
+            this.RaisePropertyChanged(nameof(ZoomPercent));
+        }
+    }
+
+    public decimal ZoomPercent
+    {
+        get => (decimal)Math.Round(_zoomLevel * 100);
+        set => ZoomLevel = Math.Clamp((double)value / 100.0, 0.1, 10.0);
     }
 
     private int _connectedPlayers;

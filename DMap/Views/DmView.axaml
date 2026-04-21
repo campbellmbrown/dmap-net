@@ -15,6 +15,14 @@
         <converters:ShapeTypeIconConverter x:Key="ShapeTypeIconConverter" />
     </UserControl.Resources>
 
+    <UserControl.Styles>
+        <Style Selector="Button.statusbar">
+            <Setter Property="Height" Value="18" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="4,0" />
+        </Style>
+    </UserControl.Styles>
+
     <DockPanel>
         <!-- Menu bar -->
         <Menu DockPanel.Dock="Top">
@@ -45,22 +53,15 @@
             </MenuItem>
         </Menu>
 
-        <!-- Top bar: fixed controls + tool-specific settings -->
+        <!-- Top bar: tool-specific settings -->
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8"
                     Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
                     Margin="0" Height="40">
-            <Button Content="+" Command="{Binding ZoomInCommand}" Margin="4,0,0,0" Width="32" VerticalAlignment="Center" />
-            <Button Content="-" Command="{Binding ZoomOutCommand}" Width="32" VerticalAlignment="Center" />
-            <Button Content="Reset" Command="{Binding ResetViewCommand}" VerticalAlignment="Center" />
-            <Separator Width="1" Margin="4,6" />
-            <TextBlock Text="{Binding ConnectedPlayers, StringFormat='Players: {0}'}"
-                       VerticalAlignment="Center" />
-            <Separator Width="1" Margin="4,6" />
 
             <!-- Brush settings -->
             <StackPanel Orientation="Horizontal" Spacing="8"
                         IsVisible="{Binding IsBrushSelected}"
-                        VerticalAlignment="Center">
+                        VerticalAlignment="Center" Margin="4,0,0,0">
                 <ComboBox ItemsSource="{Binding BrushShapes}"
                           SelectedItem="{Binding SelectedBrushShape}"
                           Width="120" VerticalAlignment="Center">
@@ -94,7 +95,7 @@
             <!-- Shape settings -->
             <StackPanel Orientation="Horizontal" Spacing="8"
                         IsVisible="{Binding IsShapeSelected}"
-                        VerticalAlignment="Center">
+                        VerticalAlignment="Center" Margin="4,0,0,0">
                 <ComboBox ItemsSource="{Binding ShapeTypes}"
                           SelectedItem="{Binding SelectedShapeType}"
                           Width="130" VerticalAlignment="Center">
@@ -121,6 +122,31 @@
                         Width="100" VerticalAlignment="Center" />
             </StackPanel>
         </StackPanel>
+
+        <!-- Status bar -->
+        <Border DockPanel.Dock="Bottom" Height="24"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+            <DockPanel Margin="8,0" LastChildFill="False">
+                <TextBlock DockPanel.Dock="Left"
+                           Text="{Binding ConnectedPlayers, StringFormat='Players: {0}'}"
+                           VerticalAlignment="Center" FontSize="11" />
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                    <Button Classes="statusbar" Width="18" Command="{Binding ZoomOutCommand}">
+                        <Image Source="{SvgImage /Assets/Icons/minus.svg}" Width="12" Height="12" />
+                    </Button>
+                    <NumericUpDown Value="{Binding ZoomPercent}"
+                                   Minimum="10" Maximum="1000" Increment="10"
+                                   FormatString="0'%'"
+                                   ShowButtonSpinner="False"
+                                   Width="64" Height="20" FontSize="11" />
+                    <Button Classes="statusbar" Width="18" Command="{Binding ZoomInCommand}">
+                        <Image Source="{SvgImage /Assets/Icons/plus.svg}" Width="12" Height="12" />
+                    </Button>
+                    <Separator Width="1" Margin="2,4" />
+                    <Button Classes="statusbar" Command="{Binding ResetViewCommand}">Reset</Button>
+                </StackPanel>
+            </DockPanel>
+        </Border>
 
         <!-- Side tool bar -->
         <Border DockPanel.Dock="Left" Width="52"
