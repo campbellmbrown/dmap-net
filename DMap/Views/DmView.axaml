@@ -91,8 +91,7 @@
                         <Image Source="{SvgImage /Assets/Icons/redo-2.svg}" />
                     </MenuItem.Icon>
                 </MenuItem>
-            </MenuItem>
-            <MenuItem Header="Map">
+                <Separator />
                 <MenuItem Header="Reveal All" Command="{Binding RevealAllCommand}">
                     <MenuItem.Icon>
                         <Image Source="{SvgImage /Assets/Icons/eye.svg}" />
