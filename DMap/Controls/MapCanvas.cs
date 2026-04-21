@@ -318,6 +318,42 @@ public class MapCanvas : Control
         }
     }
 
+    protected override void OnPointerEntered(PointerEventArgs e)
+    {
+        base.OnPointerEntered(e);
+        UpdateCursor();
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == ActiveToolProperty || change.Property == IsDmModeProperty)
+            UpdateCursor();
+    }
+
+    private void UpdateCursor()
+    {
+        if (!IsDmMode)
+        {
+            Cursor = Cursor.Default;
+            return;
+        }
+
+        if (_isPainting)
+        {
+            Cursor = new Cursor(StandardCursorType.None);
+            return;
+        }
+
+        if (_isPanning || ActiveTool == ToolType.Pan)
+        {
+            Cursor = new Cursor(StandardCursorType.SizeAll);
+            return;
+        }
+
+        Cursor = new Cursor(StandardCursorType.Cross);
+    }
+
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
@@ -327,6 +363,7 @@ public class MapCanvas : Control
         {
             _isPanning = true;
             _lastPanPoint = point.Position;
+            UpdateCursor();
             e.Handled = true;
             return;
         }
@@ -360,6 +397,7 @@ public class MapCanvas : Control
         {
             _isPainting = true;
             InitBrushMapPos(position);
+            UpdateCursor();
             BrushStrokeStarted?.Invoke(this, EventArgs.Empty);
             RaiseBrushStroke(position);
         }
@@ -413,6 +451,7 @@ public class MapCanvas : Control
 
         _isPanning = false;
         _isPainting = false;
+        UpdateCursor();
     }
 
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
