@@ -144,6 +144,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    public IReadOnlyList<ToolType> ToolTypes { get; } = Enum.GetValues<ToolType>();
     public IReadOnlyList<BrushShape> BrushShapes { get; } = Enum.GetValues<BrushShape>();
 
     public ShapeType SelectedShapeType

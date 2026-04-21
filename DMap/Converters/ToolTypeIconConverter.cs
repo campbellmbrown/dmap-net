@@ -9,17 +9,17 @@ using DMap.Models;
 
 namespace DMap.Converters;
 
-public class BrushShapeIconConverter : IValueConverter
+public class ToolTypeIconConverter : IValueConverter
 {
-    private static readonly Dictionary<BrushShape, IImage> _icons = new()
+    private static readonly Dictionary<ToolType, IImage> _icons = new()
     {
-        [BrushShape.Circle] = SvgIconLoader.Load("circle.svg"),
-        [BrushShape.Square] = SvgIconLoader.Load("square.svg"),
-        [BrushShape.Diamond] = SvgIconLoader.Load("diamond.svg"),
+        [ToolType.Brush] = SvgIconLoader.Load("brush.svg"),
+        [ToolType.Shape] = SvgIconLoader.Load("shapes.svg"),
+        [ToolType.Pan] = SvgIconLoader.Load("hand.svg"),
     };
 
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is BrushShape shape && _icons.TryGetValue(shape, out var icon) ? icon : null;
+        => value is ToolType tool && _icons.TryGetValue(tool, out var icon) ? icon : null;
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => throw new NotSupportedException();
