@@ -17,6 +17,7 @@ public class BrushStrokeEventArgs : EventArgs
     public int MapY1 { get; init; }
     public int MapX2 { get; init; }
     public int MapY2 { get; init; }
+    public bool IsErasing { get; init; }
 }
 
 public class ShapeStrokeEventArgs : EventArgs
@@ -25,6 +26,7 @@ public class ShapeStrokeEventArgs : EventArgs
     public int MapY1 { get; init; }
     public int MapX2 { get; init; }
     public int MapY2 { get; init; }
+    public bool IsErasing { get; init; }
 }
 
 public class MapCanvas : Control
@@ -128,6 +130,8 @@ public class MapCanvas : Control
         set => SetValue(ShapeTypeProperty, value);
     }
 
+    public event EventHandler? BrushStrokeStarted;
+    public event EventHandler? BrushStrokeEnded;
     public event EventHandler<BrushStrokeEventArgs>? BrushStrokeApplied;
     public event EventHandler<ShapeStrokeEventArgs>? ShapeStrokeApplied;
 
@@ -135,10 +139,11 @@ public class MapCanvas : Control
     private bool _isPanning;
     private Point _lastPanPoint;
     private bool _isPainting;
+    private bool _isErasing;
     private int _lastBrushMapX;
     private int _lastBrushMapY;
-    private bool _isDraggingRectangle;
-    private Point _rectangleDragStart;
+    private bool _isDraggingShape;
+    private Point _shapeDragStart;
     private Point _lastMousePosition;
 
     static MapCanvas()
@@ -247,67 +252,68 @@ public class MapCanvas : Control
         }
 
         if (IsDmMode && IsPointerOver)
+            RenderToolOverlay(context, zoom);
+    }
+
+    private void RenderToolOverlay(DrawingContext context, double zoom)
+    {
+        var pen = new Pen(Brushes.White, 1.5);
+        var c = _lastMousePosition;
+
+        if (ActiveTool == ToolType.Brush)
         {
-            var pen = new Pen(Brushes.White, 1.5);
-
-            if (ActiveTool == ToolType.Brush)
+            var r = BrushDiameter * zoom / 2.0;
+            switch (BrushShape)
             {
-                var r = BrushDiameter * zoom / 2.0;
-                var c = _lastMousePosition;
+                case BrushShape.Square:
+                    context.DrawRectangle(null, pen, new Rect(c.X - r, c.Y - r, r * 2, r * 2));
+                    break;
 
-                switch (BrushShape)
-                {
-                    case BrushShape.Square:
-                        context.DrawRectangle(null, pen, new Rect(c.X - r, c.Y - r, r * 2, r * 2));
-                        break;
+                case BrushShape.Diamond:
+                    var geo = new StreamGeometry();
+                    using (var ctx = geo.Open())
+                    {
+                        ctx.BeginFigure(new Point(c.X, c.Y - r), true);
+                        ctx.LineTo(new Point(c.X + r, c.Y));
+                        ctx.LineTo(new Point(c.X, c.Y + r));
+                        ctx.LineTo(new Point(c.X - r, c.Y));
+                        ctx.EndFigure(true);
+                    }
+                    context.DrawGeometry(null, pen, geo);
+                    break;
 
-                    case BrushShape.Diamond:
-                        var geo = new StreamGeometry();
-                        using (var ctx = geo.Open())
-                        {
-                            ctx.BeginFigure(new Point(c.X, c.Y - r), true);
-                            ctx.LineTo(new Point(c.X + r, c.Y));
-                            ctx.LineTo(new Point(c.X, c.Y + r));
-                            ctx.LineTo(new Point(c.X - r, c.Y));
-                            ctx.EndFigure(true);
-                        }
-
-                        context.DrawGeometry(null, pen, geo);
-                        break;
-
-                    default:
-                        context.DrawEllipse(null, pen, c, r, r);
-                        break;
-                }
+                default:
+                    context.DrawEllipse(null, pen, c, r, r);
+                    break;
             }
-            else if (ActiveTool == ToolType.Shape && _isDraggingRectangle)
+        }
+        else if (ActiveTool == ToolType.Shape && _isDraggingShape)
+        {
+            var start = _shapeDragStart;
+            var end = _lastMousePosition;
+            var shapeType = ShapeType;
+
+            if (shapeType is ShapeType.Square or ShapeType.Circle)
             {
-                var start = _rectangleDragStart;
-                var end = _lastMousePosition;
-                var shapeType = ShapeType;
+                var side = Math.Min(Math.Abs(end.X - start.X), Math.Abs(end.Y - start.Y));
+                end = new Point(
+                    start.X + Math.Sign(end.X - start.X) * side,
+                    start.Y + Math.Sign(end.Y - start.Y) * side);
+            }
 
-                if (shapeType is ShapeType.Square or ShapeType.Circle)
-                {
-                    var side = Math.Min(Math.Abs(end.X - start.X), Math.Abs(end.Y - start.Y));
-                    end = new Point(
-                        start.X + Math.Sign(end.X - start.X) * side,
-                        start.Y + Math.Sign(end.Y - start.Y) * side);
-                }
-
-                if (shapeType is ShapeType.Ellipse or ShapeType.Circle)
-                {
-                    var cx = (start.X + end.X) / 2;
-                    var cy = (start.Y + end.Y) / 2;
-                    var rx = Math.Abs(end.X - start.X) / 2;
-                    var ry = Math.Abs(end.Y - start.Y) / 2;
-                    context.DrawEllipse(new SolidColorBrush(Color.FromArgb(50, 255, 255, 255)), pen, new Point(cx, cy), rx, ry);
-                }
-                else
-                {
-                    var rect = MakeRect(start, end);
-                    context.FillRectangle(new SolidColorBrush(Color.FromArgb(50, 255, 255, 255)), rect);
-                    context.DrawRectangle(null, pen, rect);
-                }
+            if (shapeType is ShapeType.Ellipse or ShapeType.Circle)
+            {
+                var cx = (start.X + end.X) / 2;
+                var cy = (start.Y + end.Y) / 2;
+                var rx = Math.Abs(end.X - start.X) / 2;
+                var ry = Math.Abs(end.Y - start.Y) / 2;
+                context.DrawEllipse(new SolidColorBrush(Color.FromArgb(50, 255, 255, 255)), pen, new Point(cx, cy), rx, ry);
+            }
+            else
+            {
+                var rect = MakeRect(start, end);
+                context.FillRectangle(new SolidColorBrush(Color.FromArgb(50, 255, 255, 255)), rect);
+                context.DrawRectangle(null, pen, rect);
             }
         }
     }
@@ -317,7 +323,7 @@ public class MapCanvas : Control
         base.OnPointerPressed(e);
         var point = e.GetCurrentPoint(this);
 
-        if (point.Properties.IsRightButtonPressed)
+        if (point.Properties.IsMiddleButtonPressed)
         {
             _isPanning = true;
             _lastPanPoint = point.Position;
@@ -325,21 +331,42 @@ public class MapCanvas : Control
             return;
         }
 
-        if (point.Properties.IsLeftButtonPressed && IsDmMode)
+        if (point.Properties.IsLeftButtonPressed)
         {
-            if (ActiveTool == ToolType.Brush)
+            if (ActiveTool == ToolType.Pan)
             {
-                _isPainting = true;
-                InitBrushMapPos(point.Position);
-                RaiseBrushStroke(point.Position);
+                _isPanning = true;
+                _lastPanPoint = point.Position;
             }
-            else if (ActiveTool == ToolType.Shape)
+            else if (IsDmMode)
             {
-                _isDraggingRectangle = true;
-                _rectangleDragStart = point.Position;
+                StartPainting(point.Position, erase: false);
             }
-
             e.Handled = true;
+            return;
+        }
+
+        if (point.Properties.IsRightButtonPressed && IsDmMode && ActiveTool != ToolType.Pan)
+        {
+            StartPainting(point.Position, erase: true);
+            e.Handled = true;
+        }
+    }
+
+    private void StartPainting(Point position, bool erase)
+    {
+        _isErasing = erase;
+        if (ActiveTool == ToolType.Brush)
+        {
+            _isPainting = true;
+            InitBrushMapPos(position);
+            BrushStrokeStarted?.Invoke(this, EventArgs.Empty);
+            RaiseBrushStroke(position);
+        }
+        else if (ActiveTool == ToolType.Shape)
+        {
+            _isDraggingShape = true;
+            _shapeDragStart = position;
         }
     }
 
@@ -373,13 +400,16 @@ public class MapCanvas : Control
     {
         base.OnPointerReleased(e);
 
-        if (_isDraggingRectangle)
+        if (_isDraggingShape)
         {
             var point = e.GetCurrentPoint(this);
-            FireShapeStroke(_rectangleDragStart, point.Position);
-            _isDraggingRectangle = false;
+            FireShapeStroke(_shapeDragStart, point.Position);
+            _isDraggingShape = false;
             InvalidateVisual();
         }
+
+        if (_isPainting)
+            BrushStrokeEnded?.Invoke(this, EventArgs.Empty);
 
         _isPanning = false;
         _isPainting = false;
@@ -427,6 +457,7 @@ public class MapCanvas : Control
             MapY1 = _lastBrushMapY,
             MapX2 = mapX2,
             MapY2 = mapY2,
+            IsErasing = _isErasing,
         });
 
         _lastBrushMapX = mapX2;
@@ -447,6 +478,7 @@ public class MapCanvas : Control
             MapY1 = mapY1,
             MapX2 = mapX2,
             MapY2 = mapY2,
+            IsErasing = _isErasing,
         });
     }
 

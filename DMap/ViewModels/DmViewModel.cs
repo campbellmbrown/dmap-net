@@ -61,11 +61,25 @@ public class DmViewModel : ViewModelBase, IDisposable
         set => this.RaiseAndSetIfChanged(ref _brushSoftness, value);
     }
 
+    private double _brushOpacity = 1.0;
+    public double BrushOpacity
+    {
+        get => _brushOpacity;
+        set => this.RaiseAndSetIfChanged(ref _brushOpacity, value);
+    }
+
     private double _shapeSoftness = 0.0;
     public double ShapeSoftness
     {
         get => _shapeSoftness;
         set => this.RaiseAndSetIfChanged(ref _shapeSoftness, value);
+    }
+
+    private double _shapeOpacity = 1.0;
+    public double ShapeOpacity
+    {
+        get => _shapeOpacity;
+        set => this.RaiseAndSetIfChanged(ref _shapeOpacity, value);
     }
 
     private double _offsetX;
@@ -112,11 +126,13 @@ public class DmViewModel : ViewModelBase, IDisposable
             this.RaiseAndSetIfChanged(ref _selectedTool, value);
             this.RaisePropertyChanged(nameof(IsBrushSelected));
             this.RaisePropertyChanged(nameof(IsShapeSelected));
+            this.RaisePropertyChanged(nameof(IsPanSelected));
         }
     }
 
     public bool IsBrushSelected => _selectedTool == ToolType.Brush;
     public bool IsShapeSelected => _selectedTool == ToolType.Shape;
+    public bool IsPanSelected => _selectedTool == ToolType.Pan;
 
     private BrushShape _selectedBrushShape;
     public BrushShape SelectedBrushShape
@@ -142,6 +158,7 @@ public class DmViewModel : ViewModelBase, IDisposable
     public ReactiveCommand<Unit, Unit> ResetViewCommand { get; }
     public ReactiveCommand<Unit, Unit> SelectBrushCommand { get; }
     public ReactiveCommand<Unit, Unit> SelectShapeCommand { get; }
+    public ReactiveCommand<Unit, Unit> SelectPanCommand { get; }
 
     public Interaction<Unit, string?> ShowOpenFileDialog { get; } = new();
 
@@ -167,6 +184,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         ResetViewCommand = ReactiveCommand.Create(() => { ZoomLevel = 1.0; OffsetX = 0; OffsetY = 0; });
         SelectBrushCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Brush; });
         SelectShapeCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Shape; });
+        SelectPanCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Pan; });
     }
 
     private async Task LoadMapAsync()
@@ -191,7 +209,11 @@ public class DmViewModel : ViewModelBase, IDisposable
         await StartHostingAsync();
     }
 
-    public void OnShapeStroke(int x1, int y1, int x2, int y2)
+    public void BeginBrushStroke() => _fogService.BeginStroke();
+
+    public void EndBrushStroke() => _fogService.EndStroke();
+
+    public void OnShapeStroke(int x1, int y1, int x2, int y2, bool isErasing)
     {
         if (_fogService.Mask is null)
             return;
@@ -199,8 +221,8 @@ public class DmViewModel : ViewModelBase, IDisposable
         var (cx1, cy1, cx2, cy2) = ConstrainToSquare(SelectedShapeType, x1, y1, x2, y2);
 
         var dirtyRect = (SelectedShapeType is ShapeType.Ellipse or ShapeType.Circle)
-            ? _fogService.ApplyEllipse(cx1, cy1, cx2, cy2, (float)ShapeSoftness)
-            : _fogService.ApplyRectangle(cx1, cy1, cx2, cy2, (float)ShapeSoftness);
+            ? _fogService.ApplyEllipse(cx1, cy1, cx2, cy2, (float)ShapeSoftness, (float)ShapeOpacity, isErasing)
+            : _fogService.ApplyRectangle(cx1, cy1, cx2, cy2, (float)ShapeSoftness, (float)ShapeOpacity, isErasing);
 
         LastDirtyRect = dirtyRect;
         FogUpdated?.Invoke(this, dirtyRect);
@@ -216,7 +238,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         return (x1, y1, x1 + Math.Sign(x2 - x1) * side, y1 + Math.Sign(y2 - y1) * side);
     }
 
-    public void OnBrushStroke(int x1, int y1, int x2, int y2)
+    public void OnBrushStroke(int x1, int y1, int x2, int y2, bool isErasing)
     {
         if (_fogService.Mask is null)
             return;
@@ -227,7 +249,7 @@ public class DmViewModel : ViewModelBase, IDisposable
             BrushShape.Diamond => _diamondBrush,
             _ => _circleBrush,
         };
-        var settings = new BrushSettings(BrushDiameter, (float)BrushSoftness);
+        var settings = new BrushSettings(BrushDiameter, (float)BrushSoftness, (float)BrushOpacity, Erase: isErasing);
         var dirtyRect = _fogService.ApplyBrush(brush, x1, y1, x2, y2, settings);
 
         LastDirtyRect = dirtyRect;
@@ -265,7 +287,16 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     public void Dispose()
     {
-        (_hostService as IDisposable)?.Dispose();
-        (_discoveryService as IDisposable)?.Dispose();
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            (_hostService as IDisposable)?.Dispose();
+            (_discoveryService as IDisposable)?.Dispose();
+        }
     }
 }

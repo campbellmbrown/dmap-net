@@ -24,14 +24,17 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
 
         var canvas = this.FindControl<MapCanvas>("MapCanvas")!;
 
+        canvas.BrushStrokeStarted += (_, _) => ViewModel?.BeginBrushStroke();
+        canvas.BrushStrokeEnded += (_, _) => ViewModel?.EndBrushStroke();
+
         canvas.BrushStrokeApplied += (_, e) =>
         {
-            ViewModel?.OnBrushStroke(e.MapX1, e.MapY1, e.MapX2, e.MapY2);
+            ViewModel?.OnBrushStroke(e.MapX1, e.MapY1, e.MapX2, e.MapY2, e.IsErasing);
         };
 
         canvas.ShapeStrokeApplied += (_, e) =>
         {
-            ViewModel?.OnShapeStroke(e.MapX1, e.MapY1, e.MapX2, e.MapY2);
+            ViewModel?.OnShapeStroke(e.MapX1, e.MapY1, e.MapX2, e.MapY2, e.IsErasing);
         };
 
         this.WhenActivated(disposables =>

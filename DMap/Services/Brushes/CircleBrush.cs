@@ -10,7 +10,7 @@ public sealed class CircleBrush : IBrush
 {
     public string Name => "Circle";
 
-    public PixelRect Apply(FogMask mask, int x1, int y1, int x2, int y2, BrushSettings settings)
+    public PixelRect Apply(FogMask mask, int x1, int y1, int x2, int y2, BrushSettings settings, byte[]? snapshot = null)
     {
         var radius = settings.Diameter / 2.0;
         if (radius < 1)
@@ -31,41 +31,35 @@ public sealed class CircleBrush : IBrush
         {
             for (var px = minX; px <= maxX; px++)
             {
-                double dist;
-                if (lenSq < 1e-10)
-                {
-                    var ex = px - x1;
-                    var ey = py - y1;
-                    dist = Math.Sqrt((ex * ex) + (ey * ey));
-                }
-                else
-                {
-                    var t = Math.Clamp(((px - x1) * dx + (py - y1) * dy) / lenSq, 0.0, 1.0);
-                    var cx = x1 + (t * dx) - px;
-                    var cy = y1 + (t * dy) - py;
-                    dist = Math.Sqrt((cx * cx) + (cy * cy));
-                }
+                var dist = DistToSegment(px, py, x1, y1, dx, dy, lenSq);
 
                 if (dist > radius)
                     continue;
 
-                byte alpha;
-                if (dist <= innerRadius || innerRadius >= radius)
-                {
-                    alpha = 255;
-                }
-                else
-                {
-                    var tf = (dist - innerRadius) / (radius - innerRadius);
-                    alpha = (byte)(255 * (1.0 - tf));
-                }
+                var coverage = (dist <= innerRadius || innerRadius >= radius)
+                    ? 1.0
+                    : 1.0 - (dist - innerRadius) / (radius - innerRadius);
 
-                var current = mask[px, py];
-                if (alpha > current)
-                    mask[px, py] = alpha;
+                var snapshotValue = snapshot != null ? snapshot[py * mask.Width + px] : mask[px, py];
+                BrushHelper.ApplyPixel(mask, px, py, coverage, settings.Erase, snapshotValue, settings.Opacity);
             }
         }
 
         return new PixelRect(minX, minY, maxX - minX + 1, maxY - minY + 1);
+    }
+
+    private static double DistToSegment(int px, int py, int x1, int y1, double dx, double dy, double lenSq)
+    {
+        if (lenSq < 1e-10)
+        {
+            var ex = px - x1;
+            var ey = py - y1;
+            return Math.Sqrt((ex * ex) + (ey * ey));
+        }
+
+        var t = Math.Clamp(((px - x1) * dx + (py - y1) * dy) / lenSq, 0.0, 1.0);
+        var cx = x1 + (t * dx) - px;
+        var cy = y1 + (t * dy) - py;
+        return Math.Sqrt((cx * cx) + (cy * cy));
     }
 }

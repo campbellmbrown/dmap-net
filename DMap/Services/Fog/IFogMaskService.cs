@@ -16,11 +16,15 @@ public interface IFogMaskService
 
     void Initialize(int width, int height);
 
+    void BeginStroke();
+
+    void EndStroke();
+
     PixelRect ApplyBrush(IBrush brush, int x1, int y1, int x2, int y2, BrushSettings settings);
 
-    PixelRect ApplyRectangle(int x1, int y1, int x2, int y2, float softness);
+    PixelRect ApplyRectangle(int x1, int y1, int x2, int y2, float softness, float opacity, bool erase = false);
 
-    PixelRect ApplyEllipse(int x1, int y1, int x2, int y2, float softness);
+    PixelRect ApplyEllipse(int x1, int y1, int x2, int y2, float softness, float opacity, bool erase = false);
 
     void Replace(FogMask mask);
 

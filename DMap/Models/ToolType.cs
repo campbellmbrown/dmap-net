@@ -4,4 +4,5 @@ public enum ToolType
 {
     Brush,
     Shape,
+    Pan,
 }

@@ -10,7 +10,7 @@ public sealed class DiamondBrush : IBrush
 {
     public string Name => "Diamond";
 
-    public PixelRect Apply(FogMask mask, int x1, int y1, int x2, int y2, BrushSettings settings)
+    public PixelRect Apply(FogMask mask, int x1, int y1, int x2, int y2, BrushSettings settings, byte[]? snapshot = null)
     {
         var radius = settings.Diameter / 2.0;
         if (radius < 1)
@@ -35,20 +35,12 @@ public sealed class DiamondBrush : IBrush
                 if (dist > radius)
                     continue;
 
-                byte alpha;
-                if (dist <= innerRadius || innerRadius >= radius)
-                {
-                    alpha = 255;
-                }
-                else
-                {
-                    var tf = (dist - innerRadius) / (radius - innerRadius);
-                    alpha = (byte)(255 * (1.0 - tf));
-                }
+                var coverage = (dist <= innerRadius || innerRadius >= radius)
+                    ? 1.0
+                    : 1.0 - (dist - innerRadius) / (radius - innerRadius);
 
-                var current = mask[px, py];
-                if (alpha > current)
-                    mask[px, py] = alpha;
+                var snapshotValue = snapshot != null ? snapshot[py * mask.Width + px] : mask[px, py];
+                BrushHelper.ApplyPixel(mask, px, py, coverage, settings.Erase, snapshotValue, settings.Opacity);
             }
         }
 

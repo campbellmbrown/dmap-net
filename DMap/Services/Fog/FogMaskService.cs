@@ -10,29 +10,48 @@ namespace DMap.Services.Fog;
 
 public sealed class FogMaskService : IFogMaskService
 {
+    private const string MaskNotInitialized = "Fog mask not initialized.";
+
     public FogMask? Mask { get; private set; }
+
+    private byte[]? _snapshot;
 
     public event EventHandler<PixelRect>? MaskChanged;
 
     public void Initialize(int width, int height)
     {
         Mask = new FogMask(width, height);
+        _snapshot = null;
+    }
+
+    public void BeginStroke()
+    {
+        if (Mask is null)
+            return;
+
+        _snapshot = new byte[Mask.Data.Length];
+        Buffer.BlockCopy(Mask.Data, 0, _snapshot, 0, Mask.Data.Length);
+    }
+
+    public void EndStroke()
+    {
+        _snapshot = null;
     }
 
     public PixelRect ApplyBrush(IBrush brush, int x1, int y1, int x2, int y2, BrushSettings settings)
     {
         if (Mask is null)
-            throw new InvalidOperationException("Fog mask not initialized.");
+            throw new InvalidOperationException(MaskNotInitialized);
 
-        var dirtyRect = brush.Apply(Mask, x1, y1, x2, y2, settings);
+        var dirtyRect = brush.Apply(Mask, x1, y1, x2, y2, settings, _snapshot);
         MaskChanged?.Invoke(this, dirtyRect);
         return dirtyRect;
     }
 
-    public PixelRect ApplyRectangle(int x1, int y1, int x2, int y2, float softness)
+    public PixelRect ApplyRectangle(int x1, int y1, int x2, int y2, float softness, float opacity, bool erase = false)
     {
         if (Mask is null)
-            throw new InvalidOperationException("Fog mask not initialized.");
+            throw new InvalidOperationException(MaskNotInitialized);
 
         var minX = Math.Max(0, Math.Min(x1, x2));
         var minY = Math.Max(0, Math.Min(y1, y2));
@@ -45,22 +64,9 @@ public sealed class FogMaskService : IFogMaskService
         {
             for (var x = minX; x <= maxX; x++)
             {
-                byte alpha;
-                if (feather > 0)
-                {
-                    var minDist = Math.Min(
-                        Math.Min(x - minX, maxX - x),
-                        Math.Min(y - minY, maxY - y));
-                    var t = Math.Min(1.0f, minDist / feather);
-                    alpha = (byte)(255 * t);
-                }
-                else
-                {
-                    alpha = 255;
-                }
-
-                if (alpha > Mask[x, y])
-                    Mask[x, y] = alpha;
+                var coverage = RectCoverage(x, y, minX, minY, maxX, maxY, feather);
+                var snapshotValue = Mask[x, y];
+                BrushHelper.ApplyPixel(Mask, x, y, coverage, erase, snapshotValue, opacity);
             }
         }
 
@@ -69,10 +75,10 @@ public sealed class FogMaskService : IFogMaskService
         return dirtyRect;
     }
 
-    public PixelRect ApplyEllipse(int x1, int y1, int x2, int y2, float softness)
+    public PixelRect ApplyEllipse(int x1, int y1, int x2, int y2, float softness, float opacity, bool erase = false)
     {
         if (Mask is null)
-            throw new InvalidOperationException("Fog mask not initialized.");
+            throw new InvalidOperationException(MaskNotInitialized);
 
         var minX = Math.Max(0, Math.Min(x1, x2));
         var minY = Math.Max(0, Math.Min(y1, y2));
@@ -99,14 +105,12 @@ public sealed class FogMaskService : IFogMaskService
                 if (dist > 1.0)
                     continue;
 
-                byte alpha;
-                if (softness > 0 && dist > 1.0 - softness)
-                    alpha = (byte)(255 * (1.0 - dist) / softness);
-                else
-                    alpha = 255;
+                var coverage = (softness > 0 && dist > 1.0 - softness)
+                    ? (1.0 - dist) / softness
+                    : 1.0;
 
-                if (alpha > Mask[x, y])
-                    Mask[x, y] = alpha;
+                var snapshotValue = Mask[x, y];
+                BrushHelper.ApplyPixel(Mask, x, y, coverage, erase, snapshotValue, opacity);
             }
         }
 
@@ -124,7 +128,7 @@ public sealed class FogMaskService : IFogMaskService
     public void ApplyDelta(FogDelta delta)
     {
         if (Mask is null)
-            throw new InvalidOperationException("Fog mask not initialized.");
+            throw new InvalidOperationException(MaskNotInitialized);
 
         for (var dy = 0; dy < delta.Height; dy++)
         {
@@ -142,5 +146,16 @@ public sealed class FogMaskService : IFogMaskService
         }
 
         MaskChanged?.Invoke(this, new PixelRect(delta.X, delta.Y, delta.Width, delta.Height));
+    }
+
+    private static double RectCoverage(int x, int y, int minX, int minY, int maxX, int maxY, float feather)
+    {
+        if (feather <= 0)
+            return 1.0;
+
+        var minDist = Math.Min(
+            Math.Min(x - minX, maxX - x),
+            Math.Min(y - minY, maxY - y));
+        return Math.Min(1.0f, minDist / feather);
     }
 }
