@@ -39,6 +39,23 @@
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
+            <MenuItem Header="View">
+                <MenuItem Header="Zoom In" Command="{Binding ZoomInCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{SvgImage /Assets/Icons/zoom-in.svg}" Width="16" Height="16" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Zoom Out" Command="{Binding ZoomOutCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{SvgImage /Assets/Icons/zoom-out.svg}" Width="16" Height="16" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Reset View" Command="{Binding ResetViewCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{SvgImage /Assets/Icons/scaling.svg}" Width="16" Height="16" />
+                    </MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
             <MenuItem Header="Map">
                 <MenuItem Header="Reveal All" Command="{Binding RevealAllCommand}">
                     <MenuItem.Icon>
@@ -131,19 +148,22 @@
                            Text="{Binding ConnectedPlayers, StringFormat='Players: {0}'}"
                            VerticalAlignment="Center" FontSize="11" />
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                    <Button Classes="statusbar" Width="18" Command="{Binding ZoomOutCommand}">
-                        <Image Source="{SvgImage /Assets/Icons/minus.svg}" Width="12" Height="12" />
+                    <Button Classes="statusbar" Width="18" Command="{Binding ZoomOutCommand}" ToolTip.Tip="Zoom Out">
+                        <Image Source="{SvgImage /Assets/Icons/zoom-out.svg}" Width="12" Height="12" />
                     </Button>
                     <NumericUpDown Value="{Binding ZoomPercent}"
                                    Minimum="10" Maximum="1000" Increment="10"
                                    FormatString="0'%'"
                                    ShowButtonSpinner="False"
-                                   Width="64" Height="20" FontSize="11" />
-                    <Button Classes="statusbar" Width="18" Command="{Binding ZoomInCommand}">
-                        <Image Source="{SvgImage /Assets/Icons/plus.svg}" Width="12" Height="12" />
+                                   Width="64" Height="20" FontSize="11"
+                                   ToolTip.Tip="Zoom level" />
+                    <Button Classes="statusbar" Width="18" Command="{Binding ZoomInCommand}" ToolTip.Tip="Zoom In">
+                        <Image Source="{SvgImage /Assets/Icons/zoom-in.svg}" Width="12" Height="12" />
                     </Button>
                     <Separator Width="1" Margin="2,4" />
-                    <Button Classes="statusbar" Command="{Binding ResetViewCommand}">Reset</Button>
+                    <Button Classes="statusbar" Width="18" Command="{Binding ResetViewCommand}" ToolTip.Tip="Reset View">
+                        <Image Source="{SvgImage /Assets/Icons/scaling.svg}" Width="12" Height="12" />
+                    </Button>
                 </StackPanel>
             </DockPanel>
         </Border>
