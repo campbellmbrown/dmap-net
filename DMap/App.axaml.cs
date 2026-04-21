@@ -62,7 +62,7 @@ public partial class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    private static IContainer BuildContainer()
+    static IContainer BuildContainer()
     {
         var builder = new ContainerBuilder();
 

@@ -20,145 +20,140 @@ namespace DMap.ViewModels;
 
 public class DmViewModel : ViewModelBase, IDisposable
 {
-    private readonly IFogMaskService _fogService;
-    private readonly IBrush _circleBrush;
-    private readonly IBrush _squareBrush;
-    private readonly IBrush _diamondBrush;
-    private readonly IDmHostService _hostService;
-    private readonly IDiscoveryService _discoveryService;
+    const int DefaultBrushDiameter = 50;
+    const double DefaultBrushSoftness = 0.3;
+    const double DefaultBrushOpacity = 1.0;
 
-    private Bitmap? _mapImage;
+    const double DefaultShapeSoftness = 0.0;
+    const double DefaultShapeOpacity = 1.0;
+
+    const double DefaultZoomLevel = 1.0;
+    const double MinZoomLevel = 0.1;
+    const double MaxZoomLevel = 10.0;
+
+    readonly IFogMaskService _fogService;
+    readonly IBrush _circleBrush;
+    readonly IBrush _squareBrush;
+    readonly IBrush _diamondBrush;
+    readonly IDmHostService _hostService;
+    readonly IDiscoveryService _discoveryService;
+
     public Bitmap? MapImage
     {
-        get => _mapImage;
-        private set => this.RaiseAndSetIfChanged(ref _mapImage, value);
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    private bool _isMapLoaded;
     public bool IsMapLoaded
     {
-        get => _isMapLoaded;
-        private set => this.RaiseAndSetIfChanged(ref _isMapLoaded, value);
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    private FogMask? _fogMask;
     public FogMask? FogMask
     {
-        get => _fogMask;
-        private set => this.RaiseAndSetIfChanged(ref _fogMask, value);
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    private int _brushDiameter = 50;
     public int BrushDiameter
     {
-        get => _brushDiameter;
-        set => this.RaiseAndSetIfChanged(ref _brushDiameter, value);
-    }
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = DefaultBrushDiameter;
 
-    private double _brushSoftness = 0.3;
     public double BrushSoftness
     {
-        get => _brushSoftness;
-        set => this.RaiseAndSetIfChanged(ref _brushSoftness, value);
-    }
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = DefaultBrushSoftness;
 
-    private double _brushOpacity = 1.0;
     public double BrushOpacity
     {
-        get => _brushOpacity;
-        set => this.RaiseAndSetIfChanged(ref _brushOpacity, value);
-    }
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = DefaultBrushOpacity;
 
-    private double _shapeSoftness = 0.0;
     public double ShapeSoftness
     {
-        get => _shapeSoftness;
-        set => this.RaiseAndSetIfChanged(ref _shapeSoftness, value);
-    }
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = DefaultShapeSoftness;
 
-    private double _shapeOpacity = 1.0;
     public double ShapeOpacity
     {
-        get => _shapeOpacity;
-        set => this.RaiseAndSetIfChanged(ref _shapeOpacity, value);
-    }
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = DefaultShapeOpacity;
 
-    private double _offsetX;
     public double OffsetX
     {
-        get => _offsetX;
-        set => this.RaiseAndSetIfChanged(ref _offsetX, value);
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    private double _offsetY;
     public double OffsetY
     {
-        get => _offsetY;
-        set => this.RaiseAndSetIfChanged(ref _offsetY, value);
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    private double _zoomLevel = 1.0;
     public double ZoomLevel
     {
-        get => _zoomLevel;
+        get;
         set
         {
-            this.RaiseAndSetIfChanged(ref _zoomLevel, value);
+            this.RaiseAndSetIfChanged(ref field, value);
             this.RaisePropertyChanged(nameof(ZoomPercent));
         }
-    }
+    } = DefaultZoomLevel;
 
     public decimal ZoomPercent
     {
-        get => (decimal)Math.Round(_zoomLevel * 100);
-        set => ZoomLevel = Math.Clamp((double)value / 100.0, 0.1, 10.0);
+        get => (decimal)Math.Round(ZoomLevel * 100);
+        set => ZoomLevel = Math.Clamp((double)value / 100.0, MinZoomLevel, MaxZoomLevel);
     }
 
-    private int _connectedPlayers;
     public int ConnectedPlayers
     {
-        get => _connectedPlayers;
-        set => this.RaiseAndSetIfChanged(ref _connectedPlayers, value);
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    private PixelRect _lastDirtyRect;
     public PixelRect LastDirtyRect
     {
-        get => _lastDirtyRect;
-        private set => this.RaiseAndSetIfChanged(ref _lastDirtyRect, value);
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    private ToolType _selectedTool;
     public ToolType SelectedTool
     {
-        get => _selectedTool;
+        get;
         set
         {
-            this.RaiseAndSetIfChanged(ref _selectedTool, value);
+            this.RaiseAndSetIfChanged(ref field, value);
             this.RaisePropertyChanged(nameof(IsBrushSelected));
             this.RaisePropertyChanged(nameof(IsShapeSelected));
             this.RaisePropertyChanged(nameof(IsPanSelected));
         }
     }
 
-    public bool IsBrushSelected => _selectedTool == ToolType.Brush;
-    public bool IsShapeSelected => _selectedTool == ToolType.Shape;
-    public bool IsPanSelected => _selectedTool == ToolType.Pan;
+    public bool IsBrushSelected => SelectedTool == ToolType.Brush;
+    public bool IsShapeSelected => SelectedTool == ToolType.Shape;
+    public bool IsPanSelected => SelectedTool == ToolType.Pan;
 
-    private BrushShape _selectedBrushShape;
     public BrushShape SelectedBrushShape
     {
-        get => _selectedBrushShape;
-        set => this.RaiseAndSetIfChanged(ref _selectedBrushShape, value);
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
     public IReadOnlyList<BrushShape> BrushShapes { get; } = Enum.GetValues<BrushShape>();
 
-    private ShapeType _selectedShapeType;
     public ShapeType SelectedShapeType
     {
-        get => _selectedShapeType;
-        set => this.RaiseAndSetIfChanged(ref _selectedShapeType, value);
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
     public IReadOnlyList<ShapeType> ShapeTypes { get; } = Enum.GetValues<ShapeType>();
@@ -178,8 +173,8 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     public event EventHandler<PixelRect>? FogUpdated;
 
-    private byte[]? _mapImageBytes;
-    private MapSession? _session;
+    byte[]? _mapImageBytes;
+    MapSession? _session;
 
     public DmViewModel(IFogMaskService fogService, IDmHostService hostService, IDiscoveryService discoveryService)
     {
@@ -210,7 +205,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         });
     }
 
-    private void ExecuteRevealAll()
+    void ExecuteRevealAll()
     {
         _fogService.RevealAll();
         if (_fogService.Mask is null)
@@ -221,7 +216,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         SendFogDelta(rect);
     }
 
-    private void ExecuteRefogAll()
+    void ExecuteRefogAll()
     {
         _fogService.RefogAll();
         if (_fogService.Mask is null)
@@ -232,7 +227,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         SendFogDelta(rect);
     }
 
-    private async Task LoadMapAsync()
+    async Task LoadMapAsync()
     {
         var path = await ShowOpenFileDialog.Handle(Unit.Default);
         if (string.IsNullOrEmpty(path))
@@ -303,7 +298,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         SendFogDelta(dirtyRect);
     }
 
-    private void SendFogDelta(PixelRect dirtyRect)
+    void SendFogDelta(PixelRect dirtyRect)
     {
         if (_fogService.Mask is null)
             return;
@@ -314,7 +309,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         _ = _hostService.SendFogDeltaAsync(delta, default);
     }
 
-    private async Task StartHostingAsync()
+    async Task StartHostingAsync()
     {
         if (_session is null)
             return;

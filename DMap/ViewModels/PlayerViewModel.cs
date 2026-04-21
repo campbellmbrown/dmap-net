@@ -2,9 +2,11 @@ using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Reactive;
+using System.Threading.Tasks;
 
 using Avalonia;
 using Avalonia.Media.Imaging;
+using Avalonia.Threading;
 
 using DMap.Models;
 using DMap.Services.Fog;
@@ -16,74 +18,65 @@ namespace DMap.ViewModels;
 
 public class PlayerViewModel : ViewModelBase, IDisposable
 {
-    private readonly IFogMaskService _fogService;
-    private readonly IDiscoveryService _discoveryService;
-    private readonly IPlayerClientService _clientService;
+    readonly IFogMaskService _fogService;
+    readonly IDiscoveryService _discoveryService;
+    readonly IPlayerClientService _clientService;
 
     public ObservableCollection<DiscoveredDm> DiscoveredDms { get; } = new();
 
-    private DiscoveredDm? _selectedDm;
     public DiscoveredDm? SelectedDm
     {
-        get => _selectedDm;
-        set => this.RaiseAndSetIfChanged(ref _selectedDm, value);
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    private bool _isConnected;
     public bool IsConnected
     {
-        get => _isConnected;
-        private set => this.RaiseAndSetIfChanged(ref _isConnected, value);
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    private bool _isConnecting;
     public bool IsConnecting
     {
-        get => _isConnecting;
-        private set => this.RaiseAndSetIfChanged(ref _isConnecting, value);
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    private string _statusText = "Searching for DM sessions...";
     public string StatusText
     {
-        get => _statusText;
-        private set => this.RaiseAndSetIfChanged(ref _statusText, value);
-    }
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    } = "Searching for DM sessions...";
 
-    private Bitmap? _mapImage;
     public Bitmap? MapImage
     {
-        get => _mapImage;
-        private set => this.RaiseAndSetIfChanged(ref _mapImage, value);
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    private FogMask? _fogMask;
     public FogMask? FogMask
     {
-        get => _fogMask;
-        private set => this.RaiseAndSetIfChanged(ref _fogMask, value);
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    private double _offsetX;
     public double OffsetX
     {
-        get => _offsetX;
-        set => this.RaiseAndSetIfChanged(ref _offsetX, value);
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    private double _offsetY;
     public double OffsetY
     {
-        get => _offsetY;
-        set => this.RaiseAndSetIfChanged(ref _offsetY, value);
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    private double _zoomLevel = 1.0;
     public double ZoomLevel
     {
-        get => _zoomLevel;
-        set => this.RaiseAndSetIfChanged(ref _zoomLevel, value);
-    }
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = 1.0;
 
     public ReactiveCommand<Unit, Unit> ConnectCommand { get; }
     public ReactiveCommand<Unit, Unit> DisconnectCommand { get; }
@@ -113,14 +106,14 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         DisconnectCommand = ReactiveCommand.CreateFromTask(DisconnectAsync, canDisconnect);
     }
 
-    public async System.Threading.Tasks.Task StartDiscoveryAsync()
+    public async Task StartDiscoveryAsync()
     {
         await _discoveryService.StartListeningAsync(default);
     }
 
-    private void OnDmDiscovered(object? sender, DiscoveredDm dm)
+    void OnDmDiscovered(object? sender, DiscoveredDm dm)
     {
-        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        Dispatcher.UIThread.Post(() =>
         {
             foreach (var existing in DiscoveredDms)
             {
@@ -132,7 +125,7 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         });
     }
 
-    private async System.Threading.Tasks.Task ConnectAsync()
+    async Task ConnectAsync()
     {
         if (SelectedDm is null)
             return;
@@ -156,7 +149,7 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         }
     }
 
-    private async System.Threading.Tasks.Task DisconnectAsync()
+    async Task DisconnectAsync()
     {
         await _clientService.DisconnectAsync();
         IsConnected = false;
@@ -165,9 +158,9 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         StatusText = "Disconnected. Searching for DM sessions...";
     }
 
-    private void OnSessionInfoReceived(object? sender, MapSession session)
+    void OnSessionInfoReceived(object? sender, MapSession session)
     {
-        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        Dispatcher.UIThread.Post(() =>
         {
             _fogService.Initialize(session.MapWidth, session.MapHeight);
             FogMask = _fogService.Mask;
@@ -175,27 +168,27 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         });
     }
 
-    private void OnMapImageReceived(object? sender, byte[] imageBytes)
+    void OnMapImageReceived(object? sender, byte[] imageBytes)
     {
-        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        Dispatcher.UIThread.Post(() =>
         {
             using var stream = new MemoryStream(imageBytes);
             MapImage = new Bitmap(stream);
         });
     }
 
-    private void OnFogDeltaReceived(object? sender, FogDelta delta)
+    void OnFogDeltaReceived(object? sender, FogDelta delta)
     {
-        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        Dispatcher.UIThread.Post(() =>
         {
             _fogService.ApplyDelta(delta);
             FogUpdated?.Invoke(this, new PixelRect(delta.X, delta.Y, delta.Width, delta.Height));
         });
     }
 
-    private void OnFogFullReceived(object? sender, FogMask mask)
+    void OnFogFullReceived(object? sender, FogMask mask)
     {
-        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        Dispatcher.UIThread.Post(() =>
         {
             _fogService.Replace(mask);
             FogMask = _fogService.Mask;
@@ -203,9 +196,9 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         });
     }
 
-    private void OnDisconnected(object? sender, EventArgs e)
+    void OnDisconnected(object? sender, EventArgs e)
     {
-        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        Dispatcher.UIThread.Post(() =>
         {
             IsConnected = false;
             StatusText = "Disconnected from DM. Searching for sessions...";

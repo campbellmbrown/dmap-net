@@ -5,21 +5,14 @@ using DMap.Views;
 
 namespace DMap;
 
-internal sealed class NavigationService : INavigator
+internal sealed class NavigationService(MainWindowViewModel mainVm) : INavigator
 {
-    private readonly MainWindowViewModel _mainVm;
-
-    public NavigationService(MainWindowViewModel mainVm)
-    {
-        _mainVm = mainVm;
-    }
-
     public void NavigateTo(ViewModelBase vm)
     {
-        if (_mainVm.Content?.DataContext is IDisposable disposable)
+        if (mainVm.Content?.DataContext is IDisposable disposable)
             disposable.Dispose();
 
-        _mainVm.Content = vm switch
+        mainVm.Content = vm switch
         {
             StartViewModel m => new StartView { DataContext = m },
             DmViewModel m => new DmView { DataContext = m },

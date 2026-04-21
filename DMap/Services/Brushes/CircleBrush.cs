@@ -48,7 +48,7 @@ public sealed class CircleBrush : IBrush
         return new PixelRect(minX, minY, maxX - minX + 1, maxY - minY + 1);
     }
 
-    private static double DistToSegment(int px, int py, int x1, int y1, double dx, double dy, double lenSq)
+    static double DistToSegment(int px, int py, int x1, int y1, double dx, double dy, double lenSq)
     {
         if (lenSq < 1e-10)
         {

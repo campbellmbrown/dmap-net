@@ -135,16 +135,16 @@ public class MapCanvas : Control
     public event EventHandler<BrushStrokeEventArgs>? BrushStrokeApplied;
     public event EventHandler<ShapeStrokeEventArgs>? ShapeStrokeApplied;
 
-    private WriteableBitmap? _fogBitmap;
-    private bool _isPanning;
-    private Point _lastPanPoint;
-    private bool _isPainting;
-    private bool _isErasing;
-    private int _lastBrushMapX;
-    private int _lastBrushMapY;
-    private bool _isDraggingShape;
-    private Point _shapeDragStart;
-    private Point _lastMousePosition;
+    WriteableBitmap? _fogBitmap;
+    bool _isPanning;
+    Point _lastPanPoint;
+    bool _isPainting;
+    bool _isErasing;
+    int _lastBrushMapX;
+    int _lastBrushMapY;
+    bool _isDraggingShape;
+    Point _shapeDragStart;
+    Point _lastMousePosition;
 
     static MapCanvas()
     {
@@ -185,7 +185,7 @@ public class MapCanvas : Control
         UpdateFogBitmapRegion(new PixelRect(0, 0, mask.Width, mask.Height));
     }
 
-    private void UpdateFogBitmapRegion(PixelRect dirtyRect)
+    void UpdateFogBitmapRegion(PixelRect dirtyRect)
     {
         var mask = FogMask;
         if (mask is null || _fogBitmap is null)
@@ -255,7 +255,7 @@ public class MapCanvas : Control
             RenderToolOverlay(context, zoom);
     }
 
-    private void RenderToolOverlay(DrawingContext context, double zoom)
+    void RenderToolOverlay(DrawingContext context, double zoom)
     {
         var pen = new Pen(Brushes.White, 1.5);
         var c = _lastMousePosition;
@@ -331,7 +331,7 @@ public class MapCanvas : Control
             UpdateCursor();
     }
 
-    private void UpdateCursor()
+    void UpdateCursor()
     {
         if (!IsDmMode)
         {
@@ -390,7 +390,7 @@ public class MapCanvas : Control
         }
     }
 
-    private void StartPainting(Point position, bool erase)
+    void StartPainting(Point position, bool erase)
     {
         _isErasing = erase;
         if (ActiveTool == ToolType.Brush)
@@ -471,7 +471,7 @@ public class MapCanvas : Control
         e.Handled = true;
     }
 
-    private void InitBrushMapPos(Point screenPos)
+    void InitBrushMapPos(Point screenPos)
     {
         var zoom = ZoomLevel;
         if (zoom <= 0)
@@ -481,7 +481,7 @@ public class MapCanvas : Control
         _lastBrushMapY = (int)((screenPos.Y - OffsetY) / zoom);
     }
 
-    private void RaiseBrushStroke(Point screenTo)
+    void RaiseBrushStroke(Point screenTo)
     {
         var zoom = ZoomLevel;
         if (zoom <= 0)
@@ -503,7 +503,7 @@ public class MapCanvas : Control
         _lastBrushMapY = mapY2;
     }
 
-    private void FireShapeStroke(Point screenStart, Point screenEnd)
+    void FireShapeStroke(Point screenStart, Point screenEnd)
     {
         var zoom = ZoomLevel;
         var mapX1 = (int)((screenStart.X - OffsetX) / zoom);
@@ -521,6 +521,6 @@ public class MapCanvas : Control
         });
     }
 
-    private static Rect MakeRect(Point a, Point b) =>
+    static Rect MakeRect(Point a, Point b) =>
         new(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y), Math.Abs(b.X - a.X), Math.Abs(b.Y - a.Y));
 }
