@@ -1,26 +1,19 @@
-using System;
 using System.Collections.Generic;
-using System.Globalization;
 
-using Avalonia.Data.Converters;
 using Avalonia.Media;
 
 using DMap.Models;
 
 namespace DMap.Converters;
 
-public class BrushShapeIconConverter : IValueConverter
+public class BrushShapeIconConverter : EnumSvgConverter<BrushShape>
 {
-    private static readonly Dictionary<BrushShape, IImage> _icons = new()
+    static readonly Dictionary<BrushShape, IImage> _icons = new()
     {
         [BrushShape.Circle] = SvgIconLoader.Load("circle.svg"),
         [BrushShape.Square] = SvgIconLoader.Load("square.svg"),
         [BrushShape.Diamond] = SvgIconLoader.Load("diamond.svg"),
     };
 
-    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value is BrushShape shape && _icons.TryGetValue(shape, out var icon) ? icon : null;
-
-    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => throw new NotSupportedException();
+    protected override IReadOnlyDictionary<BrushShape, IImage> Icons => _icons;
 }
