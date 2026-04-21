@@ -19,6 +19,12 @@
         <!-- Menu bar -->
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="File">
+                <MenuItem Header="Open Map..." Command="{Binding LoadMapCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{SvgImage /Assets/Icons/map.svg}" Width="16" Height="16" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <Separator />
                 <MenuItem Header="Exit" Command="{Binding ExitCommand}">
                     <MenuItem.Icon>
                         <Image Source="{SvgImage /Assets/Icons/door-open.svg}" Width="16" Height="16" />
@@ -43,8 +49,7 @@
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8"
                     Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
                     Margin="0" Height="40">
-            <Button Content="Load Map" Command="{Binding LoadMapCommand}" Margin="4,0,0,0" VerticalAlignment="Center" />
-            <Button Content="+" Command="{Binding ZoomInCommand}" Width="32" VerticalAlignment="Center" />
+            <Button Content="+" Command="{Binding ZoomInCommand}" Margin="4,0,0,0" Width="32" VerticalAlignment="Center" />
             <Button Content="-" Command="{Binding ZoomOutCommand}" Width="32" VerticalAlignment="Center" />
             <Button Content="Reset" Command="{Binding ResetViewCommand}" VerticalAlignment="Center" />
             <Separator Width="1" Margin="4,6" />
