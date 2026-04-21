@@ -119,6 +119,24 @@ public sealed class FogMaskService : IFogMaskService
         return dirtyRect;
     }
 
+    public void RevealAll()
+    {
+        if (Mask is null)
+            return;
+
+        Array.Fill(Mask.Data, (byte)255);
+        MaskChanged?.Invoke(this, new PixelRect(0, 0, Mask.Width, Mask.Height));
+    }
+
+    public void RefogAll()
+    {
+        if (Mask is null)
+            return;
+
+        Array.Fill(Mask.Data, (byte)0);
+        MaskChanged?.Invoke(this, new PixelRect(0, 0, Mask.Width, Mask.Height));
+    }
+
     public void Replace(FogMask mask)
     {
         Mask = mask;

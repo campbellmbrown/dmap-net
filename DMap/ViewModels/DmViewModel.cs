@@ -6,6 +6,7 @@ using System.Reactive.Linq;
 using System.Threading.Tasks;
 
 using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media.Imaging;
 
 using DMap.Models;
@@ -159,6 +160,9 @@ public class DmViewModel : ViewModelBase, IDisposable
     public ReactiveCommand<Unit, Unit> SelectBrushCommand { get; }
     public ReactiveCommand<Unit, Unit> SelectShapeCommand { get; }
     public ReactiveCommand<Unit, Unit> SelectPanCommand { get; }
+    public ReactiveCommand<Unit, Unit> RevealAllCommand { get; }
+    public ReactiveCommand<Unit, Unit> RefogAllCommand { get; }
+    public ReactiveCommand<Unit, Unit> ExitCommand { get; }
 
     public Interaction<Unit, string?> ShowOpenFileDialog { get; } = new();
 
@@ -185,6 +189,37 @@ public class DmViewModel : ViewModelBase, IDisposable
         SelectBrushCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Brush; });
         SelectShapeCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Shape; });
         SelectPanCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Pan; });
+
+        var mapLoaded = this.WhenAnyValue(x => x.IsMapLoaded);
+        RevealAllCommand = ReactiveCommand.Create(ExecuteRevealAll, mapLoaded);
+        RefogAllCommand = ReactiveCommand.Create(ExecuteRefogAll, mapLoaded);
+        ExitCommand = ReactiveCommand.Create(() =>
+        {
+            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+                desktop.Shutdown();
+        });
+    }
+
+    private void ExecuteRevealAll()
+    {
+        _fogService.RevealAll();
+        if (_fogService.Mask is null)
+            return;
+
+        var rect = new PixelRect(0, 0, _fogService.Mask.Width, _fogService.Mask.Height);
+        FogUpdated?.Invoke(this, rect);
+        SendFogDelta(rect);
+    }
+
+    private void ExecuteRefogAll()
+    {
+        _fogService.RefogAll();
+        if (_fogService.Mask is null)
+            return;
+
+        var rect = new PixelRect(0, 0, _fogService.Mask.Width, _fogService.Mask.Height);
+        FogUpdated?.Invoke(this, rect);
+        SendFogDelta(rect);
     }
 
     private async Task LoadMapAsync()

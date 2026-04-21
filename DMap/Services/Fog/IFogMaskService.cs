@@ -26,6 +26,10 @@ public interface IFogMaskService
 
     PixelRect ApplyEllipse(int x1, int y1, int x2, int y2, float softness, float opacity, bool erase = false);
 
+    void RevealAll();
+
+    void RefogAll();
+
     void Replace(FogMask mask);
 
     void ApplyDelta(FogDelta delta);
