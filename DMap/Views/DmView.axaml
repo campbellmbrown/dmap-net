@@ -43,16 +43,24 @@
     </UserControl.Styles>
 
     <UserControl.KeyBindings>
+        <KeyBinding Gesture="Ctrl+O" Command="{Binding LoadMapCommand}" />
         <KeyBinding Gesture="Ctrl+Z" Command="{Binding UndoCommand}" />
         <KeyBinding Gesture="Ctrl+Y" Command="{Binding RedoCommand}" />
         <KeyBinding Gesture="Ctrl+Shift+Z" Command="{Binding RedoCommand}" />
+        <KeyBinding Gesture="Ctrl+OemPlus" Command="{Binding ZoomInCommand}" />
+        <KeyBinding Gesture="Ctrl+OemMinus" Command="{Binding ZoomOutCommand}" />
+        <KeyBinding Gesture="Ctrl+D0" Command="{Binding ResetViewCommand}" />
+        <KeyBinding Gesture="Ctrl+OemCloseBrackets" Command="{Binding FogOpacityUpCommand}" />
+        <KeyBinding Gesture="Ctrl+OemOpenBrackets" Command="{Binding FogOpacityDownCommand}" />
+        <KeyBinding Gesture="Ctrl+Shift+E" Command="{Binding RevealAllCommand}" />
+        <KeyBinding Gesture="Ctrl+Shift+F" Command="{Binding RefogAllCommand}" />
     </UserControl.KeyBindings>
 
     <DockPanel>
         <!-- Menu bar -->
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="File">
-                <MenuItem Header="Open Map..." Command="{Binding LoadMapCommand}">
+                <MenuItem Header="Open Map..." Command="{Binding LoadMapCommand}" InputGesture="Ctrl+O">
                     <MenuItem.Icon>
                         <Image Source="{SvgImage /Assets/Icons/map.svg}" />
                     </MenuItem.Icon>
@@ -65,28 +73,28 @@
                 </MenuItem>
             </MenuItem>
             <MenuItem Header="View">
-                <MenuItem Header="Zoom In" Command="{Binding ZoomInCommand}">
+                <MenuItem Header="Zoom In" Command="{Binding ZoomInCommand}" InputGesture="Ctrl+OemPlus">
                     <MenuItem.Icon>
                         <Image Source="{SvgImage /Assets/Icons/zoom-in.svg}" />
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="Zoom Out" Command="{Binding ZoomOutCommand}">
+                <MenuItem Header="Zoom Out" Command="{Binding ZoomOutCommand}" InputGesture="Ctrl+OemMinus">
                     <MenuItem.Icon>
                         <Image Source="{SvgImage /Assets/Icons/zoom-out.svg}" />
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="Reset View" Command="{Binding ResetViewCommand}">
+                <MenuItem Header="Reset View" Command="{Binding ResetViewCommand}" InputGesture="Ctrl+D0">
                     <MenuItem.Icon>
                         <Image Source="{SvgImage /Assets/Icons/scaling.svg}" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator />
-                <MenuItem Header="More Fog" Command="{Binding FogOpacityUpCommand}">
+                <MenuItem Header="More Fog" Command="{Binding FogOpacityUpCommand}" InputGesture="Ctrl+OemCloseBrackets">
                     <MenuItem.Icon>
                         <Image Source="{SvgImage /Assets/Icons/moon.svg}" />
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="Less Fog" Command="{Binding FogOpacityDownCommand}">
+                <MenuItem Header="Less Fog" Command="{Binding FogOpacityDownCommand}" InputGesture="Ctrl+OemOpenBrackets">
                     <MenuItem.Icon>
                         <Image Source="{SvgImage /Assets/Icons/sun.svg}" />
                     </MenuItem.Icon>
@@ -104,12 +112,12 @@
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator />
-                <MenuItem Header="Reveal All" Command="{Binding RevealAllCommand}">
+                <MenuItem Header="Reveal All" Command="{Binding RevealAllCommand}" InputGesture="Ctrl+Shift+E">
                     <MenuItem.Icon>
                         <Image Source="{SvgImage /Assets/Icons/eye.svg}" />
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="Refog All" Command="{Binding RefogAllCommand}">
+                <MenuItem Header="Refog All" Command="{Binding RefogAllCommand}" InputGesture="Ctrl+Shift+F">
                     <MenuItem.Icon>
                         <Image Source="{SvgImage /Assets/Icons/eye-off.svg}" />
                     </MenuItem.Icon>
