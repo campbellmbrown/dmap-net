@@ -11,12 +11,12 @@ namespace DMap.Services.Fog;
 
 public sealed class FogMaskService : IFogMaskService
 {
-    private const string MaskNotInitialized = "Fog mask not initialized.";
+    const string MaskNotInitialized = "Fog mask not initialized.";
 
     public FogMask? Mask { get; private set; }
 
-    private byte[]? _snapshot;
-    private PixelRect? _strokeDirtyRect;
+    byte[]? _snapshot;
+    PixelRect? _strokeDirtyRect;
 
     public event EventHandler<PixelRect>? MaskChanged;
 
@@ -184,7 +184,7 @@ public sealed class FogMaskService : IFogMaskService
         MaskChanged?.Invoke(this, new PixelRect(delta.X, delta.Y, delta.Width, delta.Height));
     }
 
-    private static PixelRect UnionRects(PixelRect a, PixelRect b)
+    static PixelRect UnionRects(PixelRect a, PixelRect b)
     {
         var x = Math.Min(a.X, b.X);
         var y = Math.Min(a.Y, b.Y);
@@ -193,7 +193,7 @@ public sealed class FogMaskService : IFogMaskService
         return new PixelRect(x, y, right - x, bottom - y);
     }
 
-    private static double RectCoverage(int x, int y, int minX, int minY, int maxX, int maxY, float feather)
+    static double RectCoverage(int x, int y, int minX, int minY, int maxX, int maxY, float feather)
     {
         if (feather <= 0)
             return 1.0;

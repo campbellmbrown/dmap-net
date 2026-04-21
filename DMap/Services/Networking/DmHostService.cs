@@ -13,15 +13,15 @@ namespace DMap.Services.Networking;
 
 public sealed class DmHostService : IDmHostService
 {
-    private TcpListener? _listener;
-    private readonly List<TcpClient> _clients = new();
-    private readonly Lock _clientsLock = new();
-    private CancellationTokenSource? _cts;
+    TcpListener? _listener;
+    readonly List<TcpClient> _clients = new();
+    readonly Lock _clientsLock = new();
+    CancellationTokenSource? _cts;
 
-    private byte[]? _pendingMapImage;
-    private byte[]? _pendingSessionInfo;
+    byte[]? _pendingMapImage;
+    byte[]? _pendingSessionInfo;
 
-    public int Port { get; private set; }
+    public int Port { get; set; }
     public int ConnectedPlayerCount => _clients.Count;
     public event EventHandler<int>? PlayerCountChanged;
 
@@ -52,7 +52,7 @@ public sealed class DmHostService : IDmHostService
         await Task.CompletedTask;
     }
 
-    private async Task HandleClientAsync(TcpClient client)
+    async Task HandleClientAsync(TcpClient client)
     {
         lock (_clientsLock)
         {
@@ -146,7 +146,7 @@ public sealed class DmHostService : IDmHostService
         return BroadcastAsync(MessageType.FogFull, ms.ToArray(), ct);
     }
 
-    private async Task BroadcastAsync(MessageType type, byte[] payload, CancellationToken ct)
+    async Task BroadcastAsync(MessageType type, byte[] payload, CancellationToken ct)
     {
         List<TcpClient> snapshot;
         lock (_clientsLock)

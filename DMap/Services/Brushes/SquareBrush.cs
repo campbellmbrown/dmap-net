@@ -49,7 +49,7 @@ public sealed class SquareBrush : IBrush
 
     // Minimises max(|rx - t*dx|, |ry - t*dy|) over t ∈ [0,1].
     // Critical points: endpoints, where the two terms are equal, and kinks of each term.
-    private static double ChebyshevDistToSegment(int px, int py, int ax, int ay, double dx, double dy)
+    static double ChebyshevDistToSegment(int px, int py, int ax, int ay, double dx, double dy)
     {
         var rx = px - ax;
         var ry = py - ay;

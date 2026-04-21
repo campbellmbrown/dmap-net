@@ -7,9 +7,9 @@ namespace DMap.ViewModels;
 
 public class StartViewModel : ViewModelBase
 {
-    private readonly INavigator _navigator;
-    private readonly Func<DmViewModel> _createDm;
-    private readonly Func<PlayerViewModel> _createPlayer;
+    readonly INavigator _navigator;
+    readonly Func<DmViewModel> _createDm;
+    readonly Func<PlayerViewModel> _createPlayer;
 
     public ReactiveCommand<Unit, Unit> StartAsDmCommand { get; }
     public ReactiveCommand<Unit, Unit> StartAsPlayerCommand { get; }
@@ -23,12 +23,12 @@ public class StartViewModel : ViewModelBase
         StartAsPlayerCommand = ReactiveCommand.Create(StartAsPlayer);
     }
 
-    private void StartAsDm()
+    void StartAsDm()
     {
         _navigator.NavigateTo(_createDm());
     }
 
-    private void StartAsPlayer()
+    void StartAsPlayer()
     {
         var vm = _createPlayer();
         _ = vm.StartDiscoveryAsync();

@@ -16,7 +16,7 @@ namespace DMap.Views;
 
 public partial class DmView : ReactiveUserControl<DmViewModel>
 {
-    private CompositeDisposable? _activationDisposables;
+    CompositeDisposable? _activationDisposables;
 
     public DmView()
     {
@@ -28,19 +28,15 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
         canvas.BrushStrokeEnded += (_, _) => ViewModel?.EndBrushStroke();
 
         canvas.BrushStrokeApplied += (_, e) =>
-        {
             ViewModel?.OnBrushStroke(e.MapX1, e.MapY1, e.MapX2, e.MapY2, e.IsErasing);
-        };
 
         canvas.ShapeStrokeApplied += (_, e) =>
-        {
             ViewModel?.OnShapeStroke(e.MapX1, e.MapY1, e.MapX2, e.MapY2, e.IsErasing);
-        };
 
         this.WhenActivated(disposables =>
         {
             _activationDisposables?.Dispose();
-            _activationDisposables = new CompositeDisposable();
+            _activationDisposables = [];
 
             if (ViewModel is null)
                 return;
@@ -66,13 +62,13 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
         });
     }
 
-    private void OnFogUpdated(object? sender, Avalonia.PixelRect dirtyRect)
+    void OnFogUpdated(object? sender, Avalonia.PixelRect dirtyRect)
     {
         var canvas = this.FindControl<MapCanvas>("MapCanvas")!;
         canvas.InvalidateFogRegion(dirtyRect);
     }
 
-    private async Task HandleOpenFileDialog(IInteractionContext<Unit, string?> context)
+    async Task HandleOpenFileDialog(IInteractionContext<Unit, string?> context)
     {
         var topLevel = TopLevel.GetTopLevel(this);
         if (topLevel is null)
@@ -85,11 +81,11 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
         {
             Title = "Open Map Image",
             AllowMultiple = false,
-            FileTypeFilter = new[]
-            {
-                new FilePickerFileType("Images") { Patterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif", "*.webp" } },
+            FileTypeFilter =
+            [
+                new FilePickerFileType("Images") { Patterns = ["*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif", "*.webp"] },
                 FilePickerFileTypes.All
-            }
+            ]
         });
 
         context.SetOutput(files.Count > 0 ? files[0].Path.LocalPath : null);

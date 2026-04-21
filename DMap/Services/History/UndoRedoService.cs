@@ -7,10 +7,10 @@ namespace DMap.Services.History;
 
 public sealed class UndoRedoService : IUndoRedoService
 {
-    private const int MaxHistory = 10;
+    const int MaxHistory = 10;
 
-    private readonly LinkedList<IFogCommand> _undoStack = new();
-    private readonly Stack<IFogCommand> _redoStack = new();
+    readonly LinkedList<IFogCommand> _undoStack = new();
+    readonly Stack<IFogCommand> _redoStack = new();
 
     public bool CanUndo => _undoStack.Count > 0;
     public bool CanRedo => _redoStack.Count > 0;

@@ -357,7 +357,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         SendFogDelta(dirtyRect);
     }
 
-    private PixelRect ComputeShapeRect(int x1, int y1, int x2, int y2)
+    PixelRect ComputeShapeRect(int x1, int y1, int x2, int y2)
     {
         var minX = Math.Max(0, Math.Min(x1, x2));
         var minY = Math.Max(0, Math.Min(y1, y2));
@@ -366,7 +366,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         return new PixelRect(minX, minY, maxX - minX + 1, maxY - minY + 1);
     }
 
-    private static (int, int, int, int) ConstrainToSquare(ShapeType shapeType, int x1, int y1, int x2, int y2)
+    static (int, int, int, int) ConstrainToSquare(ShapeType shapeType, int x1, int y1, int x2, int y2)
     {
         if (shapeType is not ShapeType.Square and not ShapeType.Circle)
             return (x1, y1, x2, y2);

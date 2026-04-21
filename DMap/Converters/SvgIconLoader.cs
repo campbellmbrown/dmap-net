@@ -7,7 +7,7 @@ namespace DMap.Converters;
 
 internal static class SvgIconLoader
 {
-    private static readonly Uri _iconBaseUri = new("avares://DMap/Assets/Icons/");
+    static readonly Uri _iconBaseUri = new("avares://DMap/Assets/Icons/");
 
     public static IImage Load(string fileName)
     {

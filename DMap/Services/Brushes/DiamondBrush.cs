@@ -49,7 +49,7 @@ public sealed class DiamondBrush : IBrush
 
     // Minimises |rx - t*dx| + |ry - t*dy| over t ∈ [0,1].
     // The piecewise-linear minimum is always at an endpoint or a kink of one of the absolute-value terms.
-    private static double ManhattanDistToSegment(int px, int py, int ax, int ay, double dx, double dy)
+    static double ManhattanDistToSegment(int px, int py, int ax, int ay, double dx, double dy)
     {
         var rx = px - ax;
         var ry = py - ay;

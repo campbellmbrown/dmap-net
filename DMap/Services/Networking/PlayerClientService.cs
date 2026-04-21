@@ -12,8 +12,8 @@ namespace DMap.Services.Networking;
 
 public sealed class PlayerClientService : IPlayerClientService
 {
-    private TcpClient? _client;
-    private CancellationTokenSource? _cts;
+    TcpClient? _client;
+    CancellationTokenSource? _cts;
 
     public event EventHandler<MapSession>? SessionInfoReceived;
     public event EventHandler<byte[]>? MapImageReceived;
@@ -30,7 +30,7 @@ public sealed class PlayerClientService : IPlayerClientService
         _ = Task.Run(() => ReceiveLoopAsync(_client.GetStream()), _cts.Token);
     }
 
-    private async Task ReceiveLoopAsync(NetworkStream stream)
+    async Task ReceiveLoopAsync(NetworkStream stream)
     {
         try
         {
@@ -71,7 +71,7 @@ public sealed class PlayerClientService : IPlayerClientService
         Disconnected?.Invoke(this, EventArgs.Empty);
     }
 
-    private void HandleSessionInfo(byte[] payload)
+    void HandleSessionInfo(byte[] payload)
     {
         using var ms = new MemoryStream(payload);
         using var reader = new BinaryReader(ms);
@@ -92,13 +92,13 @@ public sealed class PlayerClientService : IPlayerClientService
         FogFullReceived?.Invoke(this, mask);
     }
 
-    private void HandleFogDelta(byte[] payload)
+    void HandleFogDelta(byte[] payload)
     {
         var delta = FogDelta.Deserialize(payload);
         FogDeltaReceived?.Invoke(this, delta);
     }
 
-    private void HandleFogFull(byte[] payload)
+    void HandleFogFull(byte[] payload)
     {
         using var ms = new MemoryStream(payload);
         using var reader = new BinaryReader(ms);

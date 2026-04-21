@@ -8,7 +8,7 @@ namespace DMap.Converters;
 
 public class ToolTypeIconConverter : EnumSvgConverter<ToolType>
 {
-    private static readonly Dictionary<ToolType, IImage> _icons = new()
+    static readonly Dictionary<ToolType, IImage> _icons = new()
     {
         [ToolType.Brush] = SvgIconLoader.Load("brush.svg"),
         [ToolType.Shape] = SvgIconLoader.Load("shapes.svg"),

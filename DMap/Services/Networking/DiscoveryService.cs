@@ -11,11 +11,11 @@ namespace DMap.Services.Networking;
 
 public sealed class DiscoveryService : IDiscoveryService
 {
-    private const int DiscoveryPort = 19876;
-    private static readonly byte[] _magic = "DMAP"u8.ToArray();
+    const int DiscoveryPort = 19876;
+    static readonly byte[] _magic = "DMAP"u8.ToArray();
 
-    private UdpClient? _udpClient;
-    private CancellationTokenSource? _cts;
+    UdpClient? _udpClient;
+    CancellationTokenSource? _cts;
 
     public event EventHandler<DiscoveredDm>? DmDiscovered;
 
@@ -82,7 +82,7 @@ public sealed class DiscoveryService : IDiscoveryService
         await Task.CompletedTask;
     }
 
-    private static byte[] BuildBroadcastPacket(MapSession session, int tcpPort)
+    static byte[] BuildBroadcastPacket(MapSession session, int tcpPort)
     {
         var name = Environment.MachineName;
         var nameBytes = Encoding.UTF8.GetBytes(name);
@@ -107,7 +107,7 @@ public sealed class DiscoveryService : IDiscoveryService
         return packet;
     }
 
-    private static DiscoveredDm? ParseBroadcastPacket(byte[] data, IPEndPoint sender)
+    static DiscoveredDm? ParseBroadcastPacket(byte[] data, IPEndPoint sender)
     {
         if (data.Length < _magic.Length + 16 + 4 + 4)
             return null;

@@ -8,8 +8,8 @@ namespace DMap.Services.History;
 
 public sealed class FogDeltaCommand : IFogCommand
 {
-    private readonly byte[] _before;
-    private readonly byte[] _after;
+    readonly byte[] _before;
+    readonly byte[] _after;
 
     public PixelRect DirtyRect { get; }
 
@@ -23,7 +23,7 @@ public sealed class FogDeltaCommand : IFogCommand
     public void Undo(FogMask mask) => ApplyRegion(mask, _before);
     public void Redo(FogMask mask) => ApplyRegion(mask, _after);
 
-    private void ApplyRegion(FogMask mask, byte[] data)
+    void ApplyRegion(FogMask mask, byte[] data)
     {
         for (var dy = 0; dy < DirtyRect.Height; dy++)
             Buffer.BlockCopy(data, dy * DirtyRect.Width,

@@ -13,7 +13,7 @@ namespace DMap.Views;
 
 public partial class PlayerView : ReactiveUserControl<PlayerViewModel>
 {
-    private CompositeDisposable? _activationDisposables;
+    CompositeDisposable? _activationDisposables;
 
     public PlayerView()
     {
@@ -47,7 +47,7 @@ public partial class PlayerView : ReactiveUserControl<PlayerViewModel>
         });
     }
 
-    private void OnFogUpdated(object? sender, Avalonia.PixelRect dirtyRect)
+    void OnFogUpdated(object? sender, Avalonia.PixelRect dirtyRect)
     {
         var canvas = this.FindControl<MapCanvas>("MapCanvas")!;
         canvas.InvalidateFogRegion(dirtyRect);
