@@ -18,7 +18,7 @@ public interface IFogMaskService
 
     void BeginStroke();
 
-    void EndStroke();
+    IFogCommand? EndStroke();
 
     PixelRect ApplyBrush(IBrush brush, int x1, int y1, int x2, int y2, BrushSettings settings);
 

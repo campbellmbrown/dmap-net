@@ -4,6 +4,7 @@ using Avalonia;
 
 using DMap.Models;
 using DMap.Services.Brushes;
+using DMap.Services.History;
 using DMap.Services.Networking;
 
 namespace DMap.Services.Fog;
@@ -15,6 +16,7 @@ public sealed class FogMaskService : IFogMaskService
     public FogMask? Mask { get; private set; }
 
     private byte[]? _snapshot;
+    private PixelRect? _strokeDirtyRect;
 
     public event EventHandler<PixelRect>? MaskChanged;
 
@@ -22,6 +24,7 @@ public sealed class FogMaskService : IFogMaskService
     {
         Mask = new FogMask(width, height);
         _snapshot = null;
+        _strokeDirtyRect = null;
     }
 
     public void BeginStroke()
@@ -31,11 +34,22 @@ public sealed class FogMaskService : IFogMaskService
 
         _snapshot = new byte[Mask.Data.Length];
         Buffer.BlockCopy(Mask.Data, 0, _snapshot, 0, Mask.Data.Length);
+        _strokeDirtyRect = null;
     }
 
-    public void EndStroke()
+    public IFogCommand? EndStroke()
     {
+        var snapshot = _snapshot;
+        var strokeRect = _strokeDirtyRect;
         _snapshot = null;
+        _strokeDirtyRect = null;
+
+        if (Mask is null || snapshot is null || strokeRect is null)
+            return null;
+
+        var before = FogDeltaCommand.CaptureFromRaw(snapshot, Mask.Width, strokeRect.Value);
+        var after = FogDeltaCommand.CaptureFromMask(Mask, strokeRect.Value);
+        return new FogDeltaCommand(strokeRect.Value, before, after);
     }
 
     public PixelRect ApplyBrush(IBrush brush, int x1, int y1, int x2, int y2, BrushSettings settings)
@@ -44,6 +58,10 @@ public sealed class FogMaskService : IFogMaskService
             throw new InvalidOperationException(MaskNotInitialized);
 
         var dirtyRect = brush.Apply(Mask, x1, y1, x2, y2, settings, _snapshot);
+        if (dirtyRect.Width > 0 && dirtyRect.Height > 0)
+            _strokeDirtyRect = _strokeDirtyRect.HasValue
+                ? UnionRects(_strokeDirtyRect.Value, dirtyRect)
+                : dirtyRect;
         MaskChanged?.Invoke(this, dirtyRect);
         return dirtyRect;
     }
@@ -164,6 +182,15 @@ public sealed class FogMaskService : IFogMaskService
         }
 
         MaskChanged?.Invoke(this, new PixelRect(delta.X, delta.Y, delta.Width, delta.Height));
+    }
+
+    private static PixelRect UnionRects(PixelRect a, PixelRect b)
+    {
+        var x = Math.Min(a.X, b.X);
+        var y = Math.Min(a.Y, b.Y);
+        var right = Math.Max(a.X + a.Width, b.X + b.Width);
+        var bottom = Math.Max(a.Y + a.Height, b.Y + b.Height);
+        return new PixelRect(x, y, right - x, bottom - y);
     }
 
     private static double RectCoverage(int x, int y, int minX, int minY, int maxX, int maxY, float feather)

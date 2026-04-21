@@ -12,6 +12,7 @@ using Avalonia.Media.Imaging;
 using DMap.Models;
 using DMap.Services.Brushes;
 using DMap.Services.Fog;
+using DMap.Services.History;
 using DMap.Services.Networking;
 
 using ReactiveUI;
@@ -32,6 +33,7 @@ public class DmViewModel : ViewModelBase, IDisposable
     const double MaxZoomLevel = 10.0;
 
     readonly IFogMaskService _fogService;
+    readonly IUndoRedoService _undoRedo;
     readonly IBrush _circleBrush;
     readonly IBrush _squareBrush;
     readonly IBrush _diamondBrush;
@@ -120,12 +122,6 @@ public class DmViewModel : ViewModelBase, IDisposable
         set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    public PixelRect LastDirtyRect
-    {
-        get;
-        private set => this.RaiseAndSetIfChanged(ref field, value);
-    }
-
     public ToolType SelectedTool
     {
         get;
@@ -158,6 +154,18 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     public IReadOnlyList<ShapeType> ShapeTypes { get; } = Enum.GetValues<ShapeType>();
 
+    public bool CanUndo
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    public bool CanRedo
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
     public ReactiveCommand<Unit, Unit> LoadMapCommand { get; }
     public ReactiveCommand<Unit, Unit> ZoomInCommand { get; }
     public ReactiveCommand<Unit, Unit> ZoomOutCommand { get; }
@@ -168,6 +176,8 @@ public class DmViewModel : ViewModelBase, IDisposable
     public ReactiveCommand<Unit, Unit> RevealAllCommand { get; }
     public ReactiveCommand<Unit, Unit> RefogAllCommand { get; }
     public ReactiveCommand<Unit, Unit> ExitCommand { get; }
+    public ReactiveCommand<Unit, Unit> UndoCommand { get; }
+    public ReactiveCommand<Unit, Unit> RedoCommand { get; }
 
     public Interaction<Unit, string?> ShowOpenFileDialog { get; } = new();
 
@@ -176,9 +186,10 @@ public class DmViewModel : ViewModelBase, IDisposable
     byte[]? _mapImageBytes;
     MapSession? _session;
 
-    public DmViewModel(IFogMaskService fogService, IDmHostService hostService, IDiscoveryService discoveryService)
+    public DmViewModel(IFogMaskService fogService, IUndoRedoService undoRedo, IDmHostService hostService, IDiscoveryService discoveryService)
     {
         _fogService = fogService;
+        _undoRedo = undoRedo;
         _circleBrush = new CircleBrush();
         _squareBrush = new SquareBrush();
         _diamondBrush = new DiamondBrush();
@@ -186,6 +197,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         _discoveryService = discoveryService;
 
         _hostService.PlayerCountChanged += (_, count) => ConnectedPlayers = count;
+        _undoRedo.StateChanged += (_, _) => { CanUndo = _undoRedo.CanUndo; CanRedo = _undoRedo.CanRedo; };
 
         LoadMapCommand = ReactiveCommand.CreateFromTask(LoadMapAsync);
         ZoomInCommand = ReactiveCommand.Create(() => { ZoomLevel = Math.Min(ZoomLevel * 1.2, 10.0); });
@@ -203,28 +215,67 @@ public class DmViewModel : ViewModelBase, IDisposable
             if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
                 desktop.Shutdown();
         });
+
+        var canUndo = this.WhenAnyValue(x => x.CanUndo);
+        var canRedo = this.WhenAnyValue(x => x.CanRedo);
+        UndoCommand = ReactiveCommand.Create(ExecuteUndo, canUndo);
+        RedoCommand = ReactiveCommand.Create(ExecuteRedo, canRedo);
     }
 
     void ExecuteRevealAll()
     {
-        _fogService.RevealAll();
         if (_fogService.Mask is null)
             return;
 
+        var before = FogDeltaCommand.CaptureFromMask(_fogService.Mask, new PixelRect(0, 0, _fogService.Mask.Width, _fogService.Mask.Height));
+        _fogService.RevealAll();
+        var after = FogDeltaCommand.CaptureFromMask(_fogService.Mask, new PixelRect(0, 0, _fogService.Mask.Width, _fogService.Mask.Height));
         var rect = new PixelRect(0, 0, _fogService.Mask.Width, _fogService.Mask.Height);
+        _undoRedo.Push(new FogDeltaCommand(rect, before, after));
         FogUpdated?.Invoke(this, rect);
         SendFogDelta(rect);
     }
 
     void ExecuteRefogAll()
     {
-        _fogService.RefogAll();
         if (_fogService.Mask is null)
             return;
 
+        var before = FogDeltaCommand.CaptureFromMask(_fogService.Mask, new PixelRect(0, 0, _fogService.Mask.Width, _fogService.Mask.Height));
+        _fogService.RefogAll();
+        var after = FogDeltaCommand.CaptureFromMask(_fogService.Mask, new PixelRect(0, 0, _fogService.Mask.Width, _fogService.Mask.Height));
         var rect = new PixelRect(0, 0, _fogService.Mask.Width, _fogService.Mask.Height);
+        _undoRedo.Push(new FogDeltaCommand(rect, before, after));
         FogUpdated?.Invoke(this, rect);
         SendFogDelta(rect);
+    }
+
+    void ExecuteUndo()
+    {
+        if (_fogService.Mask is null)
+            return;
+
+        var command = _undoRedo.TakeUndo();
+        if (command is null)
+            return;
+
+        command.Undo(_fogService.Mask);
+        FogUpdated?.Invoke(this, command.DirtyRect);
+        SendFogDelta(command.DirtyRect);
+    }
+
+    void ExecuteRedo()
+    {
+        if (_fogService.Mask is null)
+            return;
+
+        var command = _undoRedo.TakeRedo();
+        if (command is null)
+            return;
+
+        command.Redo(_fogService.Mask);
+        FogUpdated?.Invoke(this, command.DirtyRect);
+        SendFogDelta(command.DirtyRect);
     }
 
     async Task LoadMapAsync()
@@ -242,6 +293,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         FogMask = _fogService.Mask;
 
         _session = new MapSession(Guid.NewGuid(), pixelSize.Width, pixelSize.Height);
+        _undoRedo.Clear();
         IsMapLoaded = true;
 
         FogUpdated?.Invoke(this, new PixelRect(0, 0, pixelSize.Width, pixelSize.Height));
@@ -251,7 +303,12 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     public void BeginBrushStroke() => _fogService.BeginStroke();
 
-    public void EndBrushStroke() => _fogService.EndStroke();
+    public void EndBrushStroke()
+    {
+        var command = _fogService.EndStroke();
+        if (command is not null)
+            _undoRedo.Push(command);
+    }
 
     public void OnShapeStroke(int x1, int y1, int x2, int y2, bool isErasing)
     {
@@ -260,13 +317,27 @@ public class DmViewModel : ViewModelBase, IDisposable
 
         var (cx1, cy1, cx2, cy2) = ConstrainToSquare(SelectedShapeType, x1, y1, x2, y2);
 
+        var shapeRect = ComputeShapeRect(cx1, cy1, cx2, cy2);
+        var before = FogDeltaCommand.CaptureFromMask(_fogService.Mask, shapeRect);
+
         var dirtyRect = (SelectedShapeType is ShapeType.Ellipse or ShapeType.Circle)
             ? _fogService.ApplyEllipse(cx1, cy1, cx2, cy2, (float)ShapeSoftness, (float)ShapeOpacity, isErasing)
             : _fogService.ApplyRectangle(cx1, cy1, cx2, cy2, (float)ShapeSoftness, (float)ShapeOpacity, isErasing);
 
-        LastDirtyRect = dirtyRect;
+        var after = FogDeltaCommand.CaptureFromMask(_fogService.Mask, shapeRect);
+        _undoRedo.Push(new FogDeltaCommand(shapeRect, before, after));
+
         FogUpdated?.Invoke(this, dirtyRect);
         SendFogDelta(dirtyRect);
+    }
+
+    private PixelRect ComputeShapeRect(int x1, int y1, int x2, int y2)
+    {
+        var minX = Math.Max(0, Math.Min(x1, x2));
+        var minY = Math.Max(0, Math.Min(y1, y2));
+        var maxX = Math.Min(_fogService.Mask!.Width - 1, Math.Max(x1, x2));
+        var maxY = Math.Min(_fogService.Mask!.Height - 1, Math.Max(y1, y2));
+        return new PixelRect(minX, minY, maxX - minX + 1, maxY - minY + 1);
     }
 
     private static (int, int, int, int) ConstrainToSquare(ShapeType shapeType, int x1, int y1, int x2, int y2)
@@ -292,9 +363,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         var settings = new BrushSettings(BrushDiameter, (float)BrushSoftness, (float)BrushOpacity, Erase: isErasing);
         var dirtyRect = _fogService.ApplyBrush(brush, x1, y1, x2, y2, settings);
 
-        LastDirtyRect = dirtyRect;
         FogUpdated?.Invoke(this, dirtyRect);
-
         SendFogDelta(dirtyRect);
     }
 

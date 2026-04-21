@@ -41,6 +41,12 @@
         </Style>
     </UserControl.Styles>
 
+    <UserControl.KeyBindings>
+        <KeyBinding Gesture="Ctrl+Z" Command="{Binding UndoCommand}" />
+        <KeyBinding Gesture="Ctrl+Y" Command="{Binding RedoCommand}" />
+        <KeyBinding Gesture="Ctrl+Shift+Z" Command="{Binding RedoCommand}" />
+    </UserControl.KeyBindings>
+
     <DockPanel>
         <!-- Menu bar -->
         <Menu DockPanel.Dock="Top">
@@ -71,6 +77,18 @@
                 <MenuItem Header="Reset View" Command="{Binding ResetViewCommand}">
                     <MenuItem.Icon>
                         <Image Source="{SvgImage /Assets/Icons/scaling.svg}" />
+                    </MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+            <MenuItem Header="Edit">
+                <MenuItem Header="Undo" Command="{Binding UndoCommand}" InputGesture="Ctrl+Z">
+                    <MenuItem.Icon>
+                        <Image Source="{SvgImage /Assets/Icons/undo-2.svg}" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Redo" Command="{Binding RedoCommand}" InputGesture="Ctrl+Y">
+                    <MenuItem.Icon>
+                        <Image Source="{SvgImage /Assets/Icons/redo-2.svg}" />
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
@@ -165,6 +183,14 @@
                 <TextBlock DockPanel.Dock="Left"
                            Text="{Binding ConnectedPlayers, StringFormat='Players: {0}'}"
                            VerticalAlignment="Center" FontSize="11" />
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center" Margin="8,0,0,0">
+                    <Button Classes="statusbar" Width="18" Command="{Binding UndoCommand}" ToolTip.Tip="Undo (Ctrl+Z)">
+                        <Image Source="{SvgImage /Assets/Icons/undo-2.svg}" />
+                    </Button>
+                    <Button Classes="statusbar" Width="18" Command="{Binding RedoCommand}" ToolTip.Tip="Redo (Ctrl+Y)">
+                        <Image Source="{SvgImage /Assets/Icons/redo-2.svg}" />
+                    </Button>
+                </StackPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                     <Button Classes="statusbar" Width="18" Command="{Binding ZoomOutCommand}" ToolTip.Tip="Zoom Out">
                         <Image Source="{SvgImage /Assets/Icons/zoom-out.svg}" />

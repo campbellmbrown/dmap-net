@@ -7,6 +7,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 
 using DMap.Services.Fog;
+using DMap.Services.History;
 using DMap.Services.Networking;
 using DMap.ViewModels;
 using DMap.Views;
@@ -67,6 +68,7 @@ public partial class App : Application
         var builder = new ContainerBuilder();
 
         builder.RegisterType<FogMaskService>().As<IFogMaskService>();
+        builder.RegisterType<UndoRedoService>().As<IUndoRedoService>().SingleInstance();
         builder.RegisterType<DmHostService>().As<IDmHostService>();
         builder.RegisterType<DiscoveryService>().As<IDiscoveryService>();
         builder.RegisterType<PlayerClientService>().As<IPlayerClientService>();
