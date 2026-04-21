@@ -329,6 +329,11 @@ public class MapCanvas : Control
         base.OnPropertyChanged(change);
         if (change.Property == ActiveToolProperty || change.Property == IsDmModeProperty)
             UpdateCursor();
+        if (change.Property == FogOpacityProperty && FogMask is not null)
+        {
+            UpdateFogBitmapRegion(new PixelRect(0, 0, FogMask.Width, FogMask.Height));
+            InvalidateVisual();
+        }
     }
 
     void UpdateCursor()

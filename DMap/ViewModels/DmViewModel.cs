@@ -32,6 +32,11 @@ public class DmViewModel : ViewModelBase, IDisposable
     const double MinZoomLevel = 0.1;
     const double MaxZoomLevel = 10.0;
 
+    const byte DefaultFogOpacity = 128;
+    const byte MinFogOpacity = 0;
+    const byte MaxFogOpacity = 255;
+    const decimal StepFogOpacityPercent = 5;
+
     readonly IFogMaskService _fogService;
     readonly IUndoRedoService _undoRedo;
     readonly IBrush _circleBrush;
@@ -87,6 +92,22 @@ public class DmViewModel : ViewModelBase, IDisposable
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
     } = DefaultShapeOpacity;
+
+    public byte FogOpacity
+    {
+        get;
+        private set
+        {
+            this.RaiseAndSetIfChanged(ref field, value);
+            this.RaisePropertyChanged(nameof(FogOpacityPercent));
+        }
+    } = DefaultFogOpacity;
+
+    public decimal FogOpacityPercent
+    {
+        get => (decimal)Math.Round(FogOpacity / 255.0 * 100);
+        set => FogOpacity = (byte)Math.Clamp(Math.Round((double)value / 100.0 * 255), MinFogOpacity, MaxFogOpacity);
+    }
 
     public double OffsetX
     {
@@ -179,6 +200,8 @@ public class DmViewModel : ViewModelBase, IDisposable
     public ReactiveCommand<Unit, Unit> ExitCommand { get; }
     public ReactiveCommand<Unit, Unit> UndoCommand { get; }
     public ReactiveCommand<Unit, Unit> RedoCommand { get; }
+    public ReactiveCommand<Unit, Unit> FogOpacityUpCommand { get; }
+    public ReactiveCommand<Unit, Unit> FogOpacityDownCommand { get; }
 
     public Interaction<Unit, string?> ShowOpenFileDialog { get; } = new();
 
@@ -221,6 +244,8 @@ public class DmViewModel : ViewModelBase, IDisposable
         var canRedo = this.WhenAnyValue(x => x.CanRedo);
         UndoCommand = ReactiveCommand.Create(ExecuteUndo, canUndo);
         RedoCommand = ReactiveCommand.Create(ExecuteRedo, canRedo);
+        FogOpacityUpCommand = ReactiveCommand.Create(() => { FogOpacityPercent = Math.Min(FogOpacityPercent + StepFogOpacityPercent, 100); });
+        FogOpacityDownCommand = ReactiveCommand.Create(() => { FogOpacityPercent = Math.Max(FogOpacityPercent - StepFogOpacityPercent, 0); });
     }
 
     void ExecuteRevealAll()
