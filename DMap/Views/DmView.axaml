@@ -21,6 +21,24 @@
             <Setter Property="FontSize" Value="11" />
             <Setter Property="Padding" Value="4,0" />
         </Style>
+        <Style Selector="Button.statusbar Image">
+            <Setter Property="Width" Value="12" />
+            <Setter Property="Height" Value="12" />
+        </Style>
+        <Style Selector="Button.toolbar">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Width" Value="44" />
+            <Setter Property="Height" Value="44" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.toolbar Image">
+            <Setter Property="Width" Value="20" />
+            <Setter Property="Height" Value="20" />
+        </Style>
+        <Style Selector="MenuItem Image">
+            <Setter Property="Width" Value="16" />
+            <Setter Property="Height" Value="16" />
+        </Style>
     </UserControl.Styles>
 
     <DockPanel>
@@ -29,42 +47,42 @@
             <MenuItem Header="File">
                 <MenuItem Header="Open Map..." Command="{Binding LoadMapCommand}">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/map.svg}" Width="16" Height="16" />
+                        <Image Source="{SvgImage /Assets/Icons/map.svg}" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator />
                 <MenuItem Header="Exit" Command="{Binding ExitCommand}">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/door-open.svg}" Width="16" Height="16" />
+                        <Image Source="{SvgImage /Assets/Icons/door-open.svg}" />
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
             <MenuItem Header="View">
                 <MenuItem Header="Zoom In" Command="{Binding ZoomInCommand}">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/zoom-in.svg}" Width="16" Height="16" />
+                        <Image Source="{SvgImage /Assets/Icons/zoom-in.svg}" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <MenuItem Header="Zoom Out" Command="{Binding ZoomOutCommand}">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/zoom-out.svg}" Width="16" Height="16" />
+                        <Image Source="{SvgImage /Assets/Icons/zoom-out.svg}" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <MenuItem Header="Reset View" Command="{Binding ResetViewCommand}">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/scaling.svg}" Width="16" Height="16" />
+                        <Image Source="{SvgImage /Assets/Icons/scaling.svg}" />
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
             <MenuItem Header="Map">
                 <MenuItem Header="Reveal All" Command="{Binding RevealAllCommand}">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/eye.svg}" Width="16" Height="16" />
+                        <Image Source="{SvgImage /Assets/Icons/eye.svg}" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <MenuItem Header="Refog All" Command="{Binding RefogAllCommand}">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/eye-off.svg}" Width="16" Height="16" />
+                        <Image Source="{SvgImage /Assets/Icons/eye-off.svg}" />
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
@@ -149,7 +167,7 @@
                            VerticalAlignment="Center" FontSize="11" />
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                     <Button Classes="statusbar" Width="18" Command="{Binding ZoomOutCommand}" ToolTip.Tip="Zoom Out">
-                        <Image Source="{SvgImage /Assets/Icons/zoom-out.svg}" Width="12" Height="12" />
+                        <Image Source="{SvgImage /Assets/Icons/zoom-out.svg}" />
                     </Button>
                     <NumericUpDown Value="{Binding ZoomPercent}"
                                    Minimum="10" Maximum="1000" Increment="10"
@@ -158,11 +176,11 @@
                                    Width="64" Height="20" FontSize="11"
                                    ToolTip.Tip="Zoom level" />
                     <Button Classes="statusbar" Width="18" Command="{Binding ZoomInCommand}" ToolTip.Tip="Zoom In">
-                        <Image Source="{SvgImage /Assets/Icons/zoom-in.svg}" Width="12" Height="12" />
+                        <Image Source="{SvgImage /Assets/Icons/zoom-in.svg}" />
                     </Button>
                     <Separator Width="1" Margin="2,4" />
                     <Button Classes="statusbar" Width="18" Command="{Binding ResetViewCommand}" ToolTip.Tip="Reset View">
-                        <Image Source="{SvgImage /Assets/Icons/scaling.svg}" Width="12" Height="12" />
+                        <Image Source="{SvgImage /Assets/Icons/scaling.svg}" />
                     </Button>
                 </StackPanel>
             </DockPanel>
@@ -177,11 +195,8 @@
                 <Panel>
                     <Border Background="#30FFFFFF" CornerRadius="4"
                             IsVisible="{Binding IsBrushSelected}" />
-                    <Button Command="{Binding SelectBrushCommand}"
-                            Background="Transparent" Width="44" Height="44"
-                            HorizontalContentAlignment="Center"
-                            ToolTip.Tip="Brush">
-                        <Image Source="{SvgImage /Assets/Icons/brush.svg}" Width="20" Height="20" />
+                    <Button Classes="toolbar" Command="{Binding SelectBrushCommand}" ToolTip.Tip="Brush">
+                        <Image Source="{SvgImage /Assets/Icons/brush.svg}" />
                     </Button>
                 </Panel>
 
@@ -189,11 +204,8 @@
                 <Panel>
                     <Border Background="#30FFFFFF" CornerRadius="4"
                             IsVisible="{Binding IsShapeSelected}" />
-                    <Button Command="{Binding SelectShapeCommand}"
-                            Background="Transparent" Width="44" Height="44"
-                            HorizontalContentAlignment="Center"
-                            ToolTip.Tip="Shape">
-                        <Image Source="{SvgImage /Assets/Icons/shapes.svg}" Width="20" Height="20" />
+                    <Button Classes="toolbar" Command="{Binding SelectShapeCommand}" ToolTip.Tip="Shape">
+                        <Image Source="{SvgImage /Assets/Icons/shapes.svg}" />
                     </Button>
                 </Panel>
 
@@ -203,11 +215,8 @@
                 <Panel>
                     <Border Background="#30FFFFFF" CornerRadius="4"
                             IsVisible="{Binding IsPanSelected}" />
-                    <Button Command="{Binding SelectPanCommand}"
-                            Background="Transparent" Width="44" Height="44"
-                            HorizontalContentAlignment="Center"
-                            ToolTip.Tip="Pan">
-                        <Image Source="{SvgImage /Assets/Icons/hand.svg}" Width="20" Height="20" />
+                    <Button Classes="toolbar" Command="{Binding SelectPanCommand}" ToolTip.Tip="Pan">
+                        <Image Source="{SvgImage /Assets/Icons/hand.svg}" />
                     </Button>
                 </Panel>
 
