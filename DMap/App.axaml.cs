@@ -1,5 +1,3 @@
-using System;
-
 using Autofac;
 
 using Avalonia;
@@ -27,32 +25,8 @@ public partial class App : Application
         {
             var container = BuildContainer();
             var mainVm = container.Resolve<MainWindowViewModel>();
-            var navigator = container.Resolve<INavigator>();
-
-            var args = desktop.Args ?? Array.Empty<string>();
-            var roleIndex = Array.IndexOf(args, "--role");
-            if (roleIndex >= 0 && roleIndex + 1 < args.Length)
-            {
-                var role = args[roleIndex + 1].ToLowerInvariant();
-                if (role == "dm")
-                {
-                    navigator.NavigateTo(container.Resolve<DmViewModel>());
-                }
-                else if (role == "player")
-                {
-                    var playerVm = container.Resolve<PlayerViewModel>();
-                    _ = playerVm.StartDiscoveryAsync();
-                    navigator.NavigateTo(playerVm);
-                }
-                else
-                {
-                    navigator.NavigateTo(container.Resolve<StartViewModel>());
-                }
-            }
-            else
-            {
-                navigator.NavigateTo(container.Resolve<StartViewModel>());
-            }
+            var dmVm = container.Resolve<DmViewModel>();
+            mainVm.Content = new DmView { DataContext = dmVm };
 
             desktop.MainWindow = new MainWindow
             {
@@ -74,8 +48,6 @@ public partial class App : Application
         builder.RegisterType<PlayerClientService>().As<IPlayerClientService>();
 
         builder.RegisterType<MainWindowViewModel>().AsSelf().SingleInstance();
-        builder.RegisterType<NavigationService>().As<INavigator>().SingleInstance();
-        builder.RegisterType<StartViewModel>().AsSelf();
         builder.RegisterType<DmViewModel>().AsSelf();
         builder.RegisterType<PlayerViewModel>().AsSelf();
 
