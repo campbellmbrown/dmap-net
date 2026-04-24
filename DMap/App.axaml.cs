@@ -25,9 +25,8 @@ public partial class App : Application
         {
             var container = BuildContainer();
             var mainVm = container.Resolve<MainWindowViewModel>();
-            var navigator = container.Resolve<INavigator>();
-
-            navigator.NavigateTo(container.Resolve<DmViewModel>());
+            var dmVm = container.Resolve<DmViewModel>();
+            mainVm.Content = new DmView { DataContext = dmVm };
 
             desktop.MainWindow = new MainWindow
             {
@@ -49,7 +48,6 @@ public partial class App : Application
         builder.RegisterType<PlayerClientService>().As<IPlayerClientService>();
 
         builder.RegisterType<MainWindowViewModel>().AsSelf().SingleInstance();
-        builder.RegisterType<NavigationService>().As<INavigator>().SingleInstance();
         builder.RegisterType<DmViewModel>().AsSelf();
         builder.RegisterType<PlayerViewModel>().AsSelf();
 
