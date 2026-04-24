@@ -126,7 +126,7 @@
             <MenuItem Header="Window">
                 <MenuItem Header="Open Player Window" Command="{Binding OpenPlayerWindowCommand}">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/eye.svg}" />
+                        <Image Source="{SvgImage /Assets/Icons/picture-in-picture.svg}" />
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
