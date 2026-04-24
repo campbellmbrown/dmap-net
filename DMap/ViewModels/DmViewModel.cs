@@ -44,6 +44,7 @@ public class DmViewModel : ViewModelBase, IDisposable
     readonly IBrush _diamondBrush;
     readonly IDmHostService _hostService;
     readonly IDiscoveryService _discoveryService;
+    readonly Func<PlayerViewModel> _createPlayer;
 
     public Bitmap? MapImage
     {
@@ -202,15 +203,17 @@ public class DmViewModel : ViewModelBase, IDisposable
     public ReactiveCommand<Unit, Unit> RedoCommand { get; }
     public ReactiveCommand<Unit, Unit> FogOpacityUpCommand { get; }
     public ReactiveCommand<Unit, Unit> FogOpacityDownCommand { get; }
+    public ReactiveCommand<Unit, Unit> OpenPlayerWindowCommand { get; }
 
     public Interaction<Unit, string?> ShowOpenFileDialog { get; } = new();
+    public Interaction<PlayerViewModel, Unit> ShowPlayerWindow { get; } = new();
 
     public event EventHandler<PixelRect>? FogUpdated;
 
     byte[]? _mapImageBytes;
     MapSession? _session;
 
-    public DmViewModel(IFogMaskService fogService, IUndoRedoService undoRedo, IDmHostService hostService, IDiscoveryService discoveryService)
+    public DmViewModel(IFogMaskService fogService, IUndoRedoService undoRedo, IDmHostService hostService, IDiscoveryService discoveryService, Func<PlayerViewModel> createPlayer)
     {
         _fogService = fogService;
         _undoRedo = undoRedo;
@@ -219,6 +222,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         _diamondBrush = new DiamondBrush();
         _hostService = hostService;
         _discoveryService = discoveryService;
+        _createPlayer = createPlayer;
 
         _hostService.PlayerCountChanged += (_, count) => ConnectedPlayers = count;
         _undoRedo.StateChanged += (_, _) => { CanUndo = _undoRedo.CanUndo; CanRedo = _undoRedo.CanRedo; };
@@ -246,6 +250,14 @@ public class DmViewModel : ViewModelBase, IDisposable
         RedoCommand = ReactiveCommand.Create(ExecuteRedo, canRedo);
         FogOpacityUpCommand = ReactiveCommand.Create(() => { FogOpacityPercent = Math.Min(FogOpacityPercent + StepFogOpacityPercent, 100); });
         FogOpacityDownCommand = ReactiveCommand.Create(() => { FogOpacityPercent = Math.Max(FogOpacityPercent - StepFogOpacityPercent, 0); });
+        OpenPlayerWindowCommand = ReactiveCommand.CreateFromTask(OpenPlayerWindowAsync);
+    }
+
+    async Task OpenPlayerWindowAsync()
+    {
+        var playerVm = _createPlayer();
+        await playerVm.StartDiscoveryAsync();
+        await ShowPlayerWindow.Handle(playerVm);
     }
 
     void ExecuteRevealAll()

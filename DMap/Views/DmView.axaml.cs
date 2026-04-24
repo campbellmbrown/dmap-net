@@ -54,6 +54,9 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
             _activationDisposables.Add(
                 vm.ShowOpenFileDialog.RegisterHandler(HandleOpenFileDialog));
 
+            _activationDisposables.Add(
+                vm.ShowPlayerWindow.RegisterHandler(HandleShowPlayerWindow));
+
             disposables(Disposable.Create(() =>
             {
                 _activationDisposables?.Dispose();
@@ -66,6 +69,21 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
     {
         var canvas = this.FindControl<MapCanvas>("MapCanvas")!;
         canvas.InvalidateFogRegion(dirtyRect);
+    }
+
+    void HandleShowPlayerWindow(IInteractionContext<PlayerViewModel, Unit> context)
+    {
+        var playerVm = context.Input;
+        var window = new Window
+        {
+            Title = "DMap - Player",
+            Content = new PlayerView { DataContext = playerVm },
+            Width = 800,
+            Height = 600,
+        };
+        window.Show();
+        window.Closed += (_, _) => playerVm.Dispose();
+        context.SetOutput(Unit.Default);
     }
 
     async Task HandleOpenFileDialog(IInteractionContext<Unit, string?> context)

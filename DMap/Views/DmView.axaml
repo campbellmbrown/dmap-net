@@ -123,6 +123,13 @@
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
+            <MenuItem Header="Window">
+                <MenuItem Header="Open Player Window" Command="{Binding OpenPlayerWindowCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{SvgImage /Assets/Icons/eye.svg}" />
+                    </MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
         </Menu>
 
         <!-- Top bar: tool-specific settings -->
