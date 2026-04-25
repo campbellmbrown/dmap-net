@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media.Imaging;
+using Avalonia.Threading;
 
 using DMap.Models;
 using DMap.Services.Brushes;
@@ -144,6 +145,12 @@ public class DmViewModel : ViewModelBase, IDisposable
         set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    public string MemoryUsage
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    } = string.Empty;
+
     public ToolType SelectedTool
     {
         get;
@@ -212,6 +219,7 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     byte[]? _mapImageBytes;
     MapSession? _session;
+    readonly DispatcherTimer _memoryTimer;
 
     public DmViewModel(IFogMaskService fogService, IUndoRedoService undoRedo, IDmHostService hostService, IDiscoveryService discoveryService, Func<PlayerViewModel> createPlayer)
     {
@@ -226,6 +234,10 @@ public class DmViewModel : ViewModelBase, IDisposable
 
         _hostService.PlayerCountChanged += (_, count) => ConnectedPlayers = count;
         _undoRedo.StateChanged += (_, _) => { CanUndo = _undoRedo.CanUndo; CanRedo = _undoRedo.CanRedo; };
+
+        MemoryUsage = FormatMemoryUsage();
+        _memoryTimer = new DispatcherTimer(TimeSpan.FromSeconds(2), DispatcherPriority.Background, (_, _) => MemoryUsage = FormatMemoryUsage());
+        _memoryTimer.Start();
 
         LoadMapCommand = ReactiveCommand.CreateFromTask(LoadMapAsync);
         ZoomInCommand = ReactiveCommand.Create(() => { ZoomLevel = Math.Min(ZoomLevel * 1.2, 10.0); });
@@ -339,6 +351,9 @@ public class DmViewModel : ViewModelBase, IDisposable
         await StartHostingAsync();
     }
 
+    static string FormatMemoryUsage() =>
+        $"{Environment.WorkingSet / 1024 / 1024} MB";
+
     public void BeginBrushStroke() => _fogService.BeginStroke();
 
     public void EndBrushStroke()
@@ -442,6 +457,7 @@ public class DmViewModel : ViewModelBase, IDisposable
     {
         if (disposing)
         {
+            _memoryTimer.Stop();
             (_hostService as IDisposable)?.Dispose();
             (_discoveryService as IDisposable)?.Dispose();
         }
