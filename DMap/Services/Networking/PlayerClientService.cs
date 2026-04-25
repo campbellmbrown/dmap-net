@@ -10,17 +10,32 @@ using DMap.Models;
 
 namespace DMap.Services.Networking;
 
+/// <summary>
+/// Default implementation of <see cref="IPlayerClientService"/>. Connects to the DM's TCP
+/// host and drives a background receive loop that deserializes incoming frames and fires the
+/// appropriate events on the caller's thread.
+/// </summary>
 public sealed class PlayerClientService : IPlayerClientService
 {
     TcpClient? _client;
     CancellationTokenSource? _cts;
 
+    /// <inheritdoc/>
     public event EventHandler<MapSession>? SessionInfoReceived;
+
+    /// <inheritdoc/>
     public event EventHandler<byte[]>? MapImageReceived;
+
+    /// <inheritdoc/>
     public event EventHandler<FogDelta>? FogDeltaReceived;
+
+    /// <inheritdoc/>
     public event EventHandler<FogMask>? FogFullReceived;
+
+    /// <inheritdoc/>
     public event EventHandler? Disconnected;
 
+    /// <inheritdoc/>
     public async Task ConnectAsync(IPEndPoint endpoint, CancellationToken ct)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -30,6 +45,11 @@ public sealed class PlayerClientService : IPlayerClientService
         _ = Task.Run(() => ReceiveLoopAsync(_client.GetStream()), _cts.Token);
     }
 
+    /// <summary>
+    /// Continuously reads framed messages from <paramref name="stream"/> and dispatches
+    /// them to the appropriate handler until the connection closes or the token is cancelled.
+    /// Always fires <see cref="Disconnected"/> when the loop exits.
+    /// </summary>
     async Task ReceiveLoopAsync(NetworkStream stream)
     {
         try
@@ -71,6 +91,11 @@ public sealed class PlayerClientService : IPlayerClientService
         Disconnected?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>
+    /// Deserializes a <see cref="MessageType.SessionInfo"/> payload, fires
+    /// <see cref="SessionInfoReceived"/> with the session metadata, and then fires
+    /// <see cref="FogFullReceived"/> with the embedded initial fog mask.
+    /// </summary>
     void HandleSessionInfo(byte[] payload)
     {
         using var ms = new MemoryStream(payload);
@@ -92,12 +117,18 @@ public sealed class PlayerClientService : IPlayerClientService
         FogFullReceived?.Invoke(this, mask);
     }
 
+    /// <summary>
+    /// Deserializes a <see cref="MessageType.FogDelta"/> payload and fires <see cref="FogDeltaReceived"/>.
+    /// </summary>
     void HandleFogDelta(byte[] payload)
     {
         var delta = FogDelta.Deserialize(payload);
         FogDeltaReceived?.Invoke(this, delta);
     }
 
+    /// <summary>
+    /// Deserializes a <see cref="MessageType.FogFull"/> payload and fires <see cref="FogFullReceived"/>.
+    /// </summary>
     void HandleFogFull(byte[] payload)
     {
         using var ms = new MemoryStream(payload);
@@ -114,6 +145,7 @@ public sealed class PlayerClientService : IPlayerClientService
         FogFullReceived?.Invoke(this, mask);
     }
 
+    /// <inheritdoc/>
     public async Task DisconnectAsync()
     {
         _cts?.Cancel();
@@ -122,6 +154,7 @@ public sealed class PlayerClientService : IPlayerClientService
         await Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
     public void Dispose()
     {
         _cts?.Cancel();

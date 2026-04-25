@@ -6,6 +6,10 @@ using DMap.Models;
 
 namespace DMap.Converters;
 
+/// <summary>
+/// Avalonia value converter that maps a <see cref="ToolType"/> enum value to its SVG icon.
+/// Used in the DM toolbar to display an icon for each editing tool.
+/// </summary>
 public class ToolTypeIconConverter : EnumSvgConverter<ToolType>
 {
     static readonly Dictionary<ToolType, IImage> _icons = new()
@@ -15,5 +19,6 @@ public class ToolTypeIconConverter : EnumSvgConverter<ToolType>
         [ToolType.Pan] = SvgIconLoader.Load("hand.svg"),
     };
 
+    /// <inheritdoc/>
     protected override IReadOnlyDictionary<ToolType, IImage> Icons => _icons;
 }
