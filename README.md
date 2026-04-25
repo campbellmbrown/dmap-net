@@ -30,9 +30,9 @@ Future brushes (rectangle, polygon, reveal-all, hide-all) implement the same int
 - **Data transfer** — once a player connects via TCP, the DM sends session info (map dimensions + current fog mask) and the original map image bytes. From then on, every brush stroke generates a `FogDelta` (sub-rectangle of the mask) that is compressed with `DeflateStream` and broadcast to all connected players.
 - **Framing** — every TCP message is length-prefixed: `[type:int32][length:int32][payload]`.
 
-### Navigation
+### Windows
 
-`MainWindowViewModel.Content` is a `ViewModelBase` bound to a `ContentControl` in `MainWindow.axaml`. Avalonia's `IDataTemplate` system (via `ViewLocator.cs`) resolves the view for the active view model by naming convention: `FooViewModel` -> `FooView`. Navigation is a matter of setting `Content` to a new view model.
+The app always starts in DM mode. The player window is a separate window opened from the DM menu — `DmViewModel` exposes a ReactiveUI `Interaction` that the `DmView` code-behind handles by creating a new `Window` containing a `PlayerView`.
 
 ## Repository structure
 
@@ -92,19 +92,11 @@ DMap/
 
 ## Running
 
-Open the project in VS Code and pick a launch configuration:
-
-- **DMap (Start Screen)** — no arguments, shows the DM/Player chooser.
-- **DMap (DM)** — jumps straight into DM mode.
-- **DMap (Player)** — jumps straight into Player mode and begins listening for DMs.
-- **DMap (DM + Player)** — compound configuration that launches both for testing on a single machine.
-
-Alternatively, run from the command line:
-
 ```
-dotnet run --project DMap -- --role dm
-dotnet run --project DMap -- --role player
+dotnet run --project DMap
 ```
+
+Or open the project in VS Code and use the **DMap** launch configuration. To test both DM and player on one machine, load a map (which starts hosting) and open the player window from the DM menu.
 
 ## Future work
 
