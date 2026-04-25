@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Reactive;
 using System.Reactive.Linq;
@@ -353,7 +352,7 @@ public class DmViewModel : ViewModelBase, IDisposable
     }
 
     static string FormatMemoryUsage() =>
-        $"{Process.GetCurrentProcess().WorkingSet64 / 1024 / 1024} MB";
+        $"{Environment.WorkingSet / 1024 / 1024} MB";
 
     public void BeginBrushStroke() => _fogService.BeginStroke();
 
