@@ -18,28 +18,26 @@ dotnet build DMap/DMap.csproj --configuration Release --no-restore
 # Verify formatting (CI enforces this)
 dotnet format DMap/DMap.csproj --verify-no-changes --no-restore
 
-# Run (role selection screen)
+# Run
 dotnet run --project DMap
-
-# Run in a specific mode
-dotnet run --project DMap -- --role dm
-dotnet run --project DMap -- --role player
 
 # Build Sphinx docs
 make -C docs html
 ```
 
-There are no automated tests. The dual-mode VS Code launch config (`DMap (DM + Player)`) is the primary way to test both sides on one machine.
+There are no automated tests. The primary way to test both sides is to run the app, load a map (which starts hosting), then open the player window from the DM menu — both in the same process or in two separate instances.
 
 ## Architecture
 
-### Navigation
+### Window model
 
-Navigation is a single `Content` property on the main window view model. Setting it to a new view model causes the bound `ContentControl` to switch views automatically via `ViewLocator`, which resolves views from view models by naming convention.
+The app always starts in DM mode. `App.axaml.cs` builds the Autofac container, resolves `DmViewModel`, and sets `MainWindowViewModel.Content` directly to a `DmView`. There is no navigation or role selection.
+
+The player window is a separate `Window` (not navigation) opened from the DM menu. `DmViewModel` exposes a ReactiveUI `Interaction<PlayerViewModel, Unit>`; the `DmView` code-behind handles it by creating and showing a new `Window` containing a `PlayerView`.
 
 ### Fog of war
 
-The fog mask is a flat byte array (one byte per pixel) stored independently of any UI type, which keeps it easy to serialize for networking. Brush strokes only ever increase reveal values. The same map control renders both DM and Player views — the only difference is an opacity styled property.
+The fog mask is a flat byte array (one byte per pixel) stored independently of any UI type, which keeps it easy to serialize for networking. Brush strokes only ever increase reveal values; re-fogging is also supported via explicit commands. The same map control renders both DM and Player views — the only difference is a fog opacity styled property.
 
 ### Brush pipeline
 
@@ -77,4 +75,4 @@ All business-logic services are behind interfaces and registered with Autofac in
 ### MVVM pattern
 
 - All ViewModels extend `ViewModelBase : ReactiveObject` and use `RaiseAndSetIfChanged`.
-- Views contain no logic beyond forwarding pointer events and launching file-picker dialogs.
+- Views contain no logic beyond forwarding pointer events, launching file-picker dialogs, and handling ReactiveUI interactions.
