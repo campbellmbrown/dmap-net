@@ -279,7 +279,60 @@
                             BrushDiameter="{Binding BrushDiameter}"
                             ActiveTool="{Binding SelectedTool}"
                             BrushShape="{Binding SelectedBrushShape}"
-                            ShapeType="{Binding SelectedShapeType}" />
+                            ShapeType="{Binding SelectedShapeType}">
+                <controls:MapCanvas.ContextMenu>
+                    <ContextMenu x:DataType="vm:DmViewModel">
+                        <MenuItem Header="Open Map..." Command="{Binding LoadMapCommand}" InputGesture="Ctrl+O">
+                            <MenuItem.Icon>
+                                <Image Source="{SvgImage /Assets/Icons/map.svg}" />
+                            </MenuItem.Icon>
+                        </MenuItem>
+                        <Separator />
+                        <MenuItem Header="Tools">
+                            <MenuItem.Icon>
+                                <Image Source="{SvgImage /Assets/Icons/toolbox.svg}" />
+                            </MenuItem.Icon>
+                            <MenuItem Header="Brush" Command="{Binding SelectBrushCommand}">
+                                <MenuItem.Icon>
+                                    <Image Source="{SvgImage /Assets/Icons/brush.svg}" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Shape" Command="{Binding SelectShapeCommand}">
+                                <MenuItem.Icon>
+                                    <Image Source="{SvgImage /Assets/Icons/shapes.svg}" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Pan" Command="{Binding SelectPanCommand}">
+                                <MenuItem.Icon>
+                                    <Image Source="{SvgImage /Assets/Icons/hand.svg}" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                        </MenuItem>
+                        <Separator />
+                        <MenuItem Header="Undo" Command="{Binding UndoCommand}" InputGesture="Ctrl+Z">
+                            <MenuItem.Icon>
+                                <Image Source="{SvgImage /Assets/Icons/undo-2.svg}" />
+                            </MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="Redo" Command="{Binding RedoCommand}" InputGesture="Ctrl+Y">
+                            <MenuItem.Icon>
+                                <Image Source="{SvgImage /Assets/Icons/redo-2.svg}" />
+                            </MenuItem.Icon>
+                        </MenuItem>
+                        <Separator />
+                        <MenuItem Header="Reveal All" Command="{Binding RevealAllCommand}" InputGesture="Ctrl+Shift+E">
+                            <MenuItem.Icon>
+                                <Image Source="{SvgImage /Assets/Icons/eye.svg}" />
+                            </MenuItem.Icon>
+                        </MenuItem>
+                        <MenuItem Header="Refog All" Command="{Binding RefogAllCommand}" InputGesture="Ctrl+Shift+F">
+                            <MenuItem.Icon>
+                                <Image Source="{SvgImage /Assets/Icons/eye-off.svg}" />
+                            </MenuItem.Icon>
+                        </MenuItem>
+                    </ContextMenu>
+                </controls:MapCanvas.ContextMenu>
+            </controls:MapCanvas>
 
             <!-- Floating side toolbar -->
             <Border HorizontalAlignment="Left" VerticalAlignment="Top"
