@@ -225,6 +225,11 @@
                         <Image Source="{SvgImage /Assets/Icons/redo-2.svg}" />
                     </Button>
                 </StackPanel>
+                <TextBlock DockPanel.Dock="Right"
+                           Text="{Binding MemoryUsage}"
+                           VerticalAlignment="Center" FontSize="11"
+                           ToolTip.Tip="Memory usage"
+                           Margin="0,0,8,0" />
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Margin="0,0,8,0">
                     <Button Classes="statusbar" Width="18" Command="{Binding FogOpacityDownCommand}" ToolTip.Tip="Less fog">
                         <Image Source="{SvgImage /Assets/Icons/sun.svg}" />
