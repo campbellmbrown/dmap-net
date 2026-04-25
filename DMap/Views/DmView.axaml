@@ -288,20 +288,25 @@
                             </MenuItem.Icon>
                         </MenuItem>
                         <Separator />
-                        <MenuItem Header="Brush" Command="{Binding SelectBrushCommand}">
+                        <MenuItem Header="Tools">
                             <MenuItem.Icon>
-                                <Image Source="{SvgImage /Assets/Icons/brush.svg}" />
+                                <Image Source="{SvgImage /Assets/Icons/toolbox.svg}" />
                             </MenuItem.Icon>
-                        </MenuItem>
-                        <MenuItem Header="Shape" Command="{Binding SelectShapeCommand}">
-                            <MenuItem.Icon>
-                                <Image Source="{SvgImage /Assets/Icons/shapes.svg}" />
-                            </MenuItem.Icon>
-                        </MenuItem>
-                        <MenuItem Header="Pan" Command="{Binding SelectPanCommand}">
-                            <MenuItem.Icon>
-                                <Image Source="{SvgImage /Assets/Icons/hand.svg}" />
-                            </MenuItem.Icon>
+                            <MenuItem Header="Brush" Command="{Binding SelectBrushCommand}">
+                                <MenuItem.Icon>
+                                    <Image Source="{SvgImage /Assets/Icons/brush.svg}" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Shape" Command="{Binding SelectShapeCommand}">
+                                <MenuItem.Icon>
+                                    <Image Source="{SvgImage /Assets/Icons/shapes.svg}" />
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="Pan" Command="{Binding SelectPanCommand}">
+                                <MenuItem.Icon>
+                                    <Image Source="{SvgImage /Assets/Icons/hand.svg}" />
+                                </MenuItem.Icon>
+                            </MenuItem>
                         </MenuItem>
                         <Separator />
                         <MenuItem Header="Undo" Command="{Binding UndoCommand}" InputGesture="Ctrl+Z">
