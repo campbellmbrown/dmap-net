@@ -11,10 +11,18 @@ using ReactiveUI.Avalonia;
 
 namespace DMap.Views;
 
+/// <summary>
+/// Code-behind for the player view. Wires the <see cref="MapCanvas"/> to the
+/// <see cref="PlayerViewModel"/> so that fog updates from the DM are reflected in the canvas.
+/// </summary>
 public partial class PlayerView : ReactiveUserControl<PlayerViewModel>
 {
     CompositeDisposable? _activationDisposables;
 
+    /// <summary>
+    /// Initialises the view and sets up ReactiveUI activation to subscribe to fog mask
+    /// changes and fog update events from the ViewModel.
+    /// </summary>
     public PlayerView()
     {
         InitializeComponent();
@@ -47,6 +55,10 @@ public partial class PlayerView : ReactiveUserControl<PlayerViewModel>
         });
     }
 
+    /// <summary>
+    /// Forwards a fog update from the ViewModel to <see cref="MapCanvas.InvalidateFogRegion"/>
+    /// so only the changed bitmap region is redrawn.
+    /// </summary>
     void OnFogUpdated(object? sender, Avalonia.PixelRect dirtyRect)
     {
         var canvas = this.FindControl<MapCanvas>("MapCanvas")!;

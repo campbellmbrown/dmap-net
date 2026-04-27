@@ -6,10 +6,16 @@ using DMap.Models;
 
 namespace DMap.Services.Brushes;
 
+/// <summary>
+/// Brush tip that produces a circular stroke by measuring each pixel's Euclidean distance
+/// to the nearest point on the stroke segment. Softness feathers the outer annulus of the brush.
+/// </summary>
 public sealed class CircleBrush : IBrush
 {
+    /// <inheritdoc/>
     public string Name => "Circle";
 
+    /// <inheritdoc/>
     public PixelRect Apply(FogMask mask, int x1, int y1, int x2, int y2, BrushSettings settings, byte[]? snapshot = null)
     {
         var radius = settings.Diameter / 2.0;
@@ -48,6 +54,10 @@ public sealed class CircleBrush : IBrush
         return new PixelRect(minX, minY, maxX - minX + 1, maxY - minY + 1);
     }
 
+    /// <summary>
+    /// Returns the Euclidean distance from point (<paramref name="px"/>, <paramref name="py"/>) to
+    /// the segment from (x1, y1) with direction vector (dx, dy) and squared length <paramref name="lenSq"/>.
+    /// </summary>
     static double DistToSegment(int px, int py, int x1, int y1, double dx, double dy, double lenSq)
     {
         if (lenSq < 1e-10)

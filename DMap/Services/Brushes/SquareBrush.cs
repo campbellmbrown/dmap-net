@@ -6,10 +6,16 @@ using DMap.Models;
 
 namespace DMap.Services.Brushes;
 
+/// <summary>
+/// Brush tip that produces a square stroke by measuring each pixel's Chebyshev (infinity-norm)
+/// distance to the nearest point on the stroke segment. Softness feathers the outer band of the brush.
+/// </summary>
 public sealed class SquareBrush : IBrush
 {
+    /// <inheritdoc/>
     public string Name => "Square";
 
+    /// <inheritdoc/>
     public PixelRect Apply(FogMask mask, int x1, int y1, int x2, int y2, BrushSettings settings, byte[]? snapshot = null)
     {
         var radius = settings.Diameter / 2.0;
@@ -49,6 +55,11 @@ public sealed class SquareBrush : IBrush
 
     // Minimises max(|rx - t*dx|, |ry - t*dy|) over t ∈ [0,1].
     // Critical points: endpoints, where the two terms are equal, and kinks of each term.
+    /// <summary>
+    /// Returns the Chebyshev (infinity-norm) distance from point (<paramref name="px"/>, <paramref name="py"/>)
+    /// to the segment starting at (ax, ay) with direction (dx, dy).
+    /// The minimum is found analytically by evaluating the piecewise-linear objective at all critical t values.
+    /// </summary>
     static double ChebyshevDistToSegment(int px, int py, int ax, int ay, double dx, double dy)
     {
         var rx = px - ax;

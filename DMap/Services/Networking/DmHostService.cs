@@ -11,6 +11,12 @@ using DMap.Models;
 
 namespace DMap.Services.Networking;
 
+/// <summary>
+/// TCP server implementation of <see cref="IDmHostService"/>. Listens on an OS-assigned
+/// ephemeral port and manages a list of connected player <see cref="TcpClient"/> instances.
+/// Pending map image and session info are cached so newly connecting players receive the
+/// current state without an explicit re-send from the DM.
+/// </summary>
 public sealed class DmHostService : IDmHostService
 {
     TcpListener? _listener;
@@ -18,13 +24,22 @@ public sealed class DmHostService : IDmHostService
     readonly Lock _clientsLock = new();
     CancellationTokenSource? _cts;
 
+    /// <summary>Cached map image payload sent to new clients on connect, or <see langword="null"/> before the first map is loaded.</summary>
     byte[]? _pendingMapImage;
+
+    /// <summary>Cached session info payload sent to new clients on connect, or <see langword="null"/> before hosting starts.</summary>
     byte[]? _pendingSessionInfo;
 
+    /// <inheritdoc/>
     public int Port { get; set; }
+
+    /// <inheritdoc/>
     public int ConnectedPlayerCount => _clients.Count;
+
+    /// <inheritdoc/>
     public event EventHandler<int>? PlayerCountChanged;
 
+    /// <inheritdoc/>
     public async Task StartAsync(CancellationToken ct)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -52,6 +67,11 @@ public sealed class DmHostService : IDmHostService
         await Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Handles the lifetime of a single player connection: sends the cached session info and
+    /// map image on join, then keeps the connection alive until the client disconnects or the
+    /// service is cancelled.
+    /// </summary>
     async Task HandleClientAsync(TcpClient client)
     {
         lock (_clientsLock)
@@ -101,12 +121,14 @@ public sealed class DmHostService : IDmHostService
         }
     }
 
+    /// <inheritdoc/>
     public Task SendMapImageAsync(byte[] imageBytes, CancellationToken ct)
     {
         _pendingMapImage = imageBytes;
         return BroadcastAsync(MessageType.MapImage, imageBytes, ct);
     }
 
+    /// <inheritdoc/>
     public Task SendSessionInfoAsync(MapSession session, FogMask mask, CancellationToken ct)
     {
         using var ms = new MemoryStream();
@@ -125,12 +147,14 @@ public sealed class DmHostService : IDmHostService
         return BroadcastAsync(MessageType.SessionInfo, payload, ct);
     }
 
+    /// <inheritdoc/>
     public Task SendFogDeltaAsync(FogDelta delta, CancellationToken ct)
     {
         var payload = delta.Serialize();
         return BroadcastAsync(MessageType.FogDelta, payload, ct);
     }
 
+    /// <inheritdoc/>
     public Task SendFogFullAsync(FogMask mask, CancellationToken ct)
     {
         using var ms = new MemoryStream();
@@ -146,6 +170,11 @@ public sealed class DmHostService : IDmHostService
         return BroadcastAsync(MessageType.FogFull, ms.ToArray(), ct);
     }
 
+    /// <summary>
+    /// Sends a framed message to every currently connected player, taking a snapshot of the
+    /// client list under the lock to avoid holding it during I/O. Failed writes are silently
+    /// ignored because <see cref="HandleClientAsync"/> will clean up the disconnected client.
+    /// </summary>
     async Task BroadcastAsync(MessageType type, byte[] payload, CancellationToken ct)
     {
         List<TcpClient> snapshot;
@@ -168,6 +197,7 @@ public sealed class DmHostService : IDmHostService
         }
     }
 
+    /// <inheritdoc/>
     public void Dispose()
     {
         _cts?.Cancel();

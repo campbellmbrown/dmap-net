@@ -11,128 +11,200 @@ using DMap.Models;
 
 namespace DMap.Controls;
 
+/// <summary>
+/// Event arguments for a brush stroke segment, carrying the start and end coordinates
+/// in map pixels and whether the stroke is erasing fog.
+/// </summary>
 public class BrushStrokeEventArgs : EventArgs
 {
+    /// <summary>Start X coordinate in map pixels.</summary>
     public int MapX1 { get; init; }
+
+    /// <summary>Start Y coordinate in map pixels.</summary>
     public int MapY1 { get; init; }
+
+    /// <summary>End X coordinate in map pixels.</summary>
     public int MapX2 { get; init; }
+
+    /// <summary>End Y coordinate in map pixels.</summary>
     public int MapY2 { get; init; }
+
+    /// <summary><see langword="true"/> when the stroke is removing fog; <see langword="false"/> when revealing.</summary>
     public bool IsErasing { get; init; }
 }
 
+/// <summary>
+/// Event arguments for a completed shape drag gesture, carrying the bounding box corners
+/// in map pixels and whether the shape is erasing fog.
+/// </summary>
 public class ShapeStrokeEventArgs : EventArgs
 {
+    /// <summary>First corner X in map pixels.</summary>
     public int MapX1 { get; init; }
+
+    /// <summary>First corner Y in map pixels.</summary>
     public int MapY1 { get; init; }
+
+    /// <summary>Opposite corner X in map pixels.</summary>
     public int MapX2 { get; init; }
+
+    /// <summary>Opposite corner Y in map pixels.</summary>
     public int MapY2 { get; init; }
+
+    /// <summary><see langword="true"/> when the shape is removing fog; <see langword="false"/> when revealing.</summary>
     public bool IsErasing { get; init; }
 }
 
+/// <summary>
+/// Custom Avalonia control that renders a map image, a fog-of-war overlay, and a tool cursor
+/// preview. Handles pointer input to produce brush strokes, shape drags, panning, and zooming.
+/// In player mode (<see cref="IsDmMode"/> = <see langword="false"/>) all editing input is suppressed.
+/// </summary>
 public class MapCanvas : Control
 {
+    /// <summary>Styled property for the map background image.</summary>
     public static readonly StyledProperty<Bitmap?> MapImageProperty =
         AvaloniaProperty.Register<MapCanvas, Bitmap?>(nameof(MapImage));
 
+    /// <summary>Styled property for the fog mask used to build the fog bitmap.</summary>
     public static readonly StyledProperty<FogMask?> FogMaskProperty =
         AvaloniaProperty.Register<MapCanvas, FogMask?>(nameof(FogMask));
 
+    /// <summary>Styled property for the canvas zoom multiplier (default 1.0).</summary>
     public static readonly StyledProperty<double> ZoomLevelProperty =
         AvaloniaProperty.Register<MapCanvas, double>(nameof(ZoomLevel), 1.0);
 
+    /// <summary>Styled property for the horizontal pan offset in screen pixels.</summary>
     public static readonly StyledProperty<double> OffsetXProperty =
         AvaloniaProperty.Register<MapCanvas, double>(nameof(OffsetX));
 
+    /// <summary>Styled property for the vertical pan offset in screen pixels.</summary>
     public static readonly StyledProperty<double> OffsetYProperty =
         AvaloniaProperty.Register<MapCanvas, double>(nameof(OffsetY));
 
+    /// <summary>Styled property that enables DM editing mode (brush/shape input, cursor preview).</summary>
     public static readonly StyledProperty<bool> IsDmModeProperty =
         AvaloniaProperty.Register<MapCanvas, bool>(nameof(IsDmMode));
 
+    /// <summary>Styled property for the fog overlay opacity (0 = transparent, 255 = fully opaque black).</summary>
     public static readonly StyledProperty<byte> FogOpacityProperty =
         AvaloniaProperty.Register<MapCanvas, byte>(nameof(FogOpacity), 255);
 
+    /// <summary>Styled property for the brush diameter preview in screen pixels.</summary>
     public static readonly StyledProperty<int> BrushDiameterProperty =
         AvaloniaProperty.Register<MapCanvas, int>(nameof(BrushDiameter), 50);
 
+    /// <summary>Styled property for the currently active editing tool.</summary>
     public static readonly StyledProperty<ToolType> ActiveToolProperty =
         AvaloniaProperty.Register<MapCanvas, ToolType>(nameof(ActiveTool), ToolType.Brush);
 
+    /// <summary>Styled property for the brush shape used in cursor preview.</summary>
     public static readonly StyledProperty<BrushShape> BrushShapeProperty =
         AvaloniaProperty.Register<MapCanvas, BrushShape>(nameof(BrushShape), BrushShape.Circle);
 
+    /// <summary>Styled property for the shape type used in cursor preview and shape strokes.</summary>
     public static readonly StyledProperty<ShapeType> ShapeTypeProperty =
         AvaloniaProperty.Register<MapCanvas, ShapeType>(nameof(ShapeType), ShapeType.Rectangle);
 
+    /// <summary>The map background image, or <see langword="null"/> when no map is loaded.</summary>
     public Bitmap? MapImage
     {
         get => GetValue(MapImageProperty);
         set => SetValue(MapImageProperty, value);
     }
 
+    /// <summary>The fog mask used to build and update the fog overlay bitmap.</summary>
     public FogMask? FogMask
     {
         get => GetValue(FogMaskProperty);
         set => SetValue(FogMaskProperty, value);
     }
 
+    /// <summary>Zoom multiplier applied via a scale transform before the pan offset.</summary>
     public double ZoomLevel
     {
         get => GetValue(ZoomLevelProperty);
         set => SetValue(ZoomLevelProperty, value);
     }
 
+    /// <summary>Horizontal translation of the canvas in screen pixels.</summary>
     public double OffsetX
     {
         get => GetValue(OffsetXProperty);
         set => SetValue(OffsetXProperty, value);
     }
 
+    /// <summary>Vertical translation of the canvas in screen pixels.</summary>
     public double OffsetY
     {
         get => GetValue(OffsetYProperty);
         set => SetValue(OffsetYProperty, value);
     }
 
+    /// <summary>
+    /// When <see langword="true"/>, the canvas accepts brush/shape input and draws the tool cursor preview.
+    /// When <see langword="false"/> (player mode), only panning and zooming are available.
+    /// </summary>
     public bool IsDmMode
     {
         get => GetValue(IsDmModeProperty);
         set => SetValue(IsDmModeProperty, value);
     }
 
+    /// <summary>
+    /// Opacity of the black fog overlay layer in the range [0, 255].
+    /// Changing this value triggers a full fog bitmap region update and a visual invalidation.
+    /// </summary>
     public byte FogOpacity
     {
         get => GetValue(FogOpacityProperty);
         set => SetValue(FogOpacityProperty, value);
     }
 
+    /// <summary>Brush diameter in map pixels, used to scale the cursor preview outline.</summary>
     public int BrushDiameter
     {
         get => GetValue(BrushDiameterProperty);
         set => SetValue(BrushDiameterProperty, value);
     }
 
+    /// <summary>The currently active editing tool, controlling input behavior and cursor appearance.</summary>
     public ToolType ActiveTool
     {
         get => GetValue(ActiveToolProperty);
         set => SetValue(ActiveToolProperty, value);
     }
 
+    /// <summary>Shape of the brush tip, used to draw the correct cursor outline.</summary>
     public BrushShape BrushShape
     {
         get => GetValue(BrushShapeProperty);
         set => SetValue(BrushShapeProperty, value);
     }
 
+    /// <summary>Geometric shape drawn by the Shape tool.</summary>
     public ShapeType ShapeType
     {
         get => GetValue(ShapeTypeProperty);
         set => SetValue(ShapeTypeProperty, value);
     }
 
+    /// <summary>Raised when the user presses the pointer to begin a brush stroke.</summary>
     public event EventHandler? BrushStrokeStarted;
+
+    /// <summary>Raised when the user releases the pointer to end a brush stroke.</summary>
     public event EventHandler? BrushStrokeEnded;
+
+    /// <summary>
+    /// Raised for each pointer-move event while a brush stroke is in progress,
+    /// carrying the previous and current map coordinates.
+    /// </summary>
     public event EventHandler<BrushStrokeEventArgs>? BrushStrokeApplied;
+
+    /// <summary>
+    /// Raised once when the user releases the pointer after dragging a shape,
+    /// carrying the bounding box corners in map coordinates.
+    /// </summary>
     public event EventHandler<ShapeStrokeEventArgs>? ShapeStrokeApplied;
 
     WriteableBitmap? _fogBitmap;
@@ -155,18 +227,29 @@ public class MapCanvas : Control
             ShapeTypeProperty);
     }
 
+    /// <summary>Initialises the control with clipping and keyboard focus enabled.</summary>
     public MapCanvas()
     {
         ClipToBounds = true;
         Focusable = true;
     }
 
+    /// <summary>
+    /// Updates the fog bitmap for <paramref name="dirtyRect"/> and requests a visual redraw.
+    /// Call this after the fog mask has been modified to sync the bitmap without rebuilding it entirely.
+    /// </summary>
+    /// <param name="dirtyRect">The region of the mask that changed.</param>
     public void InvalidateFogRegion(PixelRect dirtyRect)
     {
         UpdateFogBitmapRegion(dirtyRect);
         InvalidateVisual();
     }
 
+    /// <summary>
+    /// Discards the existing fog bitmap and builds a new <see cref="WriteableBitmap"/> sized to match
+    /// the current <see cref="FogMask"/>. Call this when the mask is replaced entirely (e.g. new map load
+    /// or full fog received from the DM).
+    /// </summary>
     public void RebuildFogBitmap()
     {
         var mask = FogMask;
@@ -185,6 +268,11 @@ public class MapCanvas : Control
         UpdateFogBitmapRegion(new PixelRect(0, 0, mask.Width, mask.Height));
     }
 
+    /// <summary>
+    /// Writes premultiplied BGRA8888 pixels into the fog bitmap for <paramref name="dirtyRect"/>.
+    /// Each pixel is black with an alpha derived from the fog mask value and <see cref="FogOpacity"/>:
+    /// a fully fogged pixel (mask = 0) gets full fog opacity; a fully revealed pixel (mask = 255) is transparent.
+    /// </summary>
     void UpdateFogBitmapRegion(PixelRect dirtyRect)
     {
         var mask = FogMask;
@@ -223,6 +311,11 @@ public class MapCanvas : Control
         }
     }
 
+    /// <summary>
+    /// Renders the black background, the map image, the fog overlay, and (in DM mode) the tool cursor preview.
+    /// The map and fog are drawn inside a scale+translate transform derived from <see cref="ZoomLevel"/>,
+    /// <see cref="OffsetX"/>, and <see cref="OffsetY"/>.
+    /// </summary>
     public override void Render(DrawingContext context)
     {
         base.Render(context);
@@ -255,6 +348,11 @@ public class MapCanvas : Control
             RenderToolOverlay(context, zoom);
     }
 
+    /// <summary>
+    /// Draws the tool cursor outline at the current mouse position. For the Brush tool, draws the
+    /// brush shape outline scaled by the current zoom. For the Shape tool while dragging, draws
+    /// a semi-transparent preview of the shape being placed.
+    /// </summary>
     void RenderToolOverlay(DrawingContext context, double zoom)
     {
         var pen = new Pen(Brushes.White, 1.5);
@@ -318,12 +416,14 @@ public class MapCanvas : Control
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerEntered(PointerEventArgs e)
     {
         base.OnPointerEntered(e);
         UpdateCursor();
     }
 
+    /// <inheritdoc/>
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
@@ -336,6 +436,11 @@ public class MapCanvas : Control
         }
     }
 
+    /// <summary>
+    /// Updates the cursor based on the current tool and interaction state:
+    /// hidden during painting (to show the brush outline instead), resize-all during panning,
+    /// cross-hair for brush/shape, and default for player mode.
+    /// </summary>
     void UpdateCursor()
     {
         if (!IsDmMode)
@@ -359,6 +464,7 @@ public class MapCanvas : Control
         Cursor = new Cursor(StandardCursorType.Cross);
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
@@ -395,6 +501,11 @@ public class MapCanvas : Control
         }
     }
 
+    /// <summary>
+    /// Begins a paint or shape-drag gesture at <paramref name="position"/>.
+    /// For the Brush tool, fires <see cref="BrushStrokeStarted"/> and the first <see cref="BrushStrokeApplied"/>.
+    /// For the Shape tool, records the drag start point.
+    /// </summary>
     void StartPainting(Point position, bool erase)
     {
         _isErasing = erase;
@@ -413,6 +524,7 @@ public class MapCanvas : Control
         }
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         base.OnPointerMoved(e);
@@ -439,6 +551,7 @@ public class MapCanvas : Control
             InvalidateVisual();
     }
 
+    /// <inheritdoc/>
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
         base.OnPointerReleased(e);
@@ -459,6 +572,11 @@ public class MapCanvas : Control
         UpdateCursor();
     }
 
+    /// <summary>
+    /// Handles mouse wheel events to zoom the canvas centred on the pointer position,
+    /// adjusting <see cref="OffsetX"/> and <see cref="OffsetY"/> to keep the point under
+    /// the cursor stationary.
+    /// </summary>
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
         base.OnPointerWheelChanged(e);
@@ -476,6 +594,10 @@ public class MapCanvas : Control
         e.Handled = true;
     }
 
+    /// <summary>
+    /// Records the current pointer position converted to map coordinates as the starting
+    /// point for the next brush stroke segment.
+    /// </summary>
     void InitBrushMapPos(Point screenPos)
     {
         var zoom = ZoomLevel;
@@ -486,6 +608,10 @@ public class MapCanvas : Control
         _lastBrushMapY = (int)((screenPos.Y - OffsetY) / zoom);
     }
 
+    /// <summary>
+    /// Converts <paramref name="screenTo"/> to map coordinates, fires <see cref="BrushStrokeApplied"/>
+    /// with the segment from the last position to the new position, then updates the last position.
+    /// </summary>
     void RaiseBrushStroke(Point screenTo)
     {
         var zoom = ZoomLevel;
@@ -508,6 +634,10 @@ public class MapCanvas : Control
         _lastBrushMapY = mapY2;
     }
 
+    /// <summary>
+    /// Converts the screen-space drag start and end points to map coordinates and fires
+    /// <see cref="ShapeStrokeApplied"/>.
+    /// </summary>
     void FireShapeStroke(Point screenStart, Point screenEnd)
     {
         var zoom = ZoomLevel;
@@ -526,6 +656,10 @@ public class MapCanvas : Control
         });
     }
 
+    /// <summary>
+    /// Returns a normalized <see cref="Rect"/> whose top-left is at the minimum of both points
+    /// and whose size is the absolute difference.
+    /// </summary>
     static Rect MakeRect(Point a, Point b) =>
         new(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y), Math.Abs(b.X - a.X), Math.Abs(b.Y - a.Y));
 }

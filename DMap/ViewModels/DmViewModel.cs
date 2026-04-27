@@ -20,6 +20,11 @@ using ReactiveUI;
 
 namespace DMap.ViewModels;
 
+/// <summary>
+/// ViewModel for the Dungeon Master (DM) view. Owns the fog mask, undo/redo history,
+/// networking services, and all toolbar commands. Bridges user input events from
+/// <see cref="Controls.MapCanvas"/> to the underlying fog and networking services.
+/// </summary>
 public class DmViewModel : ViewModelBase, IDisposable
 {
     const int DefaultBrushDiameter = 50;
@@ -47,54 +52,69 @@ public class DmViewModel : ViewModelBase, IDisposable
     readonly IDiscoveryService _discoveryService;
     readonly Func<PlayerViewModel> _createPlayer;
 
+    /// <summary>The decoded map background image, or <see langword="null"/> before a map is loaded.</summary>
     public Bitmap? MapImage
     {
         get;
         private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    /// <summary><see langword="true"/> once a map image has been loaded and the fog mask has been initialised.</summary>
     public bool IsMapLoaded
     {
         get;
         private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    /// <summary>
+    /// The current fog mask, kept in sync with the fog service.
+    /// Bound to the map canvas so it can rebuild its fog bitmap when the mask is replaced.
+    /// </summary>
     public FogMask? FogMask
     {
         get;
         private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    /// <summary>Diameter of the brush in map pixels. Bound to the toolbar slider.</summary>
     public int BrushDiameter
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
     } = DefaultBrushDiameter;
 
+    /// <summary>Brush edge softness in [0, 1]; 0 = hard edge, 1 = full gradient.</summary>
     public double BrushSoftness
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
     } = DefaultBrushSoftness;
 
+    /// <summary>Maximum brush opacity applied per stroke in [0, 1].</summary>
     public double BrushOpacity
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
     } = DefaultBrushOpacity;
 
+    /// <summary>Shape edge softness in [0, 1]; 0 = hard edge.</summary>
     public double ShapeSoftness
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
     } = DefaultShapeSoftness;
 
+    /// <summary>Maximum shape fill opacity in [0, 1].</summary>
     public double ShapeOpacity
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
     } = DefaultShapeOpacity;
 
+    /// <summary>
+    /// Opacity of the fog overlay rendered on the canvas, in the range [0, 255].
+    /// Changing this value also raises <see cref="FogOpacityPercent"/> change notification.
+    /// </summary>
     public byte FogOpacity
     {
         get;
@@ -105,24 +125,34 @@ public class DmViewModel : ViewModelBase, IDisposable
         }
     } = DefaultFogOpacity;
 
+    /// <summary>
+    /// <see cref="FogOpacity"/> expressed as a percentage in [0, 100], rounded to the nearest integer.
+    /// Setting this property converts the value back to a byte and updates <see cref="FogOpacity"/>.
+    /// </summary>
     public decimal FogOpacityPercent
     {
         get => (decimal)Math.Round(FogOpacity / 255.0 * 100);
         set => FogOpacity = (byte)Math.Clamp(Math.Round((double)value / 100.0 * 255), MinFogOpacity, MaxFogOpacity);
     }
 
+    /// <summary>Horizontal pan offset of the map canvas in screen pixels.</summary>
     public double OffsetX
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    /// <summary>Vertical pan offset of the map canvas in screen pixels.</summary>
     public double OffsetY
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    /// <summary>
+    /// Current zoom multiplier applied to the canvas transform.
+    /// Changing this value also raises <see cref="ZoomPercent"/> change notification.
+    /// </summary>
     public double ZoomLevel
     {
         get;
@@ -133,24 +163,35 @@ public class DmViewModel : ViewModelBase, IDisposable
         }
     } = DefaultZoomLevel;
 
+    /// <summary>
+    /// <see cref="ZoomLevel"/> expressed as a percentage in [10, 1000], rounded to the nearest integer.
+    /// Setting this property converts the value and clamps it within allowed bounds.
+    /// </summary>
     public decimal ZoomPercent
     {
         get => (decimal)Math.Round(ZoomLevel * 100);
         set => ZoomLevel = Math.Clamp((double)value / 100.0, MinZoomLevel, MaxZoomLevel);
     }
 
+    /// <summary>Number of player TCP connections currently open on the host service.</summary>
     public int ConnectedPlayers
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    /// <summary>Current process memory usage formatted as a human-readable string (e.g. "42 MB"), updated every 2 seconds.</summary>
     public string MemoryUsage
     {
         get;
         private set => this.RaiseAndSetIfChanged(ref field, value);
     } = string.Empty;
 
+    /// <summary>
+    /// The currently active editing tool.
+    /// Changing this value also raises change notifications for the derived
+    /// <see cref="IsBrushSelected"/>, <see cref="IsShapeSelected"/>, and <see cref="IsPanSelected"/> properties.
+    /// </summary>
     public ToolType SelectedTool
     {
         get;
@@ -163,64 +204,124 @@ public class DmViewModel : ViewModelBase, IDisposable
         }
     }
 
+    /// <summary><see langword="true"/> when the Brush tool is active.</summary>
     public bool IsBrushSelected => SelectedTool == ToolType.Brush;
+
+    /// <summary><see langword="true"/> when the Shape tool is active.</summary>
     public bool IsShapeSelected => SelectedTool == ToolType.Shape;
+
+    /// <summary><see langword="true"/> when the Pan tool is active.</summary>
     public bool IsPanSelected => SelectedTool == ToolType.Pan;
 
+    /// <summary>The brush shape (circle, square, or diamond) used when the Brush tool is active.</summary>
     public BrushShape SelectedBrushShape
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    /// <summary>All available tool types, used to populate the toolbar's tool selector.</summary>
     public IReadOnlyList<ToolType> ToolTypes { get; } = Enum.GetValues<ToolType>();
+
+    /// <summary>All available brush shapes, used to populate the brush shape selector.</summary>
     public IReadOnlyList<BrushShape> BrushShapes { get; } = Enum.GetValues<BrushShape>();
 
+    /// <summary>The geometric shape drawn when the Shape tool is active.</summary>
     public ShapeType SelectedShapeType
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    /// <summary>All available shape types, used to populate the shape type selector.</summary>
     public IReadOnlyList<ShapeType> ShapeTypes { get; } = Enum.GetValues<ShapeType>();
 
+    /// <summary><see langword="true"/> when at least one operation is available to undo.</summary>
     public bool CanUndo
     {
         get;
         private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    /// <summary><see langword="true"/> when at least one operation is available to redo.</summary>
     public bool CanRedo
     {
         get;
         private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    /// <summary>Opens a file picker and loads the selected image as the map background.</summary>
     public ReactiveCommand<Unit, Unit> LoadMapCommand { get; }
+
+    /// <summary>Increases the zoom level by 20%.</summary>
     public ReactiveCommand<Unit, Unit> ZoomInCommand { get; }
+
+    /// <summary>Decreases the zoom level by ~17%.</summary>
     public ReactiveCommand<Unit, Unit> ZoomOutCommand { get; }
+
+    /// <summary>Resets zoom to 100% and clears the pan offset.</summary>
     public ReactiveCommand<Unit, Unit> ResetViewCommand { get; }
+
+    /// <summary>Activates the Brush tool.</summary>
     public ReactiveCommand<Unit, Unit> SelectBrushCommand { get; }
+
+    /// <summary>Activates the Shape tool.</summary>
     public ReactiveCommand<Unit, Unit> SelectShapeCommand { get; }
+
+    /// <summary>Activates the Pan tool.</summary>
     public ReactiveCommand<Unit, Unit> SelectPanCommand { get; }
+
+    /// <summary>Sets all fog mask pixels to 255 (fully revealed) and pushes an undo entry.</summary>
     public ReactiveCommand<Unit, Unit> RevealAllCommand { get; }
+
+    /// <summary>Sets all fog mask pixels to 0 (fully fogged) and pushes an undo entry.</summary>
     public ReactiveCommand<Unit, Unit> RefogAllCommand { get; }
+
+    /// <summary>Shuts down the application.</summary>
     public ReactiveCommand<Unit, Unit> ExitCommand { get; }
+
+    /// <summary>Undoes the most recent fog operation.</summary>
     public ReactiveCommand<Unit, Unit> UndoCommand { get; }
+
+    /// <summary>Redoes the most recently undone fog operation.</summary>
     public ReactiveCommand<Unit, Unit> RedoCommand { get; }
+
+    /// <summary>Increases <see cref="FogOpacityPercent"/> by one step.</summary>
     public ReactiveCommand<Unit, Unit> FogOpacityUpCommand { get; }
+
+    /// <summary>Decreases <see cref="FogOpacityPercent"/> by one step.</summary>
     public ReactiveCommand<Unit, Unit> FogOpacityDownCommand { get; }
+
+    /// <summary>Opens the player discovery window so the DM can monitor connected players.</summary>
     public ReactiveCommand<Unit, Unit> OpenPlayerWindowCommand { get; }
 
+    /// <summary>
+    /// Interaction that requests the view to display a file picker and return the chosen path.
+    /// Handled in <see cref="Views.DmView"/>.
+    /// </summary>
     public Interaction<Unit, string?> ShowOpenFileDialog { get; } = new();
+
+    /// <summary>
+    /// Interaction that requests the view to display the player window for the given ViewModel.
+    /// Handled in <see cref="Views.DmView"/>.
+    /// </summary>
     public Interaction<PlayerViewModel, Unit> ShowPlayerWindow { get; } = new();
 
+    /// <summary>
+    /// Raised after any fog modification (brush, shape, undo, redo, reveal-all, refog-all).
+    /// The event argument is the bounding rectangle of the changed region. The view uses
+    /// this to update only the affected portion of the fog bitmap rather than rebuilding it entirely.
+    /// </summary>
     public event EventHandler<PixelRect>? FogUpdated;
 
     byte[]? _mapImageBytes;
     MapSession? _session;
+    /// <summary>Fires every 2 seconds on the UI thread to refresh <see cref="MemoryUsage"/>.</summary>
     readonly DispatcherTimer _memoryTimer;
 
+    /// <summary>
+    /// Constructs the ViewModel and wires up all reactive commands and service event handlers.
+    /// </summary>
     public DmViewModel(IFogMaskService fogService, IUndoRedoService undoRedo, IDmHostService hostService, IDiscoveryService discoveryService, Func<PlayerViewModel> createPlayer)
     {
         _fogService = fogService;
@@ -265,6 +366,10 @@ public class DmViewModel : ViewModelBase, IDisposable
         OpenPlayerWindowCommand = ReactiveCommand.CreateFromTask(OpenPlayerWindowAsync);
     }
 
+    /// <summary>
+    /// Creates a <see cref="PlayerViewModel"/>, starts discovery listening, and triggers the
+    /// <see cref="ShowPlayerWindow"/> interaction so the view can open the player window.
+    /// </summary>
     async Task OpenPlayerWindowAsync()
     {
         var playerVm = _createPlayer();
@@ -272,6 +377,9 @@ public class DmViewModel : ViewModelBase, IDisposable
         await ShowPlayerWindow.Handle(playerVm);
     }
 
+    /// <summary>
+    /// Reveals the entire map, captures a before/after undo entry, and broadcasts the change.
+    /// </summary>
     void ExecuteRevealAll()
     {
         if (_fogService.Mask is null)
@@ -286,6 +394,9 @@ public class DmViewModel : ViewModelBase, IDisposable
         SendFogDelta(rect);
     }
 
+    /// <summary>
+    /// Re-fogs the entire map, captures a before/after undo entry, and broadcasts the change.
+    /// </summary>
     void ExecuteRefogAll()
     {
         if (_fogService.Mask is null)
@@ -300,6 +411,9 @@ public class DmViewModel : ViewModelBase, IDisposable
         SendFogDelta(rect);
     }
 
+    /// <summary>
+    /// Pops the most recent command from the undo stack, restores the before-state, and broadcasts the delta.
+    /// </summary>
     void ExecuteUndo()
     {
         if (_fogService.Mask is null)
@@ -314,6 +428,9 @@ public class DmViewModel : ViewModelBase, IDisposable
         SendFogDelta(command.DirtyRect);
     }
 
+    /// <summary>
+    /// Pops the most recently undone command from the redo stack, re-applies it, and broadcasts the delta.
+    /// </summary>
     void ExecuteRedo()
     {
         if (_fogService.Mask is null)
@@ -328,6 +445,10 @@ public class DmViewModel : ViewModelBase, IDisposable
         SendFogDelta(command.DirtyRect);
     }
 
+    /// <summary>
+    /// Opens the file picker via <see cref="ShowOpenFileDialog"/>, loads the chosen image as the
+    /// map background, initialises the fog mask, and starts hosting.
+    /// </summary>
     async Task LoadMapAsync()
     {
         var path = await ShowOpenFileDialog.Handle(Unit.Default);
@@ -351,11 +472,20 @@ public class DmViewModel : ViewModelBase, IDisposable
         await StartHostingAsync();
     }
 
+    /// <summary>Returns the current process working set formatted as "<c>N MB</c>".</summary>
     static string FormatMemoryUsage() =>
         $"{Environment.WorkingSet / 1024 / 1024} MB";
 
+    /// <summary>
+    /// Called by the view when the user begins a brush stroke (pointer pressed).
+    /// Snapshots the current mask for opacity-consistent painting.
+    /// </summary>
     public void BeginBrushStroke() => _fogService.BeginStroke();
 
+    /// <summary>
+    /// Called by the view when the user ends a brush stroke (pointer released).
+    /// Finalises the stroke and pushes a undo entry if any pixels changed.
+    /// </summary>
     public void EndBrushStroke()
     {
         var command = _fogService.EndStroke();
@@ -363,6 +493,15 @@ public class DmViewModel : ViewModelBase, IDisposable
             _undoRedo.Push(command);
     }
 
+    /// <summary>
+    /// Called by the view when the user completes a shape drag gesture.
+    /// Applies the selected shape to the fog mask, records an undo entry, and broadcasts the delta.
+    /// </summary>
+    /// <param name="x1">Start X in map pixels.</param>
+    /// <param name="y1">Start Y in map pixels.</param>
+    /// <param name="x2">End X in map pixels.</param>
+    /// <param name="y2">End Y in map pixels.</param>
+    /// <param name="isErasing"><see langword="true"/> to erase fog; <see langword="false"/> to reveal.</param>
     public void OnShapeStroke(int x1, int y1, int x2, int y2, bool isErasing)
     {
         if (_fogService.Mask is null)
@@ -384,6 +523,9 @@ public class DmViewModel : ViewModelBase, IDisposable
         SendFogDelta(dirtyRect);
     }
 
+    /// <summary>
+    /// Computes the clamped bounding rectangle of a shape defined by two corner points.
+    /// </summary>
     PixelRect ComputeShapeRect(int x1, int y1, int x2, int y2)
     {
         var minX = Math.Max(0, Math.Min(x1, x2));
@@ -393,6 +535,10 @@ public class DmViewModel : ViewModelBase, IDisposable
         return new PixelRect(minX, minY, maxX - minX + 1, maxY - minY + 1);
     }
 
+    /// <summary>
+    /// For square and circle shape types, constrains the drag so the resulting shape has equal
+    /// width and height (the smaller of the two extents is used). Other shape types are returned unchanged.
+    /// </summary>
     static (int, int, int, int) ConstrainToSquare(ShapeType shapeType, int x1, int y1, int x2, int y2)
     {
         if (shapeType is not ShapeType.Square and not ShapeType.Circle)
@@ -402,6 +548,15 @@ public class DmViewModel : ViewModelBase, IDisposable
         return (x1, y1, x1 + Math.Sign(x2 - x1) * side, y1 + Math.Sign(y2 - y1) * side);
     }
 
+    /// <summary>
+    /// Called by the view for each pointer-move event while a brush stroke is in progress.
+    /// Applies the selected brush between the previous and current map coordinates and broadcasts the change.
+    /// </summary>
+    /// <param name="x1">Previous map X in pixels.</param>
+    /// <param name="y1">Previous map Y in pixels.</param>
+    /// <param name="x2">Current map X in pixels.</param>
+    /// <param name="y2">Current map Y in pixels.</param>
+    /// <param name="isErasing"><see langword="true"/> to erase fog; <see langword="false"/> to reveal.</param>
     public void OnBrushStroke(int x1, int y1, int x2, int y2, bool isErasing)
     {
         if (_fogService.Mask is null)
@@ -420,6 +575,10 @@ public class DmViewModel : ViewModelBase, IDisposable
         SendFogDelta(dirtyRect);
     }
 
+    /// <summary>
+    /// Extracts the fog delta for <paramref name="dirtyRect"/> from the current mask and
+    /// fires-and-forgets a broadcast to all connected players.
+    /// </summary>
     void SendFogDelta(PixelRect dirtyRect)
     {
         if (_fogService.Mask is null)
@@ -431,6 +590,10 @@ public class DmViewModel : ViewModelBase, IDisposable
         _ = _hostService.SendFogDeltaAsync(delta, default);
     }
 
+    /// <summary>
+    /// Starts the TCP host, sends the current map image and session info to any already-connected
+    /// players, and begins broadcasting the session over UDP for discovery.
+    /// </summary>
     async Task StartHostingAsync()
     {
         if (_session is null)
@@ -447,12 +610,14 @@ public class DmViewModel : ViewModelBase, IDisposable
         await _discoveryService.StartBroadcastingAsync(_session, _hostService.Port, default);
     }
 
+    /// <inheritdoc/>
     public void Dispose()
     {
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
     }
 
+    /// <summary>Releases managed resources when <paramref name="disposing"/> is <see langword="true"/>.</summary>
     protected virtual void Dispose(bool disposing)
     {
         if (disposing)

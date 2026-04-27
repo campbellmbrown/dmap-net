@@ -14,10 +14,19 @@ using ReactiveUI.Avalonia;
 
 namespace DMap.Views;
 
+/// <summary>
+/// Code-behind for the DM (Dungeon Master) view. Wires the <see cref="MapCanvas"/> events
+/// to the ViewModel, handles fog bitmap updates, and implements the ReactiveUI interactions
+/// for the file picker and the player window.
+/// </summary>
 public partial class DmView : ReactiveUserControl<DmViewModel>
 {
     CompositeDisposable? _activationDisposables;
 
+    /// <summary>
+    /// Initialises the view, wires canvas input events to ViewModel methods, and sets up
+    /// ReactiveUI activation to subscribe to fog updates and handle interactions.
+    /// </summary>
     public DmView()
     {
         InitializeComponent();
@@ -65,12 +74,21 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
         });
     }
 
+    /// <summary>
+    /// Forwards a fog update from the ViewModel to <see cref="MapCanvas.InvalidateFogRegion"/>
+    /// so only the changed bitmap region is redrawn.
+    /// </summary>
     void OnFogUpdated(object? sender, Avalonia.PixelRect dirtyRect)
     {
         var canvas = this.FindControl<MapCanvas>("MapCanvas")!;
         canvas.InvalidateFogRegion(dirtyRect);
     }
 
+    /// <summary>
+    /// Handles the <see cref="DmViewModel.ShowPlayerWindow"/> interaction by creating a new
+    /// top-level window containing a <see cref="PlayerView"/> and disposing the ViewModel when
+    /// the window is closed.
+    /// </summary>
     void HandleShowPlayerWindow(IInteractionContext<PlayerViewModel, Unit> context)
     {
         var playerVm = context.Input;
@@ -86,6 +104,11 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
         context.SetOutput(Unit.Default);
     }
 
+    /// <summary>
+    /// Handles the <see cref="DmViewModel.ShowOpenFileDialog"/> interaction by opening the
+    /// platform file picker filtered to common image formats, returning the chosen local path
+    /// or <see langword="null"/> if the dialog was cancelled.
+    /// </summary>
     async Task HandleOpenFileDialog(IInteractionContext<Unit, string?> context)
     {
         var topLevel = TopLevel.GetTopLevel(this);

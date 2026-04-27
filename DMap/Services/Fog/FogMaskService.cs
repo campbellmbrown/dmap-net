@@ -9,17 +9,28 @@ using DMap.Services.Networking;
 
 namespace DMap.Services.Fog;
 
+/// <summary>
+/// Default implementation of <see cref="IFogMaskService"/>. Tracks a per-stroke snapshot
+/// for opacity-consistent brush painting and accumulates a dirty rectangle so that only
+/// the changed region needs to be re-rendered or transmitted.
+/// </summary>
 public sealed class FogMaskService : IFogMaskService
 {
     const string MaskNotInitialized = "Fog mask not initialized.";
 
+    /// <inheritdoc/>
     public FogMask? Mask { get; private set; }
 
+    /// <summary>Pixel snapshot captured at the start of the current stroke, or <see langword="null"/> when no stroke is in progress.</summary>
     byte[]? _snapshot;
+
+    /// <summary>Union of all dirty rectangles produced during the current stroke, or <see langword="null"/> when no pixels have been touched yet.</summary>
     PixelRect? _strokeDirtyRect;
 
+    /// <inheritdoc/>
     public event EventHandler<PixelRect>? MaskChanged;
 
+    /// <inheritdoc/>
     public void Initialize(int width, int height)
     {
         Mask = new FogMask(width, height);
@@ -27,6 +38,7 @@ public sealed class FogMaskService : IFogMaskService
         _strokeDirtyRect = null;
     }
 
+    /// <inheritdoc/>
     public void BeginStroke()
     {
         if (Mask is null)
@@ -37,6 +49,7 @@ public sealed class FogMaskService : IFogMaskService
         _strokeDirtyRect = null;
     }
 
+    /// <inheritdoc/>
     public IFogCommand? EndStroke()
     {
         var snapshot = _snapshot;
@@ -52,6 +65,7 @@ public sealed class FogMaskService : IFogMaskService
         return new FogDeltaCommand(strokeRect.Value, before, after);
     }
 
+    /// <inheritdoc/>
     public PixelRect ApplyBrush(IBrush brush, int x1, int y1, int x2, int y2, BrushSettings settings)
     {
         if (Mask is null)
@@ -66,6 +80,7 @@ public sealed class FogMaskService : IFogMaskService
         return dirtyRect;
     }
 
+    /// <inheritdoc/>
     public PixelRect ApplyRectangle(int x1, int y1, int x2, int y2, float softness, float opacity, bool erase = false)
     {
         if (Mask is null)
@@ -93,6 +108,7 @@ public sealed class FogMaskService : IFogMaskService
         return dirtyRect;
     }
 
+    /// <inheritdoc/>
     public PixelRect ApplyEllipse(int x1, int y1, int x2, int y2, float softness, float opacity, bool erase = false)
     {
         if (Mask is null)
@@ -137,6 +153,7 @@ public sealed class FogMaskService : IFogMaskService
         return dirtyRect;
     }
 
+    /// <inheritdoc/>
     public void RevealAll()
     {
         if (Mask is null)
@@ -146,6 +163,7 @@ public sealed class FogMaskService : IFogMaskService
         MaskChanged?.Invoke(this, new PixelRect(0, 0, Mask.Width, Mask.Height));
     }
 
+    /// <inheritdoc/>
     public void RefogAll()
     {
         if (Mask is null)
@@ -155,12 +173,14 @@ public sealed class FogMaskService : IFogMaskService
         MaskChanged?.Invoke(this, new PixelRect(0, 0, Mask.Width, Mask.Height));
     }
 
+    /// <inheritdoc/>
     public void Replace(FogMask mask)
     {
         Mask = mask;
         MaskChanged?.Invoke(this, new PixelRect(0, 0, mask.Width, mask.Height));
     }
 
+    /// <inheritdoc/>
     public void ApplyDelta(FogDelta delta)
     {
         if (Mask is null)
@@ -184,6 +204,7 @@ public sealed class FogMaskService : IFogMaskService
         MaskChanged?.Invoke(this, new PixelRect(delta.X, delta.Y, delta.Width, delta.Height));
     }
 
+    /// <summary>Returns the smallest rectangle that contains both <paramref name="a"/> and <paramref name="b"/>.</summary>
     static PixelRect UnionRects(PixelRect a, PixelRect b)
     {
         var x = Math.Min(a.X, b.X);
@@ -193,6 +214,11 @@ public sealed class FogMaskService : IFogMaskService
         return new PixelRect(x, y, right - x, bottom - y);
     }
 
+    /// <summary>
+    /// Returns the coverage value in [0, 1] for a pixel at (<paramref name="x"/>, <paramref name="y"/>)
+    /// inside a rectangle, based on its distance from the nearest edge and the feather width.
+    /// Pixels closer to the edge than <paramref name="feather"/> receive a proportionally reduced coverage.
+    /// </summary>
     static double RectCoverage(int x, int y, int minX, int minY, int maxX, int maxY, float feather)
     {
         if (feather <= 0)

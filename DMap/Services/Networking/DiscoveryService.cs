@@ -9,16 +9,25 @@ using DMap.Models;
 
 namespace DMap.Services.Networking;
 
+/// <summary>
+/// Default implementation of <see cref="IDiscoveryService"/> using UDP broadcast on a fixed port.
+/// Packet format: "DMAP" magic (4 bytes) | SessionId (16 bytes) | TCP port (4 bytes) |
+/// name byte length (4 bytes) | UTF-8 machine name.
+/// </summary>
 public sealed class DiscoveryService : IDiscoveryService
 {
+    /// <summary>UDP port used for both sending and receiving discovery broadcast packets.</summary>
     const int DiscoveryPort = 19876;
+
     static readonly byte[] _magic = "DMAP"u8.ToArray();
 
     UdpClient? _udpClient;
     CancellationTokenSource? _cts;
 
+    /// <inheritdoc/>
     public event EventHandler<DiscoveredDm>? DmDiscovered;
 
+    /// <inheritdoc/>
     public async Task StartBroadcastingAsync(MapSession session, int tcpPort, CancellationToken ct)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -51,6 +60,7 @@ public sealed class DiscoveryService : IDiscoveryService
         await Task.CompletedTask;
     }
 
+    /// <inheritdoc/>
     public async Task StartListeningAsync(CancellationToken ct)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -82,6 +92,9 @@ public sealed class DiscoveryService : IDiscoveryService
         await Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Constructs a broadcast packet containing the magic bytes, session ID, TCP port, and hostname.
+    /// </summary>
     static byte[] BuildBroadcastPacket(MapSession session, int tcpPort)
     {
         var name = Environment.MachineName;
@@ -107,6 +120,10 @@ public sealed class DiscoveryService : IDiscoveryService
         return packet;
     }
 
+    /// <summary>
+    /// Parses a received UDP datagram and returns a <see cref="DiscoveredDm"/> if the packet
+    /// is valid, or <see langword="null"/> if the magic bytes are missing or the packet is truncated.
+    /// </summary>
     static DiscoveredDm? ParseBroadcastPacket(byte[] data, IPEndPoint sender)
     {
         if (data.Length < _magic.Length + 16 + 4 + 4)
@@ -138,6 +155,7 @@ public sealed class DiscoveryService : IDiscoveryService
         return new DiscoveredDm(name, tcpEndPoint, sessionId);
     }
 
+    /// <inheritdoc/>
     public void Dispose()
     {
         _cts?.Cancel();
