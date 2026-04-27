@@ -106,6 +106,10 @@ public class MapCanvas : Control
     public static readonly StyledProperty<ShapeType> ShapeTypeProperty =
         AvaloniaProperty.Register<MapCanvas, ShapeType>(nameof(ShapeType), ShapeType.Rectangle);
 
+    /// <summary>Styled property controlling whether the map image is rendered (true) or replaced with white (false).</summary>
+    public static readonly StyledProperty<bool> ShowMapProperty =
+        AvaloniaProperty.Register<MapCanvas, bool>(nameof(ShowMap), true);
+
     /// <summary>The map background image, or <see langword="null"/> when no map is loaded.</summary>
     public Bitmap? MapImage
     {
@@ -189,6 +193,16 @@ public class MapCanvas : Control
         set => SetValue(ShapeTypeProperty, value);
     }
 
+    /// <summary>
+    /// When <see langword="false"/>, the map image is replaced with a white fill so the fog mask
+    /// boundaries are easier to inspect. The fog overlay is still rendered.
+    /// </summary>
+    public bool ShowMap
+    {
+        get => GetValue(ShowMapProperty);
+        set => SetValue(ShowMapProperty, value);
+    }
+
     /// <summary>Raised when the user presses the pointer to begin a brush stroke.</summary>
     public event EventHandler? BrushStrokeStarted;
 
@@ -224,7 +238,7 @@ public class MapCanvas : Control
             MapImageProperty, FogMaskProperty, ZoomLevelProperty,
             OffsetXProperty, OffsetYProperty, FogOpacityProperty,
             BrushDiameterProperty, ActiveToolProperty, BrushShapeProperty,
-            ShapeTypeProperty);
+            ShapeTypeProperty, ShowMapProperty);
     }
 
     /// <summary>Initialises the control with clipping and keyboard focus enabled.</summary>
@@ -335,7 +349,10 @@ public class MapCanvas : Control
         using (context.PushTransform(transform))
         {
             var imageRect = new Rect(0, 0, mapImage.Size.Width, mapImage.Size.Height);
-            context.DrawImage(mapImage, imageRect);
+            if (ShowMap)
+                context.DrawImage(mapImage, imageRect);
+            else
+                context.FillRectangle(Brushes.White, imageRect);
 
             if (_fogBitmap != null)
             {

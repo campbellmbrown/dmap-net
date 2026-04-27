@@ -295,6 +295,19 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// <summary>Opens the player discovery window so the DM can monitor connected players.</summary>
     public ReactiveCommand<Unit, Unit> OpenPlayerWindowCommand { get; }
 
+    /// <summary>Toggles whether the map image is rendered or replaced with a white background for fog inspection.</summary>
+    public ReactiveCommand<Unit, Unit> ToggleMapVisibilityCommand { get; }
+
+    /// <summary>
+    /// <see langword="true"/> when the map image is rendered; <see langword="false"/> when the map is hidden
+    /// and replaced with a white background so the fog mask is easier to inspect.
+    /// </summary>
+    public bool IsMapVisible
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    } = true;
+
     /// <summary>
     /// Interaction that requests the view to display a file picker and return the chosen path.
     /// Handled in <see cref="Views.DmView"/>.
@@ -364,6 +377,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         FogOpacityUpCommand = ReactiveCommand.Create(() => { FogOpacityPercent = Math.Min(FogOpacityPercent + StepFogOpacityPercent, 100); });
         FogOpacityDownCommand = ReactiveCommand.Create(() => { FogOpacityPercent = Math.Max(FogOpacityPercent - StepFogOpacityPercent, 0); });
         OpenPlayerWindowCommand = ReactiveCommand.CreateFromTask(OpenPlayerWindowAsync);
+        ToggleMapVisibilityCommand = ReactiveCommand.Create(() => { IsMapVisible = !IsMapVisible; });
     }
 
     /// <summary>

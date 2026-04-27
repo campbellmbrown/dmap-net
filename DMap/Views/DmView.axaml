@@ -54,6 +54,7 @@
         <KeyBinding Gesture="Ctrl+OemOpenBrackets" Command="{Binding FogOpacityDownCommand}" />
         <KeyBinding Gesture="Ctrl+Shift+E" Command="{Binding RevealAllCommand}" />
         <KeyBinding Gesture="Ctrl+Shift+F" Command="{Binding RefogAllCommand}" />
+        <KeyBinding Gesture="Ctrl+M" Command="{Binding ToggleMapVisibilityCommand}" />
     </UserControl.KeyBindings>
 
     <DockPanel>
@@ -97,6 +98,15 @@
                 <MenuItem Header="Less Fog" Command="{Binding FogOpacityDownCommand}" InputGesture="Ctrl+OemOpenBrackets">
                     <MenuItem.Icon>
                         <Image Source="{SvgImage /Assets/Icons/sun.svg}" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <Separator />
+                <MenuItem Header="Toggle Map" Command="{Binding ToggleMapVisibilityCommand}" InputGesture="Ctrl+M">
+                    <MenuItem.Icon>
+                        <Panel>
+                            <Image Source="{SvgImage /Assets/Icons/map.svg}" IsVisible="{Binding IsMapVisible}" />
+                            <Image Source="{SvgImage /Assets/Icons/eye-off.svg}" IsVisible="{Binding !IsMapVisible}" />
+                        </Panel>
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
@@ -224,6 +234,13 @@
                     <Button Classes="statusbar" Width="18" Command="{Binding RedoCommand}" ToolTip.Tip="Redo (Ctrl+Y)">
                         <Image Source="{SvgImage /Assets/Icons/redo-2.svg}" />
                     </Button>
+                    <Separator Width="1" Margin="4,4" />
+                    <Button Classes="statusbar" Width="18" Command="{Binding ToggleMapVisibilityCommand}" ToolTip.Tip="Toggle Map (Ctrl+M)">
+                        <Panel>
+                            <Image Source="{SvgImage /Assets/Icons/map.svg}" IsVisible="{Binding IsMapVisible}" />
+                            <Image Source="{SvgImage /Assets/Icons/eye-off.svg}" IsVisible="{Binding !IsMapVisible}" />
+                        </Panel>
+                    </Button>
                 </StackPanel>
                 <TextBlock DockPanel.Dock="Right"
                            Text="{Binding MemoryUsage}"
@@ -276,6 +293,7 @@
                             OffsetY="{Binding OffsetY, Mode=TwoWay}"
                             IsDmMode="True"
                             FogOpacity="{Binding FogOpacity}"
+                            ShowMap="{Binding IsMapVisible}"
                             BrushDiameter="{Binding BrushDiameter}"
                             ActiveTool="{Binding SelectedTool}"
                             BrushShape="{Binding SelectedBrushShape}"
