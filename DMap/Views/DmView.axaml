@@ -102,21 +102,17 @@
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator />
-                <MenuItem Header="Toggle Map" Command="{Binding ToggleMapVisibilityCommand}" InputGesture="Ctrl+M">
+                <MenuItem Header="Toggle Map" Command="{Binding ToggleMapVisibilityCommand}" InputGesture="Ctrl+M"
+                          IsChecked="{Binding IsMapVisible}">
                     <MenuItem.Icon>
-                        <Panel>
-                            <Image Source="{SvgImage /Assets/Icons/image.svg}" IsVisible="{Binding IsMapVisible}" />
-                            <Image Source="{SvgImage /Assets/Icons/image-off.svg}" IsVisible="{Binding !IsMapVisible}" />
-                        </Panel>
+                        <Image Source="{SvgImage /Assets/Icons/image.svg}" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator />
-                <MenuItem Header="Pause Updates" Command="{Binding TogglePauseUpdatesCommand}" InputGesture="Ctrl+P">
+                <MenuItem Header="Pause Updates" Command="{Binding TogglePauseUpdatesCommand}" InputGesture="Ctrl+P"
+                          IsChecked="{Binding IsUpdatesPaused}">
                     <MenuItem.Icon>
-                        <Panel>
-                            <Image Source="{SvgImage /Assets/Icons/radio.svg}" IsVisible="{Binding !IsUpdatesPaused}" />
-                            <Image Source="{SvgImage /Assets/Icons/radio-off.svg}" IsVisible="{Binding IsUpdatesPaused}" />
-                        </Panel>
+                        <Image Source="{SvgImage /Assets/Icons/radio.svg}" />
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
