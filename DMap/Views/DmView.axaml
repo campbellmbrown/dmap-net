@@ -54,6 +54,8 @@
         <KeyBinding Gesture="Ctrl+OemOpenBrackets" Command="{Binding FogOpacityDownCommand}" />
         <KeyBinding Gesture="Ctrl+Shift+E" Command="{Binding RevealAllCommand}" />
         <KeyBinding Gesture="Ctrl+Shift+F" Command="{Binding RefogAllCommand}" />
+        <KeyBinding Gesture="Ctrl+M" Command="{Binding ToggleMapVisibilityCommand}" />
+        <KeyBinding Gesture="Ctrl+P" Command="{Binding TogglePauseUpdatesCommand}" />
     </UserControl.KeyBindings>
 
     <DockPanel>
@@ -97,6 +99,20 @@
                 <MenuItem Header="Less Fog" Command="{Binding FogOpacityDownCommand}" InputGesture="Ctrl+OemOpenBrackets">
                     <MenuItem.Icon>
                         <Image Source="{SvgImage /Assets/Icons/sun.svg}" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <Separator />
+                <MenuItem Header="Show Map" Command="{Binding ToggleMapVisibilityCommand}" InputGesture="Ctrl+M"
+                          ToggleType="CheckBox" IsChecked="{Binding IsMapVisible, Mode=OneWay}">
+                    <MenuItem.Icon>
+                        <Image Source="{SvgImage /Assets/Icons/image.svg}" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <Separator />
+                <MenuItem Header="Send Updates" Command="{Binding TogglePauseUpdatesCommand}" InputGesture="Ctrl+P"
+                          ToggleType="CheckBox" IsChecked="{Binding !IsUpdatesPaused, Mode=OneWay}">
+                    <MenuItem.Icon>
+                        <Image Source="{SvgImage /Assets/Icons/radio.svg}" />
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
@@ -224,6 +240,20 @@
                     <Button Classes="statusbar" Width="18" Command="{Binding RedoCommand}" ToolTip.Tip="Redo (Ctrl+Y)">
                         <Image Source="{SvgImage /Assets/Icons/redo-2.svg}" />
                     </Button>
+                    <Separator Width="1" Margin="4,4" />
+                    <Button Classes="statusbar" Width="18" Command="{Binding ToggleMapVisibilityCommand}" ToolTip.Tip="Toggle Map (Ctrl+M)">
+                        <Panel>
+                            <Image Source="{SvgImage /Assets/Icons/image.svg}" IsVisible="{Binding IsMapVisible}" />
+                            <Image Source="{SvgImage /Assets/Icons/image-off.svg}" IsVisible="{Binding !IsMapVisible}" />
+                        </Panel>
+                    </Button>
+                    <Separator Width="1" Margin="4,4" />
+                    <Button Classes="statusbar" Width="18" Command="{Binding TogglePauseUpdatesCommand}" ToolTip.Tip="Pause/Resume Player Updates (Ctrl+P)">
+                        <Panel>
+                            <Image Source="{SvgImage /Assets/Icons/radio.svg}" IsVisible="{Binding !IsUpdatesPaused}" />
+                            <Image Source="{SvgImage /Assets/Icons/radio-off.svg}" IsVisible="{Binding IsUpdatesPaused}" />
+                        </Panel>
+                    </Button>
                 </StackPanel>
                 <TextBlock DockPanel.Dock="Right"
                            Text="{Binding MemoryUsage}"
@@ -276,6 +306,7 @@
                             OffsetY="{Binding OffsetY, Mode=TwoWay}"
                             IsDmMode="True"
                             FogOpacity="{Binding FogOpacity}"
+                            ShowMap="{Binding IsMapVisible}"
                             BrushDiameter="{Binding BrushDiameter}"
                             ActiveTool="{Binding SelectedTool}"
                             BrushShape="{Binding SelectedBrushShape}"
