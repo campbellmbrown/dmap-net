@@ -102,15 +102,15 @@
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator />
-                <MenuItem Header="Toggle Map" Command="{Binding ToggleMapVisibilityCommand}" InputGesture="Ctrl+M"
+                <MenuItem Header="Show Map" Command="{Binding ToggleMapVisibilityCommand}" InputGesture="Ctrl+M"
                           ToggleType="CheckBox" IsChecked="{Binding IsMapVisible, Mode=OneWay}">
                     <MenuItem.Icon>
                         <Image Source="{SvgImage /Assets/Icons/image.svg}" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator />
-                <MenuItem Header="Pause Updates" Command="{Binding TogglePauseUpdatesCommand}" InputGesture="Ctrl+P"
-                          ToggleType="CheckBox" IsChecked="{Binding IsUpdatesPaused, Mode=OneWay}">
+                <MenuItem Header="Send Updates" Command="{Binding TogglePauseUpdatesCommand}" InputGesture="Ctrl+P"
+                          ToggleType="CheckBox" IsChecked="{Binding !IsUpdatesPaused, Mode=OneWay}">
                     <MenuItem.Icon>
                         <Image Source="{SvgImage /Assets/Icons/radio.svg}" />
                     </MenuItem.Icon>
