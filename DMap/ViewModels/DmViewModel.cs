@@ -308,6 +308,19 @@ public class DmViewModel : ViewModelBase, IDisposable
         private set => this.RaiseAndSetIfChanged(ref field, value);
     } = true;
 
+    /// <summary>Toggles whether fog updates are held locally or sent to connected players immediately.</summary>
+    public ReactiveCommand<Unit, Unit> TogglePauseUpdatesCommand { get; }
+
+    /// <summary>
+    /// When <see langword="true"/>, fog changes are applied locally but not broadcast to players.
+    /// Resuming sends a single full-mask delta to bring all players up to date.
+    /// </summary>
+    public bool IsUpdatesPaused
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
     /// <summary>
     /// Interaction that requests the view to display a file picker and return the chosen path.
     /// Handled in <see cref="Views.DmView"/>.
@@ -329,6 +342,7 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     byte[]? _mapImageBytes;
     MapSession? _session;
+    bool _hasPendingUpdates;
     /// <summary>Fires every 2 seconds on the UI thread to refresh <see cref="MemoryUsage"/>.</summary>
     readonly DispatcherTimer _memoryTimer;
 
@@ -378,6 +392,12 @@ public class DmViewModel : ViewModelBase, IDisposable
         FogOpacityDownCommand = ReactiveCommand.Create(() => { FogOpacityPercent = Math.Max(FogOpacityPercent - StepFogOpacityPercent, 0); });
         OpenPlayerWindowCommand = ReactiveCommand.CreateFromTask(OpenPlayerWindowAsync);
         ToggleMapVisibilityCommand = ReactiveCommand.Create(() => { IsMapVisible = !IsMapVisible; });
+        TogglePauseUpdatesCommand = ReactiveCommand.Create(() =>
+        {
+            IsUpdatesPaused = !IsUpdatesPaused;
+            if (!IsUpdatesPaused)
+                FlushPendingUpdates();
+        });
     }
 
     /// <summary>
@@ -591,16 +611,39 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     /// <summary>
     /// Extracts the fog delta for <paramref name="dirtyRect"/> from the current mask and
-    /// fires-and-forgets a broadcast to all connected players.
+    /// fires-and-forgets a broadcast to all connected players. When updates are paused the
+    /// delta is discarded and a flag is set so <see cref="FlushPendingUpdates"/> knows to
+    /// sync when updates resume.
     /// </summary>
     void SendFogDelta(PixelRect dirtyRect)
     {
         if (_fogService.Mask is null)
             return;
 
+        if (IsUpdatesPaused)
+        {
+            _hasPendingUpdates = true;
+            return;
+        }
+
         var delta = FogDelta.FromMask(
             _fogService.Mask, dirtyRect.X, dirtyRect.Y, dirtyRect.Width, dirtyRect.Height);
 
+        _ = _hostService.SendFogDeltaAsync(delta, default);
+    }
+
+    /// <summary>
+    /// Sends the full current fog mask to all players as a single delta, catching them up on
+    /// every change made while updates were paused.
+    /// </summary>
+    void FlushPendingUpdates()
+    {
+        if (!_hasPendingUpdates || _fogService.Mask is null)
+            return;
+
+        _hasPendingUpdates = false;
+        var mask = _fogService.Mask;
+        var delta = FogDelta.FromMask(mask, 0, 0, mask.Width, mask.Height);
         _ = _hostService.SendFogDeltaAsync(delta, default);
     }
 
