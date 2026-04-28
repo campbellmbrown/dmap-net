@@ -209,16 +209,16 @@ public class PlayerViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
-    /// Initialises the fog service with the new map dimensions and raises <see cref="FogUpdated"/>
-    /// for the full map area so the canvas rebuilds its fog bitmap.
+    /// Initialises the fog service with the new map dimensions. The canvas rebuild and
+    /// <see cref="FogUpdated"/> notification are deferred to the <see cref="FogFullReceived"/>
+    /// event that <see cref="IPlayerClientService"/> always fires immediately after this one
+    /// when processing a session-info frame, avoiding a redundant double rebuild.
     /// </summary>
     void OnSessionInfoReceived(object? sender, MapSession session)
     {
         Dispatcher.UIThread.Post(() =>
         {
             _fogService.Initialize(session.MapWidth, session.MapHeight);
-            FogMask = _fogService.Mask;
-            FogUpdated?.Invoke(this, new PixelRect(0, 0, session.MapWidth, session.MapHeight));
         });
     }
 

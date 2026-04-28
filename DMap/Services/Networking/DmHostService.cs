@@ -40,7 +40,7 @@ public sealed class DmHostService : IDmHostService
     public event EventHandler<int>? PlayerCountChanged;
 
     /// <inheritdoc/>
-    public async Task StartAsync(CancellationToken ct)
+    public Task StartAsync(CancellationToken ct)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         _listener = new TcpListener(IPAddress.Any, 0);
@@ -64,7 +64,7 @@ public sealed class DmHostService : IDmHostService
             }
         }, _cts.Token);
 
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -85,12 +85,20 @@ public sealed class DmHostService : IDmHostService
         {
             var stream = client.GetStream();
 
-            // Send pending data to new client
-            if (_pendingSessionInfo is not null)
-                await ProtocolFraming.WriteFrameAsync(stream, MessageType.SessionInfo, _pendingSessionInfo, default);
+            // Snapshot the pending payloads under the lock so reads are race-free.
+            byte[]? pendingSessionInfo;
+            byte[]? pendingMapImage;
+            lock (_clientsLock)
+            {
+                pendingSessionInfo = _pendingSessionInfo;
+                pendingMapImage = _pendingMapImage;
+            }
 
-            if (_pendingMapImage is not null)
-                await ProtocolFraming.WriteFrameAsync(stream, MessageType.MapImage, _pendingMapImage, default);
+            if (pendingSessionInfo is not null)
+                await ProtocolFraming.WriteFrameAsync(stream, MessageType.SessionInfo, pendingSessionInfo, default);
+
+            if (pendingMapImage is not null)
+                await ProtocolFraming.WriteFrameAsync(stream, MessageType.MapImage, pendingMapImage, default);
 
             // Keep connection alive until cancelled or disconnected
             var buffer = new byte[1];
@@ -124,7 +132,10 @@ public sealed class DmHostService : IDmHostService
     /// <inheritdoc/>
     public Task SendMapImageAsync(byte[] imageBytes, CancellationToken ct)
     {
-        _pendingMapImage = imageBytes;
+        lock (_clientsLock)
+        {
+            _pendingMapImage = imageBytes;
+        }
         return BroadcastAsync(MessageType.MapImage, imageBytes, ct);
     }
 
@@ -143,7 +154,10 @@ public sealed class DmHostService : IDmHostService
         }
 
         var payload = ms.ToArray();
-        _pendingSessionInfo = payload;
+        lock (_clientsLock)
+        {
+            _pendingSessionInfo = payload;
+        }
         return BroadcastAsync(MessageType.SessionInfo, payload, ct);
     }
 

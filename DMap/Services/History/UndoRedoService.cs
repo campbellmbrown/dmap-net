@@ -13,7 +13,7 @@ namespace DMap.Services.History;
 public sealed class UndoRedoService : IUndoRedoService
 {
     /// <summary>Maximum number of commands retained in the undo history.</summary>
-    const int MaxHistory = 10;
+    const int MaxHistory = 50;
 
     readonly LinkedList<IFogCommand> _undoStack = new();
     readonly Stack<IFogCommand> _redoStack = new();

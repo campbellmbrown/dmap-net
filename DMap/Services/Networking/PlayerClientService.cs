@@ -146,12 +146,14 @@ public sealed class PlayerClientService : IPlayerClientService
     }
 
     /// <inheritdoc/>
-    public async Task DisconnectAsync()
+    public Task DisconnectAsync()
     {
         _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = null;
         _client?.Dispose();
         _client = null;
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>

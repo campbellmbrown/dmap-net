@@ -28,7 +28,7 @@ public sealed class DiscoveryService : IDiscoveryService
     public event EventHandler<DiscoveredDm>? DmDiscovered;
 
     /// <inheritdoc/>
-    public async Task StartBroadcastingAsync(MapSession session, int tcpPort, CancellationToken ct)
+    public Task StartBroadcastingAsync(MapSession session, int tcpPort, CancellationToken ct)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         _udpClient = new UdpClient();
@@ -57,11 +57,11 @@ public sealed class DiscoveryService : IDiscoveryService
             }
         }, _cts.Token);
 
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public async Task StartListeningAsync(CancellationToken ct)
+    public Task StartListeningAsync(CancellationToken ct)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         _udpClient = new UdpClient(DiscoveryPort);
@@ -89,7 +89,7 @@ public sealed class DiscoveryService : IDiscoveryService
             }
         }, _cts.Token);
 
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 
     /// <summary>
