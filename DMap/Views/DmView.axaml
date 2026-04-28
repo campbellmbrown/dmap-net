@@ -17,10 +17,16 @@
     </UserControl.Resources>
 
     <UserControl.Styles>
+        <Style Selector="Separator.statusbar">
+            <Setter Property="Width" Value="1" />
+            <Setter Property="Height" Value="16" />
+            <Setter Property="Margin" Value="2,0" />
+        </Style>
         <Style Selector="Button.statusbar">
-            <Setter Property="Height" Value="18" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Height" Value="20" />
+            <Setter Property="Width" Value="20" />
             <Setter Property="FontSize" Value="11" />
-            <Setter Property="Padding" Value="4,0" />
         </Style>
         <Style Selector="Button.statusbar Image">
             <Setter Property="Width" Value="12" />
@@ -230,38 +236,37 @@
         <Border DockPanel.Dock="Bottom" Height="24"
                 Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
             <DockPanel Margin="8,0" LastChildFill="False">
-                <TextBlock DockPanel.Dock="Left"
-                           Text="{Binding ConnectedPlayers, StringFormat='Players: {0}'}"
-                           VerticalAlignment="Center" FontSize="11" />
-                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center" Margin="8,0,0,0">
-                    <Button Classes="statusbar" Width="18" Command="{Binding UndoCommand}" ToolTip.Tip="Undo (Ctrl+Z)">
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding ConnectedPlayers, StringFormat='Players: {0}'}"
+                               VerticalAlignment="Center" FontSize="11" />
+                    <Separator Classes="statusbar" />
+                    <TextBlock Text="{Binding MemoryUsage}"
+                               VerticalAlignment="Center" FontSize="11"
+                               ToolTip.Tip="Memory usage" />
+                </StackPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                    <Button Classes="statusbar" Command="{Binding UndoCommand}" ToolTip.Tip="Undo">
                         <Image Source="{SvgImage /Assets/Icons/undo-2.svg}" />
                     </Button>
-                    <Button Classes="statusbar" Width="18" Command="{Binding RedoCommand}" ToolTip.Tip="Redo (Ctrl+Y)">
+                    <Button Classes="statusbar" Command="{Binding RedoCommand}" ToolTip.Tip="Redo">
                         <Image Source="{SvgImage /Assets/Icons/redo-2.svg}" />
                     </Button>
-                    <Separator Width="1" Margin="4,4" />
-                    <Button Classes="statusbar" Width="18" Command="{Binding ToggleMapVisibilityCommand}" ToolTip.Tip="Toggle Map (Ctrl+M)">
+                    <Separator Classes="statusbar" />
+                    <Button Classes="statusbar" Command="{Binding ToggleMapVisibilityCommand}" ToolTip.Tip="Toggle Map">
                         <Panel>
                             <Image Source="{SvgImage /Assets/Icons/image.svg}" IsVisible="{Binding IsMapVisible}" />
                             <Image Source="{SvgImage /Assets/Icons/image-off.svg}" IsVisible="{Binding !IsMapVisible}" />
                         </Panel>
                     </Button>
-                    <Separator Width="1" Margin="4,4" />
-                    <Button Classes="statusbar" Width="18" Command="{Binding TogglePauseUpdatesCommand}" ToolTip.Tip="Pause/Resume Player Updates (Ctrl+P)">
+                    <Separator Classes="statusbar" />
+                    <Button Classes="statusbar" Command="{Binding TogglePauseUpdatesCommand}" ToolTip.Tip="Pause/Resume Player Updates">
                         <Panel>
                             <Image Source="{SvgImage /Assets/Icons/radio.svg}" IsVisible="{Binding !IsUpdatesPaused}" />
                             <Image Source="{SvgImage /Assets/Icons/radio-off.svg}" IsVisible="{Binding IsUpdatesPaused}" />
                         </Panel>
                     </Button>
-                </StackPanel>
-                <TextBlock DockPanel.Dock="Right"
-                           Text="{Binding MemoryUsage}"
-                           VerticalAlignment="Center" FontSize="11"
-                           ToolTip.Tip="Memory usage"
-                           Margin="0,0,8,0" />
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" Margin="0,0,8,0">
-                    <Button Classes="statusbar" Width="18" Command="{Binding FogOpacityDownCommand}" ToolTip.Tip="Less fog">
+                    <Separator Classes="statusbar" />
+                    <Button Classes="statusbar" Command="{Binding FogOpacityDownCommand}" ToolTip.Tip="Less fog">
                         <Image Source="{SvgImage /Assets/Icons/sun.svg}" />
                     </Button>
                     <NumericUpDown Value="{Binding FogOpacityPercent}"
@@ -270,13 +275,11 @@
                                    ShowButtonSpinner="False"
                                    Width="56" Height="20" FontSize="11"
                                    ToolTip.Tip="Fog opacity" />
-                    <Button Classes="statusbar" Width="18" Command="{Binding FogOpacityUpCommand}" ToolTip.Tip="More fog">
+                    <Button Classes="statusbar" Command="{Binding FogOpacityUpCommand}" ToolTip.Tip="More fog">
                         <Image Source="{SvgImage /Assets/Icons/moon.svg}" />
                     </Button>
-                    <Separator Width="1" Margin="2,4" />
-                </StackPanel>
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                    <Button Classes="statusbar" Width="18" Command="{Binding ZoomOutCommand}" ToolTip.Tip="Zoom Out">
+                    <Separator Classes="statusbar" />
+                    <Button Classes="statusbar" Command="{Binding ZoomOutCommand}" ToolTip.Tip="Zoom Out">
                         <Image Source="{SvgImage /Assets/Icons/zoom-out.svg}" />
                     </Button>
                     <NumericUpDown Value="{Binding ZoomPercent}"
@@ -285,11 +288,11 @@
                                    ShowButtonSpinner="False"
                                    Width="64" Height="20" FontSize="11"
                                    ToolTip.Tip="Zoom level" />
-                    <Button Classes="statusbar" Width="18" Command="{Binding ZoomInCommand}" ToolTip.Tip="Zoom In">
+                    <Button Classes="statusbar" Command="{Binding ZoomInCommand}" ToolTip.Tip="Zoom In">
                         <Image Source="{SvgImage /Assets/Icons/zoom-in.svg}" />
                     </Button>
-                    <Separator Width="1" Margin="2,4" />
-                    <Button Classes="statusbar" Width="18" Command="{Binding ResetViewCommand}" ToolTip.Tip="Reset View">
+                    <Separator Classes="statusbar" />
+                    <Button Classes="statusbar" Command="{Binding ResetViewCommand}" ToolTip.Tip="Reset View">
                         <Image Source="{SvgImage /Assets/Icons/scaling.svg}" />
                     </Button>
                 </StackPanel>
