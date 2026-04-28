@@ -543,6 +543,9 @@ public class DmViewModel : ViewModelBase, IDisposable
 
         var (cx1, cy1, cx2, cy2) = ConstrainToSquare(SelectedShapeType, x1, y1, x2, y2);
 
+        if (cx1 == cx2 && cy1 == cy2)
+            return;
+
         var shapeRect = ComputeShapeRect(cx1, cy1, cx2, cy2);
         var before = FogDeltaCommand.CaptureFromMask(_fogService.Mask, shapeRect);
 
