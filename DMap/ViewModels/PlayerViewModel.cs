@@ -5,6 +5,7 @@ using System.Reactive;
 using System.Threading.Tasks;
 
 using Avalonia;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 
@@ -99,6 +100,27 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         set => this.RaiseAndSetIfChanged(ref field, value);
     } = 1.0;
 
+    /// <summary>Fog overlay style as set by the DM. Defaults to flat black until the DM broadcasts an update.</summary>
+    public FogType FogType
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    /// <summary>Flat fog colour as set by the DM. Used when <see cref="FogType"/> is <see cref="FogType.Color"/>.</summary>
+    public Color FogColor
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    } = Colors.Black;
+
+    /// <summary>Texture seed broadcast by the DM so the player generates the same noise pattern.</summary>
+    public Guid FogSeed
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
     /// <summary>
     /// Initiates a connection to <see cref="SelectedDm"/>.
     /// Enabled only when a DM is selected and no connection is active or pending.
@@ -131,6 +153,7 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         _clientService.MapImageReceived += OnMapImageReceived;
         _clientService.FogDeltaReceived += OnFogDeltaReceived;
         _clientService.FogFullReceived += OnFogFullReceived;
+        _clientService.FogAppearanceReceived += OnFogAppearanceReceived;
         _clientService.Disconnected += OnDisconnected;
 
         var canConnect = this.WhenAnyValue(
@@ -253,6 +276,17 @@ public class PlayerViewModel : ViewModelBase, IDisposable
             _fogService.Replace(mask);
             FogMask = _fogService.Mask;
             FogUpdated?.Invoke(this, new PixelRect(0, 0, mask.Width, mask.Height));
+        });
+    }
+
+    /// <summary>Applies a fog appearance update from the DM (type, colour, and texture seed).</summary>
+    void OnFogAppearanceReceived(object? sender, FogAppearancePayload appearance)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            FogType = appearance.FogType;
+            FogColor = Color.FromRgb(appearance.R, appearance.G, appearance.B);
+            FogSeed = appearance.Seed;
         });
     }
 

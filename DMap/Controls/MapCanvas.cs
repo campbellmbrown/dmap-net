@@ -8,6 +8,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 
 using DMap.Models;
+using DMap.Services.Fog;
 
 namespace DMap.Controls;
 
@@ -86,9 +87,21 @@ public class MapCanvas : Control
     public static readonly StyledProperty<bool> IsDmModeProperty =
         AvaloniaProperty.Register<MapCanvas, bool>(nameof(IsDmMode));
 
-    /// <summary>Styled property for the fog overlay opacity (0 = transparent, 255 = fully opaque black).</summary>
-    public static readonly StyledProperty<byte> FogOpacityProperty =
-        AvaloniaProperty.Register<MapCanvas, byte>(nameof(FogOpacity), 255);
+    /// <summary>Styled property for the fog overlay opacity (0 = transparent, 1 = fully opaque black).</summary>
+    public static readonly StyledProperty<double> FogOpacityProperty =
+        AvaloniaProperty.Register<MapCanvas, double>(nameof(FogOpacity), 1.0);
+
+    /// <summary>Styled property for the fog overlay style (flat colour or one of the textured variants).</summary>
+    public static readonly StyledProperty<FogType> FogTypeProperty =
+        AvaloniaProperty.Register<MapCanvas, FogType>(nameof(FogType), FogType.Color);
+
+    /// <summary>Styled property for the flat fog colour (used when <see cref="FogType"/> is <see cref="FogType.Color"/>).</summary>
+    public static readonly StyledProperty<Color> FogColorProperty =
+        AvaloniaProperty.Register<MapCanvas, Color>(nameof(FogColor), Colors.Black);
+
+    /// <summary>Styled property for the texture seed (typically the session ID) so DM and players see identical textures.</summary>
+    public static readonly StyledProperty<Guid> FogSeedProperty =
+        AvaloniaProperty.Register<MapCanvas, Guid>(nameof(FogSeed), Guid.Empty);
 
     /// <summary>Styled property for the brush diameter preview in screen pixels.</summary>
     public static readonly StyledProperty<int> BrushDiameterProperty =
@@ -156,13 +169,34 @@ public class MapCanvas : Control
     }
 
     /// <summary>
-    /// Opacity of the black fog overlay layer in the range [0, 255].
+    /// Opacity of the black fog overlay layer in the range [0, 1].
     /// Changing this value triggers a full fog bitmap region update and a visual invalidation.
     /// </summary>
-    public byte FogOpacity
+    public double FogOpacity
     {
         get => GetValue(FogOpacityProperty);
         set => SetValue(FogOpacityProperty, value);
+    }
+
+    /// <summary>Selected fog overlay style.</summary>
+    public FogType FogType
+    {
+        get => GetValue(FogTypeProperty);
+        set => SetValue(FogTypeProperty, value);
+    }
+
+    /// <summary>Flat fog colour used when <see cref="FogType"/> is <see cref="FogType.Color"/>.</summary>
+    public Color FogColor
+    {
+        get => GetValue(FogColorProperty);
+        set => SetValue(FogColorProperty, value);
+    }
+
+    /// <summary>Texture seed used to generate deterministic noise for textured fog types.</summary>
+    public Guid FogSeed
+    {
+        get => GetValue(FogSeedProperty);
+        set => SetValue(FogSeedProperty, value);
     }
 
     /// <summary>Brush diameter in map pixels, used to scale the cursor preview outline.</summary>
@@ -221,7 +255,10 @@ public class MapCanvas : Control
     /// </summary>
     public event EventHandler<ShapeStrokeEventArgs>? ShapeStrokeApplied;
 
+    static readonly FogTextureGenerator _textureGenerator = new();
+
     WriteableBitmap? _fogBitmap;
+    byte[]? _fogTexture;
     bool _isPanning;
     Point _lastPanPoint;
     bool _isPainting;
@@ -238,7 +275,8 @@ public class MapCanvas : Control
             MapImageProperty, FogMaskProperty, ZoomLevelProperty,
             OffsetXProperty, OffsetYProperty, FogOpacityProperty,
             BrushDiameterProperty, ActiveToolProperty, BrushShapeProperty,
-            ShapeTypeProperty, ShowMapProperty);
+            ShapeTypeProperty, ShowMapProperty,
+            FogTypeProperty, FogColorProperty, FogSeedProperty);
     }
 
     /// <summary>Initialises the control with clipping and keyboard focus enabled.</summary>
@@ -270,6 +308,7 @@ public class MapCanvas : Control
         if (mask is null)
         {
             _fogBitmap = null;
+            _fogTexture = null;
             return;
         }
 
@@ -279,13 +318,33 @@ public class MapCanvas : Control
             Avalonia.Platform.PixelFormat.Bgra8888,
             AlphaFormat.Premul);
 
+        RegenerateFogTexture();
         UpdateFogBitmapRegion(new PixelRect(0, 0, mask.Width, mask.Height));
     }
 
     /// <summary>
+    /// Regenerates the cached fog texture for the current <see cref="FogType"/> and <see cref="FogSeed"/>.
+    /// Sized to match the current <see cref="FogMask"/>; cleared to <see langword="null"/> when in
+    /// flat-colour mode or when no mask is loaded.
+    /// </summary>
+    void RegenerateFogTexture()
+    {
+        var mask = FogMask;
+        if (mask is null)
+        {
+            _fogTexture = null;
+            return;
+        }
+
+        _fogTexture = _textureGenerator.Generate(mask.Width, mask.Height, FogType, FogSeed);
+    }
+
+    /// <summary>
     /// Writes premultiplied BGRA8888 pixels into the fog bitmap for <paramref name="dirtyRect"/>.
-    /// Each pixel is black with an alpha derived from the fog mask value and <see cref="FogOpacity"/>:
-    /// a fully fogged pixel (mask = 0) gets full fog opacity; a fully revealed pixel (mask = 255) is transparent.
+    /// The colour at each pixel comes from <see cref="FogColor"/> in flat-colour mode or from the
+    /// pre-generated noise texture in textured modes; alpha is derived from the fog mask value and
+    /// <see cref="FogOpacity"/> so a fully fogged pixel (mask = 0) gets full fog opacity and a fully
+    /// revealed pixel (mask = 255) is transparent.
     /// </summary>
     void UpdateFogBitmapRegion(PixelRect dirtyRect)
     {
@@ -294,6 +353,9 @@ public class MapCanvas : Control
             return;
 
         var fogOpacity = FogOpacity;
+        var texture = _fogTexture;
+        var color = FogColor;
+        var width = mask.Width;
 
         using var fb = _fogBitmap.Lock();
         unsafe
@@ -303,23 +365,45 @@ public class MapCanvas : Control
 
             var minX = Math.Max(0, dirtyRect.X);
             var minY = Math.Max(0, dirtyRect.Y);
-            var maxX = Math.Min(mask.Width, dirtyRect.X + dirtyRect.Width);
+            var maxX = Math.Min(width, dirtyRect.X + dirtyRect.Width);
             var maxY = Math.Min(mask.Height, dirtyRect.Y + dirtyRect.Height);
 
-            for (var y = minY; y < maxY; y++)
+            if (texture is null)
             {
-                var row = ptr + y * stride;
-                for (var x = minX; x < maxX; x++)
+                byte cb = color.B, cg = color.G, cr = color.R;
+                for (var y = minY; y < maxY; y++)
                 {
-                    var maskValue = mask[x, y];
-                    var alpha = (byte)(fogOpacity * (255 - maskValue) / 255);
-
-                    // Premultiplied BGRA: color channels must be <= alpha
-                    var offset = x * 4;
-                    row[offset + 0] = 0;     // B
-                    row[offset + 1] = 0;     // G
-                    row[offset + 2] = 0;     // R
-                    row[offset + 3] = alpha; // A
+                    var row = ptr + y * stride;
+                    for (var x = minX; x < maxX; x++)
+                    {
+                        var alpha = fogOpacity * (255 - mask[x, y]) / 255;
+                        var offset = x * 4;
+                        row[offset + 0] = (byte)(cb * alpha);
+                        row[offset + 1] = (byte)(cg * alpha);
+                        row[offset + 2] = (byte)(cr * alpha);
+                        row[offset + 3] = (byte)(alpha * 255);
+                    }
+                }
+            }
+            else
+            {
+                fixed (byte* texPtr = texture)
+                {
+                    for (var y = minY; y < maxY; y++)
+                    {
+                        var row = ptr + y * stride;
+                        var texRow = texPtr + y * width * 3;
+                        for (var x = minX; x < maxX; x++)
+                        {
+                            var alpha = fogOpacity * (255 - mask[x, y]) / 255;
+                            var offset = x * 4;
+                            var texOffset = x * 3;
+                            row[offset + 0] = (byte)(texRow[texOffset + 0] * alpha);
+                            row[offset + 1] = (byte)(texRow[texOffset + 1] * alpha);
+                            row[offset + 2] = (byte)(texRow[texOffset + 2] * alpha);
+                            row[offset + 3] = (byte)(alpha * 255);
+                        }
+                    }
                 }
             }
         }
@@ -446,7 +530,19 @@ public class MapCanvas : Control
         base.OnPropertyChanged(change);
         if (change.Property == ActiveToolProperty || change.Property == IsDmModeProperty)
             UpdateCursor();
-        if (change.Property == FogOpacityProperty && FogMask is not null)
+
+        if (FogMask is null)
+            return;
+
+        var needsTextureRefresh = change.Property == FogTypeProperty || change.Property == FogSeedProperty;
+        var needsBitmapRefresh = needsTextureRefresh
+            || change.Property == FogOpacityProperty
+            || change.Property == FogColorProperty;
+
+        if (needsTextureRefresh)
+            RegenerateFogTexture();
+
+        if (needsBitmapRefresh)
         {
             UpdateFogBitmapRegion(new PixelRect(0, 0, FogMask.Width, FogMask.Height));
             InvalidateVisual();
@@ -460,7 +556,7 @@ public class MapCanvas : Control
     /// </summary>
     void UpdateCursor()
     {
-        if (!IsDmMode)
+        if (!IsDmMode || ActiveTool == ToolType.Fog)
         {
             Cursor = Cursor.Default;
             return;

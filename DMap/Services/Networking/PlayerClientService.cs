@@ -33,6 +33,9 @@ public sealed class PlayerClientService : IPlayerClientService
     public event EventHandler<FogMask>? FogFullReceived;
 
     /// <inheritdoc/>
+    public event EventHandler<FogAppearancePayload>? FogAppearanceReceived;
+
+    /// <inheritdoc/>
     public event EventHandler? Disconnected;
 
     /// <inheritdoc/>
@@ -75,6 +78,9 @@ public sealed class PlayerClientService : IPlayerClientService
                         break;
                     case MessageType.FogFull:
                         HandleFogFull(payload);
+                        break;
+                    case MessageType.FogAppearance:
+                        FogAppearanceReceived?.Invoke(this, FogAppearancePayload.Deserialize(payload));
                         break;
                 }
             }

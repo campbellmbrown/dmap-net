@@ -30,6 +30,9 @@ public sealed class DmHostService : IDmHostService
     /// <summary>Cached session info payload sent to new clients on connect, or <see langword="null"/> before hosting starts.</summary>
     byte[]? _pendingSessionInfo;
 
+    /// <summary>Cached fog appearance payload sent to new clients on connect, or <see langword="null"/> if never set.</summary>
+    byte[]? _pendingFogAppearance;
+
     /// <inheritdoc/>
     public int Port { get; set; }
 
@@ -88,14 +91,19 @@ public sealed class DmHostService : IDmHostService
             // Snapshot the pending payloads under the lock so reads are race-free.
             byte[]? pendingSessionInfo;
             byte[]? pendingMapImage;
+            byte[]? pendingFogAppearance;
             lock (_clientsLock)
             {
                 pendingSessionInfo = _pendingSessionInfo;
                 pendingMapImage = _pendingMapImage;
+                pendingFogAppearance = _pendingFogAppearance;
             }
 
             if (pendingSessionInfo is not null)
                 await ProtocolFraming.WriteFrameAsync(stream, MessageType.SessionInfo, pendingSessionInfo, default);
+
+            if (pendingFogAppearance is not null)
+                await ProtocolFraming.WriteFrameAsync(stream, MessageType.FogAppearance, pendingFogAppearance, default);
 
             if (pendingMapImage is not null)
                 await ProtocolFraming.WriteFrameAsync(stream, MessageType.MapImage, pendingMapImage, default);
@@ -166,6 +174,17 @@ public sealed class DmHostService : IDmHostService
     {
         var payload = delta.Serialize();
         return BroadcastAsync(MessageType.FogDelta, payload, ct);
+    }
+
+    /// <inheritdoc/>
+    public Task SendFogAppearanceAsync(FogAppearancePayload appearance, CancellationToken ct)
+    {
+        var payload = appearance.Serialize();
+        lock (_clientsLock)
+        {
+            _pendingFogAppearance = payload;
+        }
+        return BroadcastAsync(MessageType.FogAppearance, payload, ct);
     }
 
     /// <inheritdoc/>

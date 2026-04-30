@@ -63,4 +63,12 @@ public interface IDmHostService : IDisposable
     /// <param name="mask">The complete fog mask to send.</param>
     /// <param name="ct">Cancellation token.</param>
     Task SendFogFullAsync(FogMask mask, CancellationToken ct);
+
+    /// <summary>
+    /// Broadcasts the current fog overlay appearance (type + colour + seed) to all connected players,
+    /// and caches the payload so newly connecting players receive it on join.
+    /// </summary>
+    /// <param name="appearance">Fog appearance settings.</param>
+    /// <param name="ct">Cancellation token.</param>
+    Task SendFogAppearanceAsync(FogAppearancePayload appearance, CancellationToken ct);
 }

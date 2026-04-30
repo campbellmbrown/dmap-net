@@ -13,32 +13,21 @@
     <UserControl.Resources>
         <converters:BrushShapeIconConverter x:Key="BrushShapeIconConverter" />
         <converters:ShapeTypeIconConverter x:Key="ShapeTypeIconConverter" />
-        <converters:ToolTypeIconConverter x:Key="ToolTypeIconConverter" />
     </UserControl.Resources>
 
     <UserControl.Styles>
-        <Style Selector="Separator.statusbar">
+        <Style Selector="Separator.toolbar">
             <Setter Property="Width" Value="1" />
             <Setter Property="Height" Value="16" />
             <Setter Property="Margin" Value="2,0" />
         </Style>
-        <Style Selector="Button.statusbar">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Height" Value="20" />
-            <Setter Property="Width" Value="20" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
-        <Style Selector="Button.statusbar Image">
-            <Setter Property="Width" Value="12" />
-            <Setter Property="Height" Value="12" />
-        </Style>
-        <Style Selector="Button.toolbar">
+        <Style Selector="Button.icon">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Width" Value="44" />
             <Setter Property="Height" Value="44" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
         </Style>
-        <Style Selector="Button.toolbar Image">
+        <Style Selector="Button.icon Image">
             <Setter Property="Width" Value="20" />
             <Setter Property="Height" Value="20" />
         </Style>
@@ -56,8 +45,6 @@
         <KeyBinding Gesture="Ctrl+OemPlus" Command="{Binding ZoomInCommand}" />
         <KeyBinding Gesture="Ctrl+OemMinus" Command="{Binding ZoomOutCommand}" />
         <KeyBinding Gesture="Ctrl+D0" Command="{Binding ResetViewCommand}" />
-        <KeyBinding Gesture="Ctrl+OemCloseBrackets" Command="{Binding FogOpacityUpCommand}" />
-        <KeyBinding Gesture="Ctrl+OemOpenBrackets" Command="{Binding FogOpacityDownCommand}" />
         <KeyBinding Gesture="Ctrl+Shift+E" Command="{Binding RevealAllCommand}" />
         <KeyBinding Gesture="Ctrl+Shift+F" Command="{Binding RefogAllCommand}" />
         <KeyBinding Gesture="Ctrl+M" Command="{Binding ToggleMapVisibilityCommand}" />
@@ -94,17 +81,6 @@
                 <MenuItem Header="Reset View" Command="{Binding ResetViewCommand}" InputGesture="Ctrl+D0">
                     <MenuItem.Icon>
                         <Image Source="{SvgImage /Assets/Icons/scaling.svg}" />
-                    </MenuItem.Icon>
-                </MenuItem>
-                <Separator />
-                <MenuItem Header="More Fog" Command="{Binding FogOpacityUpCommand}" InputGesture="Ctrl+OemCloseBrackets">
-                    <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/moon.svg}" />
-                    </MenuItem.Icon>
-                </MenuItem>
-                <MenuItem Header="Less Fog" Command="{Binding FogOpacityDownCommand}" InputGesture="Ctrl+OemOpenBrackets">
-                    <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/sun.svg}" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator />
@@ -154,82 +130,48 @@
             </MenuItem>
         </Menu>
 
-        <!-- Top bar: tool-specific settings -->
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8"
                     Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
                     Margin="0" Height="40">
 
-            <!-- Tool selector -->
-            <ComboBox ItemsSource="{Binding ToolTypes}"
-                      SelectedItem="{Binding SelectedTool}"
-                      Width="130" VerticalAlignment="Center" Margin="8,0,0,0">
-                <ComboBox.ItemTemplate>
-                    <DataTemplate x:CompileBindings="False">
-                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                            <Image Width="16" Height="16" Source="{Binding Converter={StaticResource ToolTypeIconConverter}}" />
-                            <TextBlock Text="{Binding}" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </DataTemplate>
-                </ComboBox.ItemTemplate>
-            </ComboBox>
+            <Button Classes="icon" Command="{Binding UndoCommand}" ToolTip.Tip="Undo">
+                <Image Source="{SvgImage /Assets/Icons/undo-2.svg}" />
+            </Button>
+            <Button Classes="icon" Command="{Binding RedoCommand}" ToolTip.Tip="Redo">
+                <Image Source="{SvgImage /Assets/Icons/redo-2.svg}" />
+            </Button>
+            <Separator Classes="toolbar" />
+            <Button Classes="icon" Command="{Binding ToggleMapVisibilityCommand}" ToolTip.Tip="Toggle Map">
+                <Panel>
+                    <Image Source="{SvgImage /Assets/Icons/image.svg}" IsVisible="{Binding IsMapVisible}" />
+                    <Image Source="{SvgImage /Assets/Icons/image-off.svg}" IsVisible="{Binding !IsMapVisible}" />
+                </Panel>
+            </Button>
+            <Separator Classes="toolbar" />
+            <Button Classes="icon" Command="{Binding TogglePauseUpdatesCommand}" ToolTip.Tip="Pause/Resume Player Updates">
+                <Panel>
+                    <Image Source="{SvgImage /Assets/Icons/radio.svg}" IsVisible="{Binding !IsUpdatesPaused}" />
+                    <Image Source="{SvgImage /Assets/Icons/radio-off.svg}" IsVisible="{Binding IsUpdatesPaused}" />
+                </Panel>
+            </Button>
+            <Separator Classes="toolbar" />
+            <Button Classes="icon" Command="{Binding ZoomOutCommand}" ToolTip.Tip="Zoom Out">
+                <Image Source="{SvgImage /Assets/Icons/zoom-out.svg}" />
+            </Button>
+            <NumericUpDown Value="{Binding ZoomPercent}"
+                           Minimum="10" Maximum="1000" Increment="10"
+                           FormatString="0'%'"
+                           ShowButtonSpinner="False"
+                           Width="64" Height="20" FontSize="11"
+                           ToolTip.Tip="Zoom level" />
+            <Button Classes="icon" Command="{Binding ZoomInCommand}" ToolTip.Tip="Zoom In">
+                <Image Source="{SvgImage /Assets/Icons/zoom-in.svg}" />
+            </Button>
+            <Separator Classes="toolbar" />
+            <Button Classes="icon" Command="{Binding ResetViewCommand}" ToolTip.Tip="Reset View">
+                <Image Source="{SvgImage /Assets/Icons/scaling.svg}" />
+            </Button>
 
-            <Separator Width="1" Margin="4,8" />
-
-            <!-- Brush settings -->
-            <StackPanel Orientation="Horizontal" Spacing="8"
-                        IsVisible="{Binding IsBrushSelected}"
-                        VerticalAlignment="Center" Margin="4,0,0,0">
-                <ComboBox ItemsSource="{Binding BrushShapes}"
-                          SelectedItem="{Binding SelectedBrushShape}"
-                          Width="120" VerticalAlignment="Center">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate x:CompileBindings="False">
-                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                <Image Width="16" Height="16" Source="{Binding Converter={StaticResource BrushShapeIconConverter}}" />
-                                <TextBlock Text="{Binding}" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
-                <TextBlock Text="{Binding BrushDiameter, StringFormat='Diameter: {0}'}" VerticalAlignment="Center" />
-                <Slider Minimum="10" Maximum="300" Value="{Binding BrushDiameter}"
-                        TickFrequency="1" IsSnapToTickEnabled="True"
-                        Width="120" VerticalAlignment="Center" />
-                <TextBlock Text="{Binding BrushSoftness, StringFormat='Softness: {0:F2}'}" VerticalAlignment="Center" />
-                <Slider Minimum="0" Maximum="1" Value="{Binding BrushSoftness}"
-                        TickFrequency="0.01" IsSnapToTickEnabled="True"
-                        Width="100" VerticalAlignment="Center" />
-                <TextBlock Text="{Binding BrushOpacity, StringFormat='Opacity: {0:F2}'}" VerticalAlignment="Center" />
-                <Slider Minimum="0" Maximum="1" Value="{Binding BrushOpacity}"
-                        TickFrequency="0.01" IsSnapToTickEnabled="True"
-                        Width="100" VerticalAlignment="Center" />
-            </StackPanel>
-
-            <!-- Shape settings -->
-            <StackPanel Orientation="Horizontal" Spacing="8"
-                        IsVisible="{Binding IsShapeSelected}"
-                        VerticalAlignment="Center" Margin="4,0,0,0">
-                <ComboBox ItemsSource="{Binding ShapeTypes}"
-                          SelectedItem="{Binding SelectedShapeType}"
-                          Width="130" VerticalAlignment="Center">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate x:CompileBindings="False">
-                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                <Image Width="16" Height="16" Source="{Binding Converter={StaticResource ShapeTypeIconConverter}}" />
-                                <TextBlock Text="{Binding}" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
-                <TextBlock Text="{Binding ShapeSoftness, StringFormat='Softness: {0:F2}'}" VerticalAlignment="Center" />
-                <Slider Minimum="0" Maximum="1" Value="{Binding ShapeSoftness}"
-                        TickFrequency="0.01" IsSnapToTickEnabled="True"
-                        Width="100" VerticalAlignment="Center" />
-                <TextBlock Text="{Binding ShapeOpacity, StringFormat='Opacity: {0:F2}'}" VerticalAlignment="Center" />
-                <Slider Minimum="0" Maximum="1" Value="{Binding ShapeOpacity}"
-                        TickFrequency="0.01" IsSnapToTickEnabled="True"
-                        Width="100" VerticalAlignment="Center" />
-            </StackPanel>
         </StackPanel>
 
         <!-- Status bar -->
@@ -239,62 +181,9 @@
                 <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
                     <TextBlock Text="{Binding ConnectedPlayers, StringFormat='Players: {0}'}"
                                VerticalAlignment="Center" FontSize="11" />
-                    <Separator Classes="statusbar" />
                     <TextBlock Text="{Binding MemoryUsage}"
                                VerticalAlignment="Center" FontSize="11"
                                ToolTip.Tip="Memory usage" />
-                </StackPanel>
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
-                    <Button Classes="statusbar" Command="{Binding UndoCommand}" ToolTip.Tip="Undo">
-                        <Image Source="{SvgImage /Assets/Icons/undo-2.svg}" />
-                    </Button>
-                    <Button Classes="statusbar" Command="{Binding RedoCommand}" ToolTip.Tip="Redo">
-                        <Image Source="{SvgImage /Assets/Icons/redo-2.svg}" />
-                    </Button>
-                    <Separator Classes="statusbar" />
-                    <Button Classes="statusbar" Command="{Binding ToggleMapVisibilityCommand}" ToolTip.Tip="Toggle Map">
-                        <Panel>
-                            <Image Source="{SvgImage /Assets/Icons/image.svg}" IsVisible="{Binding IsMapVisible}" />
-                            <Image Source="{SvgImage /Assets/Icons/image-off.svg}" IsVisible="{Binding !IsMapVisible}" />
-                        </Panel>
-                    </Button>
-                    <Separator Classes="statusbar" />
-                    <Button Classes="statusbar" Command="{Binding TogglePauseUpdatesCommand}" ToolTip.Tip="Pause/Resume Player Updates">
-                        <Panel>
-                            <Image Source="{SvgImage /Assets/Icons/radio.svg}" IsVisible="{Binding !IsUpdatesPaused}" />
-                            <Image Source="{SvgImage /Assets/Icons/radio-off.svg}" IsVisible="{Binding IsUpdatesPaused}" />
-                        </Panel>
-                    </Button>
-                    <Separator Classes="statusbar" />
-                    <Button Classes="statusbar" Command="{Binding FogOpacityDownCommand}" ToolTip.Tip="Less fog">
-                        <Image Source="{SvgImage /Assets/Icons/sun.svg}" />
-                    </Button>
-                    <NumericUpDown Value="{Binding FogOpacityPercent}"
-                                   Minimum="0" Maximum="100" Increment="5"
-                                   FormatString="0'%'"
-                                   ShowButtonSpinner="False"
-                                   Width="56" Height="20" FontSize="11"
-                                   ToolTip.Tip="Fog opacity" />
-                    <Button Classes="statusbar" Command="{Binding FogOpacityUpCommand}" ToolTip.Tip="More fog">
-                        <Image Source="{SvgImage /Assets/Icons/moon.svg}" />
-                    </Button>
-                    <Separator Classes="statusbar" />
-                    <Button Classes="statusbar" Command="{Binding ZoomOutCommand}" ToolTip.Tip="Zoom Out">
-                        <Image Source="{SvgImage /Assets/Icons/zoom-out.svg}" />
-                    </Button>
-                    <NumericUpDown Value="{Binding ZoomPercent}"
-                                   Minimum="10" Maximum="1000" Increment="10"
-                                   FormatString="0'%'"
-                                   ShowButtonSpinner="False"
-                                   Width="64" Height="20" FontSize="11"
-                                   ToolTip.Tip="Zoom level" />
-                    <Button Classes="statusbar" Command="{Binding ZoomInCommand}" ToolTip.Tip="Zoom In">
-                        <Image Source="{SvgImage /Assets/Icons/zoom-in.svg}" />
-                    </Button>
-                    <Separator Classes="statusbar" />
-                    <Button Classes="statusbar" Command="{Binding ResetViewCommand}" ToolTip.Tip="Reset View">
-                        <Image Source="{SvgImage /Assets/Icons/scaling.svg}" />
-                    </Button>
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -309,6 +198,9 @@
                             OffsetY="{Binding OffsetY, Mode=TwoWay}"
                             IsDmMode="True"
                             FogOpacity="{Binding FogOpacity}"
+                            FogType="{Binding SelectedFogType}"
+                            FogColor="{Binding FogColor}"
+                            FogSeed="{Binding FogSeed}"
                             ShowMap="{Binding IsMapVisible}"
                             BrushDiameter="{Binding BrushDiameter}"
                             ActiveTool="{Binding SelectedTool}"
@@ -341,6 +233,11 @@
                                     <Image Source="{SvgImage /Assets/Icons/hand.svg}" />
                                 </MenuItem.Icon>
                             </MenuItem>
+                            <MenuItem Header="Fog" Command="{Binding SelectFogCommand}">
+                                <MenuItem.Icon>
+                                    <Image Source="{SvgImage /Assets/Icons/moon.svg}" />
+                                </MenuItem.Icon>
+                            </MenuItem>
                         </MenuItem>
                         <Separator />
                         <MenuItem Header="Undo" Command="{Binding UndoCommand}" InputGesture="Ctrl+Z">
@@ -369,54 +266,124 @@
             </controls:MapCanvas>
 
             <!-- Floating side toolbar -->
-            <Border HorizontalAlignment="Left" VerticalAlignment="Top"
-                    Margin="8,8,0,0"
-                    Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                    CornerRadius="8"
-                    BoxShadow="0 2 8 0 #40000000"
-                    IsHitTestVisible="True">
-                <StackPanel Spacing="4" Margin="4,8,4,8">
+            <StackPanel Orientation="Horizontal"
+                        Spacing="10" Margin="8,8,0,0"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Top">
+                <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                        CornerRadius="8"
+                        VerticalAlignment="Top"
+                        BoxShadow="0 2 8 0 #40000000"
+                        IsHitTestVisible="True">
+                    <StackPanel Spacing="4" Margin="4,8,4,8">
 
-                    <!-- Brush tool -->
+                        <!-- Brush tool -->
+                        <Panel>
+                            <Border Background="#330078D4" CornerRadius="4" IsVisible="{Binding IsBrushSelected}" />
+                            <Button Classes="icon" Command="{Binding SelectBrushCommand}" ToolTip.Tip="Brush">
+                                <Image Source="{SvgImage /Assets/Icons/brush.svg}" />
+                            </Button>
+                        </Panel>
+
+                        <!-- Shape tools group -->
+                        <Panel>
+                            <Border Background="#330078D4" CornerRadius="4" IsVisible="{Binding IsShapeSelected}" />
+                            <Button Classes="icon" Command="{Binding SelectShapeCommand}" ToolTip.Tip="Shape">
+                                <Image Source="{SvgImage /Assets/Icons/shapes.svg}" />
+                            </Button>
+                        </Panel>
+
+                        <!-- Fog tool -->
+                        <Panel>
+                            <Border Background="#330078D4" CornerRadius="4" IsVisible="{Binding IsFogSelected}" />
+                            <Button Classes="icon" Command="{Binding SelectFogCommand}" ToolTip.Tip="Fog">
+                                <Image Source="{SvgImage /Assets/Icons/cloud-fog.svg}" />
+                            </Button>
+                        </Panel>
+
+                        <!-- Pan tool -->
+                        <Panel>
+                            <Border Background="#330078D4" CornerRadius="4" IsVisible="{Binding IsPanSelected}" />
+                            <Button Classes="icon" Command="{Binding SelectPanCommand}" ToolTip.Tip="Pan">
+                                <Image Source="{SvgImage /Assets/Icons/hand.svg}" />
+                            </Button>
+                        </Panel>
+                    </StackPanel>
+                </Border>
+
+                <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                        CornerRadius="8" Padding="8"
+                        BoxShadow="0 2 8 0 #40000000"
+                        VerticalAlignment="Top"
+                        IsHitTestVisible="True">
                     <Panel>
-                        <Border Background="#330078D4" CornerRadius="4"
-                                IsVisible="{Binding IsBrushSelected}" />
-                        <Border Width="3" HorizontalAlignment="Left" CornerRadius="2,0,0,2"
-                                Background="#0078D4"
-                                IsVisible="{Binding IsBrushSelected}" />
-                        <Button Classes="toolbar" Command="{Binding SelectBrushCommand}" ToolTip.Tip="Brush">
-                            <Image Source="{SvgImage /Assets/Icons/brush.svg}" />
-                        </Button>
+                        <StackPanel Spacing="8" MinWidth="200" IsVisible="{Binding IsBrushSelected}">
+                            <TextBlock Text="Brush Shape" FontWeight="SemiBold" />
+                            <ComboBox ItemsSource="{Binding BrushShapes}"
+                                    SelectedItem="{Binding SelectedBrushShape}"
+                                    HorizontalAlignment="Stretch">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:CompileBindings="False">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                            <Image Width="16" Height="16" Source="{Binding Converter={StaticResource BrushShapeIconConverter}}" />
+                                            <TextBlock Text="{Binding}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBlock Text="{Binding BrushDiameter, StringFormat='Diameter: {0}'}" />
+                            <Slider Minimum="10" Maximum="300" Value="{Binding BrushDiameter}"
+                                    TickFrequency="1" IsSnapToTickEnabled="True"
+                                    HorizontalAlignment="Stretch" />
+                            <TextBlock Text="{Binding BrushSoftness, StringFormat='Softness: {0:F2}'}" />
+                            <Slider Minimum="0" Maximum="1" Value="{Binding BrushSoftness}"
+                                    TickFrequency="0.01" IsSnapToTickEnabled="True"
+                                    HorizontalAlignment="Stretch" />
+                            <TextBlock Text="{Binding BrushOpacity, StringFormat='Opacity: {0:F2}'}" />
+                            <Slider Minimum="0" Maximum="1" Value="{Binding BrushOpacity}"
+                                    TickFrequency="0.01" IsSnapToTickEnabled="True"
+                                    HorizontalAlignment="Stretch" />
+                        </StackPanel>
+                        <StackPanel Spacing="8" MinWidth="200" IsVisible="{Binding IsShapeSelected}">
+                            <TextBlock Text="Shape Type" FontWeight="SemiBold" />
+                            <ComboBox ItemsSource="{Binding ShapeTypes}"
+                                    SelectedItem="{Binding SelectedShapeType}"
+                                    HorizontalAlignment="Stretch">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:CompileBindings="False">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                            <Image Width="16" Height="16" Source="{Binding Converter={StaticResource ShapeTypeIconConverter}}" />
+                                            <TextBlock Text="{Binding}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBlock Text="{Binding ShapeSoftness, StringFormat='Softness: {0:F2}'}" FontWeight="SemiBold" />
+                            <Slider Minimum="0" Maximum="1" Value="{Binding ShapeSoftness}"
+                                    TickFrequency="0.01" IsSnapToTickEnabled="True"
+                                    HorizontalAlignment="Stretch" />
+                            <TextBlock Text="{Binding ShapeOpacity, StringFormat='Opacity: {0:F2}'}" FontWeight="SemiBold" />
+                            <Slider Minimum="0" Maximum="1" Value="{Binding ShapeOpacity}"
+                                    TickFrequency="0.01" IsSnapToTickEnabled="True"
+                                    HorizontalAlignment="Stretch" />
+                        </StackPanel>
+                        <StackPanel Spacing="8" MinWidth="200" IsVisible="{Binding IsFogSelected}">
+                            <TextBlock Text="Fog Type" FontWeight="SemiBold" />
+                            <ComboBox ItemsSource="{Binding FogTypes}"
+                                    SelectedItem="{Binding SelectedFogType}"
+                                    HorizontalAlignment="Stretch" />
+                            <TextBlock Text="Fog Colour" FontWeight="SemiBold" />
+                            <ColorPicker Color="{Binding FogColor}"
+                                        IsAlphaVisible="False"
+                                        IsAlphaEnabled="False" />
+                            <TextBlock Text="{Binding FogOpacity, StringFormat='Fog Opacity: {0:F2}'}" FontWeight="SemiBold" />
+                            <Slider Minimum="0" Maximum="1" Value="{Binding FogOpacity}"
+                                    TickFrequency="0.01" IsSnapToTickEnabled="True"
+                                    HorizontalAlignment="Stretch" />
+                        </StackPanel>
                     </Panel>
-
-                    <!-- Shape tools group -->
-                    <Panel>
-                        <Border Background="#330078D4" CornerRadius="4"
-                                IsVisible="{Binding IsShapeSelected}" />
-                        <Border Width="3" HorizontalAlignment="Left" CornerRadius="2,0,0,2"
-                                Background="#0078D4"
-                                IsVisible="{Binding IsShapeSelected}" />
-                        <Button Classes="toolbar" Command="{Binding SelectShapeCommand}" ToolTip.Tip="Shape">
-                            <Image Source="{SvgImage /Assets/Icons/shapes.svg}" />
-                        </Button>
-                    </Panel>
-
-                    <Separator Margin="4,2" />
-
-                    <!-- Pan tool -->
-                    <Panel>
-                        <Border Background="#330078D4" CornerRadius="4"
-                                IsVisible="{Binding IsPanSelected}" />
-                        <Border Width="3" HorizontalAlignment="Left" CornerRadius="2,0,0,2"
-                                Background="#0078D4"
-                                IsVisible="{Binding IsPanSelected}" />
-                        <Button Classes="toolbar" Command="{Binding SelectPanCommand}" ToolTip.Tip="Pan">
-                            <Image Source="{SvgImage /Assets/Icons/hand.svg}" />
-                        </Button>
-                    </Panel>
-
-                </StackPanel>
-            </Border>
+                </Border>
+            </StackPanel>
         </Panel>
     </DockPanel>
 

@@ -52,7 +52,10 @@
                                 OffsetX="{Binding OffsetX, Mode=TwoWay}"
                                 OffsetY="{Binding OffsetY, Mode=TwoWay}"
                                 IsDmMode="False"
-                                FogOpacity="255" />
+                                FogOpacity="1.0"
+                                FogType="{Binding FogType}"
+                                FogColor="{Binding FogColor}"
+                                FogSeed="{Binding FogSeed}" />
         </DockPanel>
     </Panel>
 

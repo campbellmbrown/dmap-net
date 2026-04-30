@@ -21,7 +21,61 @@ public enum MessageType
     FogDelta = 3,
 
     /// <summary>A compressed full fog mask replacement.</summary>
-    FogFull = 4
+    FogFull = 4,
+
+    /// <summary>Fog overlay appearance (type, colour, and texture seed).</summary>
+    FogAppearance = 5
+}
+
+/// <summary>
+/// Fog overlay appearance settings broadcast from DM to players.
+/// Carries the selected <see cref="FogType"/>, the flat fog colour (used when type is
+/// <see cref="FogType.Color"/>), and a texture seed so all clients generate identical noise.
+/// </summary>
+public sealed class FogAppearancePayload
+{
+    /// <summary>Selected fog type (flat colour or one of the textured variants).</summary>
+    public FogType FogType { get; init; }
+
+    /// <summary>Red channel of the flat fog colour.</summary>
+    public byte R { get; init; }
+
+    /// <summary>Green channel of the flat fog colour.</summary>
+    public byte G { get; init; }
+
+    /// <summary>Blue channel of the flat fog colour.</summary>
+    public byte B { get; init; }
+
+    /// <summary>Texture seed (typically the session ID) so DM and players share the same noise.</summary>
+    public Guid Seed { get; init; }
+
+    /// <summary>
+    /// Serializes this payload to a fixed 20-byte buffer.
+    /// Format: 1 byte type | 1 byte R | 1 byte G | 1 byte B | 16 byte Guid.
+    /// </summary>
+    public byte[] Serialize()
+    {
+        var bytes = new byte[20];
+        bytes[0] = (byte)FogType;
+        bytes[1] = R;
+        bytes[2] = G;
+        bytes[3] = B;
+        Seed.TryWriteBytes(bytes.AsSpan(4, 16));
+        return bytes;
+    }
+
+    /// <summary>Reconstructs a <see cref="FogAppearancePayload"/> from the buffer produced by <see cref="Serialize"/>.</summary>
+    public static FogAppearancePayload Deserialize(byte[] bytes)
+    {
+        return new FogAppearancePayload
+        {
+            FogType = (FogType)bytes[0],
+            R = bytes[1],
+            G = bytes[2],
+            B = bytes[3],
+            Seed = new Guid(bytes.AsSpan(4, 16)),
+        };
+    }
 }
 
 /// <summary>

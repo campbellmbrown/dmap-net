@@ -13,4 +13,7 @@ public enum ToolType
 
     /// <summary>Pan tool that scrolls the map viewport without modifying the fog.</summary>
     Pan,
+
+    /// <summary>Fog appearance settings (type and colour). Does not modify the fog mask.</summary>
+    Fog,
 }

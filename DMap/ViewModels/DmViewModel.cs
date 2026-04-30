@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 
@@ -17,6 +18,8 @@ using DMap.Services.History;
 using DMap.Services.Networking;
 
 using ReactiveUI;
+
+using IBrush = DMap.Services.Brushes.IBrush;
 
 namespace DMap.ViewModels;
 
@@ -38,10 +41,7 @@ public class DmViewModel : ViewModelBase, IDisposable
     const double MinZoomLevel = 0.1;
     const double MaxZoomLevel = 10.0;
 
-    const byte DefaultFogOpacity = 128;
-    const byte MinFogOpacity = 0;
-    const byte MaxFogOpacity = 255;
-    const decimal StepFogOpacityPercent = 5;
+    const double DefaultFogOpacity = 0.5;
 
     readonly IFogMaskService _fogService;
     readonly IUndoRedoService _undoRedo;
@@ -111,29 +111,12 @@ public class DmViewModel : ViewModelBase, IDisposable
         set => this.RaiseAndSetIfChanged(ref field, value);
     } = DefaultShapeOpacity;
 
-    /// <summary>
-    /// Opacity of the fog overlay rendered on the canvas, in the range [0, 255].
-    /// Changing this value also raises <see cref="FogOpacityPercent"/> change notification.
-    /// </summary>
-    public byte FogOpacity
+        /// <summary>Opacity of the fog overlay rendered on the canvas, in the range [0, 1].</summary>
+    public double FogOpacity
     {
         get;
-        private set
-        {
-            this.RaiseAndSetIfChanged(ref field, value);
-            this.RaisePropertyChanged(nameof(FogOpacityPercent));
-        }
+        set => this.RaiseAndSetIfChanged(ref field, value);
     } = DefaultFogOpacity;
-
-    /// <summary>
-    /// <see cref="FogOpacity"/> expressed as a percentage in [0, 100], rounded to the nearest integer.
-    /// Setting this property converts the value back to a byte and updates <see cref="FogOpacity"/>.
-    /// </summary>
-    public decimal FogOpacityPercent
-    {
-        get => (decimal)Math.Round(FogOpacity / 255.0 * 100);
-        set => FogOpacity = (byte)Math.Clamp(Math.Round((double)value / 100.0 * 255), MinFogOpacity, MaxFogOpacity);
-    }
 
     /// <summary>Horizontal pan offset of the map canvas in screen pixels.</summary>
     public double OffsetX
@@ -190,7 +173,8 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// <summary>
     /// The currently active editing tool.
     /// Changing this value also raises change notifications for the derived
-    /// <see cref="IsBrushSelected"/>, <see cref="IsShapeSelected"/>, and <see cref="IsPanSelected"/> properties.
+    /// <see cref="IsBrushSelected"/>, <see cref="IsShapeSelected"/>, <see cref="IsPanSelected"/>,
+    /// and <see cref="IsFogSelected"/> properties.
     /// </summary>
     public ToolType SelectedTool
     {
@@ -201,6 +185,7 @@ public class DmViewModel : ViewModelBase, IDisposable
             this.RaisePropertyChanged(nameof(IsBrushSelected));
             this.RaisePropertyChanged(nameof(IsShapeSelected));
             this.RaisePropertyChanged(nameof(IsPanSelected));
+            this.RaisePropertyChanged(nameof(IsFogSelected));
         }
     }
 
@@ -212,6 +197,9 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     /// <summary><see langword="true"/> when the Pan tool is active.</summary>
     public bool IsPanSelected => SelectedTool == ToolType.Pan;
+
+    /// <summary><see langword="true"/> when the Fog tool is active.</summary>
+    public bool IsFogSelected => SelectedTool == ToolType.Fog;
 
     /// <summary>The brush shape (circle, square, or diamond) used when the Brush tool is active.</summary>
     public BrushShape SelectedBrushShape
@@ -235,6 +223,48 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     /// <summary>All available shape types, used to populate the shape type selector.</summary>
     public IReadOnlyList<ShapeType> ShapeTypes { get; } = Enum.GetValues<ShapeType>();
+
+    /// <summary>
+    /// The fog overlay style. Changing this raises change notification for
+    /// <see cref="IsFogColorVisible"/> and broadcasts the new appearance to connected players.
+    /// </summary>
+    public FogType SelectedFogType
+    {
+        get;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref field, value);
+            this.RaisePropertyChanged(nameof(IsFogColorVisible));
+            BroadcastFogAppearance();
+        }
+    }
+
+    /// <summary>
+    /// The flat fog colour used when <see cref="SelectedFogType"/> is <see cref="FogType.Color"/>.
+    /// Changing this broadcasts the new appearance to connected players.
+    /// </summary>
+    public Color FogColor
+    {
+        get;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref field, value);
+            BroadcastFogAppearance();
+        }
+    } = Colors.Black;
+
+    /// <summary>Texture seed shared with players so all clients render identical fog noise.</summary>
+    public Guid FogSeed
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    /// <summary><see langword="true"/> when the colour picker should be shown (i.e. flat-colour mode).</summary>
+    public bool IsFogColorVisible => SelectedFogType == FogType.Color;
+
+    /// <summary>All available fog types, used to populate the fog type selector.</summary>
+    public IReadOnlyList<FogType> FogTypes { get; } = Enum.GetValues<FogType>();
 
     /// <summary><see langword="true"/> when at least one operation is available to undo.</summary>
     public bool CanUndo
@@ -271,6 +301,9 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// <summary>Activates the Pan tool.</summary>
     public ReactiveCommand<Unit, Unit> SelectPanCommand { get; }
 
+    /// <summary>Activates the Fog tool.</summary>
+    public ReactiveCommand<Unit, Unit> SelectFogCommand { get; }
+
     /// <summary>Sets all fog mask pixels to 255 (fully revealed) and pushes an undo entry.</summary>
     public ReactiveCommand<Unit, Unit> RevealAllCommand { get; }
 
@@ -285,12 +318,6 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     /// <summary>Redoes the most recently undone fog operation.</summary>
     public ReactiveCommand<Unit, Unit> RedoCommand { get; }
-
-    /// <summary>Increases <see cref="FogOpacityPercent"/> by one step.</summary>
-    public ReactiveCommand<Unit, Unit> FogOpacityUpCommand { get; }
-
-    /// <summary>Decreases <see cref="FogOpacityPercent"/> by one step.</summary>
-    public ReactiveCommand<Unit, Unit> FogOpacityDownCommand { get; }
 
     /// <summary>Opens the player discovery window so the DM can monitor connected players.</summary>
     public ReactiveCommand<Unit, Unit> OpenPlayerWindowCommand { get; }
@@ -374,6 +401,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         SelectBrushCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Brush; });
         SelectShapeCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Shape; });
         SelectPanCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Pan; });
+        SelectFogCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Fog; });
 
         var mapLoaded = this.WhenAnyValue(x => x.IsMapLoaded);
         RevealAllCommand = ReactiveCommand.Create(ExecuteRevealAll, mapLoaded);
@@ -388,8 +416,6 @@ public class DmViewModel : ViewModelBase, IDisposable
         var canRedo = this.WhenAnyValue(x => x.CanRedo);
         UndoCommand = ReactiveCommand.Create(ExecuteUndo, canUndo);
         RedoCommand = ReactiveCommand.Create(ExecuteRedo, canRedo);
-        FogOpacityUpCommand = ReactiveCommand.Create(() => { FogOpacityPercent = Math.Min(FogOpacityPercent + StepFogOpacityPercent, 100); });
-        FogOpacityDownCommand = ReactiveCommand.Create(() => { FogOpacityPercent = Math.Max(FogOpacityPercent - StepFogOpacityPercent, 0); });
         OpenPlayerWindowCommand = ReactiveCommand.CreateFromTask(OpenPlayerWindowAsync);
         ToggleMapVisibilityCommand = ReactiveCommand.Create(() => { IsMapVisible = !IsMapVisible; });
         TogglePauseUpdatesCommand = ReactiveCommand.Create(() =>
@@ -498,12 +524,14 @@ public class DmViewModel : ViewModelBase, IDisposable
         FogMask = _fogService.Mask;
 
         _session = new MapSession(Guid.NewGuid(), pixelSize.Width, pixelSize.Height);
+        FogSeed = _session.SessionId;
         _undoRedo.Clear();
         IsMapLoaded = true;
 
         FogUpdated?.Invoke(this, new PixelRect(0, 0, pixelSize.Width, pixelSize.Height));
 
         await StartHostingAsync();
+        BroadcastFogAppearance();
     }
 
     /// <summary>Returns the current process working set formatted as "<c>N MB</c>".</summary>
@@ -601,9 +629,10 @@ public class DmViewModel : ViewModelBase, IDisposable
 
         var brush = SelectedBrushShape switch
         {
+            BrushShape.Circle => _circleBrush,
             BrushShape.Square => _squareBrush,
             BrushShape.Diamond => _diamondBrush,
-            _ => _circleBrush,
+            _ => throw new InvalidOperationException($"Unsupported brush shape: {SelectedBrushShape}")
         };
         var settings = new BrushSettings(BrushDiameter, (float)BrushSoftness, (float)BrushOpacity, Erase: isErasing);
         var dirtyRect = _fogService.ApplyBrush(brush, x1, y1, x2, y2, settings);
@@ -633,6 +662,27 @@ public class DmViewModel : ViewModelBase, IDisposable
             _fogService.Mask, dirtyRect.X, dirtyRect.Y, dirtyRect.Width, dirtyRect.Height);
 
         _ = _hostService.SendFogDeltaAsync(delta, default);
+    }
+
+    /// <summary>
+    /// Fires-and-forgets a broadcast of the current fog appearance (type + colour + seed)
+    /// to all connected players. Called whenever <see cref="SelectedFogType"/> or <see cref="FogColor"/>
+    /// changes, and once per map load. Skipped before the host starts (no session yet).
+    /// </summary>
+    void BroadcastFogAppearance()
+    {
+        if (_session is null)
+            return;
+
+        var payload = new FogAppearancePayload
+        {
+            FogType = SelectedFogType,
+            R = FogColor.R,
+            G = FogColor.G,
+            B = FogColor.B,
+            Seed = FogSeed,
+        };
+        _ = _hostService.SendFogAppearanceAsync(payload, default);
     }
 
     /// <summary>
