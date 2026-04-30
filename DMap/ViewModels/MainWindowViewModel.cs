@@ -1,3 +1,5 @@
+using System.Reactive;
+
 using Avalonia.Controls;
 
 using ReactiveUI;
@@ -20,5 +22,23 @@ public class MainWindowViewModel : ViewModelBase
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    public WindowState WindowState
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = WindowState.Maximized;
+
+    public ReactiveCommand<Unit, Unit> ToggleFullScreenCommand { get; }
+
+    public MainWindowViewModel()
+    {
+        ToggleFullScreenCommand = ReactiveCommand.Create(ToggleFullScreen);
+    }
+
+    void ToggleFullScreen()
+    {
+        WindowState = WindowState == WindowState.FullScreen ? WindowState.Normal : WindowState.FullScreen;
     }
 }

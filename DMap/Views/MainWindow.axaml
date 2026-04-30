@@ -7,11 +7,16 @@
         x:Class="DMap.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="DMap">
+        Title="DMap"
+        WindowState="{Binding WindowState}">
 
     <Design.DataContext>
         <vm:MainWindowViewModel/>
     </Design.DataContext>
+
+    <Window.KeyBindings>
+        <KeyBinding Gesture="F11" Command="{Binding ToggleFullScreenCommand}" />
+    </Window.KeyBindings>
 
     <ContentControl Content="{Binding Content}" />
 
