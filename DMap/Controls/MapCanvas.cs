@@ -360,6 +360,23 @@ public class MapCanvas : Control
     }
 
     /// <summary>
+    /// Cancels any active local interaction without applying further changes.
+    /// Used primarily so Escape can abandon an in-progress shape drag.
+    /// </summary>
+    public void CancelActiveInteraction()
+    {
+        var hadShapePreview = _isDraggingShape;
+
+        _isDraggingShape = false;
+        _isPainting = false;
+        _isPanning = false;
+        UpdateCursor();
+
+        if (hadShapePreview)
+            InvalidateVisual();
+    }
+
+    /// <summary>
     /// Regenerates the cached fog texture for the current <see cref="FogType"/> and <see cref="FogSeed"/>.
     /// Sized to match the current <see cref="FogMask"/>; cleared to <see langword="null"/> when in
     /// flat-colour mode or when no mask is loaded.
@@ -631,6 +648,8 @@ public class MapCanvas : Control
         if (!IsDmMode)
             return;
 
+        Focus();
+
         var point = e.GetCurrentPoint(this);
 
         if (point.Properties.IsMiddleButtonPressed)
@@ -761,6 +780,18 @@ public class MapCanvas : Control
         ZoomLevel = newZoom;
 
         e.Handled = true;
+    }
+
+    /// <inheritdoc/>
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+
+        if (e.Key == Key.Escape && _isDraggingShape)
+        {
+            CancelActiveInteraction();
+            e.Handled = true;
+        }
     }
 
     /// <summary>
