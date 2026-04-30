@@ -93,9 +93,9 @@ public interface IFogMaskService
     void Replace(FogMask mask);
 
     /// <summary>
-    /// Merges a network-received fog delta into the mask using a max-blend: only pixels
-    /// that are more revealed in the delta override the local value, so fog can never be
-    /// re-added via a network update.
+    /// Applies a network-received fog delta as an exact replacement for the addressed
+    /// region. Delta pixels are authoritative snapshots from the DM, so both reveal and
+    /// re-fog operations must overwrite the local player mask.
     /// </summary>
     void ApplyDelta(FogDelta delta);
 }

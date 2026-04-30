@@ -81,6 +81,7 @@ public sealed class FogAppearancePayload
 /// <summary>
 /// A rectangular region of fog mask data that can be serialized for network transmission.
 /// Used for incremental fog updates so only the changed area is sent over the wire.
+/// The payload contains authoritative mask bytes for the addressed region, not a reveal-only diff.
 /// </summary>
 public sealed class FogDelta
 {

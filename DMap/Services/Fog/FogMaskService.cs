@@ -193,11 +193,7 @@ public sealed class FogMaskService : IFogMaskService
                 var mx = delta.X + dx;
                 var my = delta.Y + dy;
                 if (mx >= 0 && mx < Mask.Width && my >= 0 && my < Mask.Height)
-                {
-                    var value = delta.Data[dy * delta.Width + dx];
-                    if (value > Mask[mx, my])
-                        Mask[mx, my] = value;
-                }
+                    Mask[mx, my] = delta.Data[dy * delta.Width + dx];
             }
         }
 
