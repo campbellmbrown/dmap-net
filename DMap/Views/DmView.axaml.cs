@@ -32,6 +32,7 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
         InitializeComponent();
 
         var canvas = this.FindControl<MapCanvas>("MapCanvas")!;
+        canvas.ViewportChanged += (_, viewport) => ViewModel?.UpdateViewport(viewport);
 
         canvas.BrushStrokeStarted += (_, _) => ViewModel?.BeginBrushStroke();
         canvas.BrushStrokeEnded += (_, _) => ViewModel?.EndBrushStroke();
@@ -51,10 +52,15 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
                 return;
 
             var vm = ViewModel;
+            vm.UpdateViewport(canvas.GetViewport());
 
             _activationDisposables.Add(
                 vm.WhenAnyValue(x => x.FogMask)
                     .Subscribe(_ => canvas.RebuildFogBitmap()));
+
+            _activationDisposables.Add(
+                vm.WhenAnyValue(x => x.MapImage)
+                    .Subscribe(_ => vm.UpdateViewport(canvas.GetViewport())));
 
             vm.FogUpdated += OnFogUpdated;
             _activationDisposables.Add(

@@ -24,7 +24,10 @@ public enum MessageType
     FogFull = 4,
 
     /// <summary>Fog overlay appearance (type, colour, and texture seed).</summary>
-    FogAppearance = 5
+    FogAppearance = 5,
+
+    /// <summary>Viewport camera state (map center and zoom) broadcast from the DM to players.</summary>
+    Viewport = 6,
 }
 
 /// <summary>
@@ -74,6 +77,46 @@ public sealed class FogAppearancePayload
             G = bytes[2],
             B = bytes[3],
             Seed = new Guid(bytes.AsSpan(4, 16)),
+        };
+    }
+}
+
+/// <summary>
+/// Camera state broadcast from the DM so players follow the DM viewport even when their
+/// window size differs. The payload is expressed in map-space center coordinates plus zoom.
+/// </summary>
+public sealed class ViewportPayload
+{
+    /// <summary>Map-space X coordinate that should be centered in the viewport.</summary>
+    public double CenterMapX { get; init; }
+
+    /// <summary>Map-space Y coordinate that should be centered in the viewport.</summary>
+    public double CenterMapY { get; init; }
+
+    /// <summary>Zoom multiplier to apply around the centered map coordinate.</summary>
+    public double ZoomLevel { get; init; }
+
+    /// <summary>
+    /// Serializes this payload to a fixed 24-byte buffer.
+    /// Format: CenterMapX (8 bytes) | CenterMapY (8 bytes) | ZoomLevel (8 bytes).
+    /// </summary>
+    public byte[] Serialize()
+    {
+        var bytes = new byte[24];
+        BitConverter.TryWriteBytes(bytes.AsSpan(0, 8), CenterMapX);
+        BitConverter.TryWriteBytes(bytes.AsSpan(8, 8), CenterMapY);
+        BitConverter.TryWriteBytes(bytes.AsSpan(16, 8), ZoomLevel);
+        return bytes;
+    }
+
+    /// <summary>Reconstructs a <see cref="ViewportPayload"/> from the buffer produced by <see cref="Serialize"/>.</summary>
+    public static ViewportPayload Deserialize(byte[] bytes)
+    {
+        return new ViewportPayload
+        {
+            CenterMapX = BitConverter.ToDouble(bytes, 0),
+            CenterMapY = BitConverter.ToDouble(bytes, 8),
+            ZoomLevel = BitConverter.ToDouble(bytes, 16),
         };
     }
 }

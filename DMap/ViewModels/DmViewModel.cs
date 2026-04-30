@@ -370,6 +370,8 @@ public class DmViewModel : ViewModelBase, IDisposable
     byte[]? _mapImageBytes;
     MapSession? _session;
     bool _hasPendingUpdates;
+    ViewportPayload? _latestViewport;
+    bool _isViewportBroadcastQueued;
     /// <summary>Fires every 2 seconds on the UI thread to refresh <see cref="MemoryUsage"/>.</summary>
     readonly DispatcherTimer _memoryTimer;
 
@@ -532,6 +534,7 @@ public class DmViewModel : ViewModelBase, IDisposable
 
         await StartHostingAsync();
         BroadcastFogAppearance();
+        QueueViewportBroadcast();
     }
 
     /// <summary>Returns the current process working set formatted as "<c>N MB</c>".</summary>
@@ -642,6 +645,17 @@ public class DmViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
+    /// Updates the authoritative DM viewport snapshot and queues a broadcast to players.
+    /// Repeated updates within a single UI tick are coalesced into a single send using the
+    /// most recent viewport values.
+    /// </summary>
+    public void UpdateViewport(ViewportPayload viewport)
+    {
+        _latestViewport = viewport;
+        QueueViewportBroadcast();
+    }
+
+    /// <summary>
     /// Extracts the fog delta for <paramref name="dirtyRect"/> from the current mask and
     /// fires-and-forgets a broadcast to all connected players. When updates are paused the
     /// delta is discarded and a flag is set so <see cref="FlushPendingUpdates"/> knows to
@@ -686,6 +700,26 @@ public class DmViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
+    /// Queues a viewport broadcast for the next UI dispatch pass so multiple offset/zoom changes
+    /// produced by a single pan or wheel gesture collapse into one authoritative send.
+    /// </summary>
+    void QueueViewportBroadcast()
+    {
+        if (_session is null || _latestViewport is null || _isViewportBroadcastQueued)
+            return;
+
+        _isViewportBroadcastQueued = true;
+        Dispatcher.UIThread.Post(() =>
+        {
+            _isViewportBroadcastQueued = false;
+            if (_session is null || _latestViewport is null)
+                return;
+
+            _ = _hostService.SendViewportAsync(_latestViewport, default);
+        }, DispatcherPriority.Background);
+    }
+
+    /// <summary>
     /// Sends the full current fog mask to all players as a single delta, catching them up on
     /// every change made while updates were paused.
     /// </summary>
@@ -716,6 +750,9 @@ public class DmViewModel : ViewModelBase, IDisposable
 
         if (_fogService.Mask != null)
             await _hostService.SendSessionInfoAsync(_session, _fogService.Mask, default);
+
+        if (_latestViewport is not null)
+            await _hostService.SendViewportAsync(_latestViewport, default);
 
         await _discoveryService.StartBroadcastingAsync(_session, _hostService.Port, default);
     }

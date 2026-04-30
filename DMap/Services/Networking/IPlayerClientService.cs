@@ -45,6 +45,12 @@ public interface IPlayerClientService : IDisposable
     event EventHandler<FogAppearancePayload>? FogAppearanceReceived;
 
     /// <summary>
+    /// Raised when a <see cref="MessageType.Viewport"/> frame is received.
+    /// The event argument carries the DM camera center and zoom.
+    /// </summary>
+    event EventHandler<ViewportPayload>? ViewportReceived;
+
+    /// <summary>
     /// Raised when the connection to the DM is closed, either because the DM disconnected,
     /// the network failed, or <see cref="DisconnectAsync"/> was called.
     /// </summary>

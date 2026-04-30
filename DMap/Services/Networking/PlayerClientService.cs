@@ -36,6 +36,9 @@ public sealed class PlayerClientService : IPlayerClientService
     public event EventHandler<FogAppearancePayload>? FogAppearanceReceived;
 
     /// <inheritdoc/>
+    public event EventHandler<ViewportPayload>? ViewportReceived;
+
+    /// <inheritdoc/>
     public event EventHandler? Disconnected;
 
     /// <inheritdoc/>
@@ -81,6 +84,9 @@ public sealed class PlayerClientService : IPlayerClientService
                         break;
                     case MessageType.FogAppearance:
                         FogAppearanceReceived?.Invoke(this, FogAppearancePayload.Deserialize(payload));
+                        break;
+                    case MessageType.Viewport:
+                        ViewportReceived?.Invoke(this, ViewportPayload.Deserialize(payload));
                         break;
                 }
             }

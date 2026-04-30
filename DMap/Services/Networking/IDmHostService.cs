@@ -71,4 +71,12 @@ public interface IDmHostService : IDisposable
     /// <param name="appearance">Fog appearance settings.</param>
     /// <param name="ct">Cancellation token.</param>
     Task SendFogAppearanceAsync(FogAppearancePayload appearance, CancellationToken ct);
+
+    /// <summary>
+    /// Broadcasts the current viewport camera (map center + zoom) to all connected players,
+    /// and caches the payload so newly connecting players join at the current DM camera.
+    /// </summary>
+    /// <param name="viewport">Viewport settings.</param>
+    /// <param name="ct">Cancellation token.</param>
+    Task SendViewportAsync(ViewportPayload viewport, CancellationToken ct);
 }

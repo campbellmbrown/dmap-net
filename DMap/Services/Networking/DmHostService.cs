@@ -33,6 +33,9 @@ public sealed class DmHostService : IDmHostService
     /// <summary>Cached fog appearance payload sent to new clients on connect, or <see langword="null"/> if never set.</summary>
     byte[]? _pendingFogAppearance;
 
+    /// <summary>Cached viewport payload sent to new clients on connect, or <see langword="null"/> if never set.</summary>
+    byte[]? _pendingViewport;
+
     /// <inheritdoc/>
     public int Port { get; set; }
 
@@ -92,11 +95,13 @@ public sealed class DmHostService : IDmHostService
             byte[]? pendingSessionInfo;
             byte[]? pendingMapImage;
             byte[]? pendingFogAppearance;
+            byte[]? pendingViewport;
             lock (_clientsLock)
             {
                 pendingSessionInfo = _pendingSessionInfo;
                 pendingMapImage = _pendingMapImage;
                 pendingFogAppearance = _pendingFogAppearance;
+                pendingViewport = _pendingViewport;
             }
 
             if (pendingSessionInfo is not null)
@@ -107,6 +112,9 @@ public sealed class DmHostService : IDmHostService
 
             if (pendingMapImage is not null)
                 await ProtocolFraming.WriteFrameAsync(stream, MessageType.MapImage, pendingMapImage, default);
+
+            if (pendingViewport is not null)
+                await ProtocolFraming.WriteFrameAsync(stream, MessageType.Viewport, pendingViewport, default);
 
             // Keep connection alive until cancelled or disconnected
             var buffer = new byte[1];
@@ -185,6 +193,18 @@ public sealed class DmHostService : IDmHostService
             _pendingFogAppearance = payload;
         }
         return BroadcastAsync(MessageType.FogAppearance, payload, ct);
+    }
+
+    /// <inheritdoc/>
+    public Task SendViewportAsync(ViewportPayload viewport, CancellationToken ct)
+    {
+        var payload = viewport.Serialize();
+        lock (_clientsLock)
+        {
+            _pendingViewport = payload;
+        }
+
+        return BroadcastAsync(MessageType.Viewport, payload, ct);
     }
 
     /// <inheritdoc/>

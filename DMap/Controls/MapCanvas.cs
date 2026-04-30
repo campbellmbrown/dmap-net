@@ -9,6 +9,7 @@ using Avalonia.Platform;
 
 using DMap.Models;
 using DMap.Services.Fog;
+using DMap.Services.Networking;
 
 namespace DMap.Controls;
 
@@ -59,10 +60,13 @@ public class ShapeStrokeEventArgs : EventArgs
 /// <summary>
 /// Custom Avalonia control that renders a map image, a fog-of-war overlay, and a tool cursor
 /// preview. Handles pointer input to produce brush strokes, shape drags, panning, and zooming.
-/// In player mode (<see cref="IsDmMode"/> = <see langword="false"/>) all editing input is suppressed.
+/// In player mode (<see cref="IsDmMode"/> = <see langword="false"/>) all editing and camera input is suppressed.
 /// </summary>
 public class MapCanvas : Control
 {
+    const double MinZoomLevel = 0.1;
+    const double MaxZoomLevel = 10.0;
+
     /// <summary>Styled property for the map background image.</summary>
     public static readonly StyledProperty<Bitmap?> MapImageProperty =
         AvaloniaProperty.Register<MapCanvas, Bitmap?>(nameof(MapImage));
@@ -160,7 +164,8 @@ public class MapCanvas : Control
 
     /// <summary>
     /// When <see langword="true"/>, the canvas accepts brush/shape input and draws the tool cursor preview.
-    /// When <see langword="false"/> (player mode), only panning and zooming are available.
+    /// When <see langword="false"/> (player mode), the canvas is display-only and does not accept
+    /// local editing, panning, or zooming input.
     /// </summary>
     public bool IsDmMode
     {
@@ -255,6 +260,11 @@ public class MapCanvas : Control
     /// </summary>
     public event EventHandler<ShapeStrokeEventArgs>? ShapeStrokeApplied;
 
+    /// <summary>
+    /// Raised whenever the viewport camera changes, expressed as a map-space center coordinate plus zoom.
+    /// </summary>
+    public event EventHandler<ViewportPayload>? ViewportChanged;
+
     static readonly FogTextureGenerator _textureGenerator = new();
 
     WriteableBitmap? _fogBitmap;
@@ -320,6 +330,33 @@ public class MapCanvas : Control
 
         RegenerateFogTexture();
         UpdateFogBitmapRegion(new PixelRect(0, 0, mask.Width, mask.Height));
+    }
+
+    /// <summary>
+    /// Returns the current viewport expressed as a map-space center coordinate plus zoom so it can
+    /// be mirrored on canvases with different screen sizes.
+    /// </summary>
+    public ViewportPayload GetViewport()
+    {
+        var zoom = ZoomLevel <= 0 ? 1.0 : ZoomLevel;
+        return new ViewportPayload
+        {
+            CenterMapX = (Bounds.Width / 2.0 - OffsetX) / zoom,
+            CenterMapY = (Bounds.Height / 2.0 - OffsetY) / zoom,
+            ZoomLevel = zoom,
+        };
+    }
+
+    /// <summary>
+    /// Applies a remotely provided viewport by deriving local screen offsets from the current control
+    /// bounds and the desired map-space center/zoom.
+    /// </summary>
+    public void ApplyViewport(ViewportPayload viewport)
+    {
+        var zoom = Math.Clamp(viewport.ZoomLevel, MinZoomLevel, MaxZoomLevel);
+        ZoomLevel = zoom;
+        OffsetX = Bounds.Width / 2.0 - viewport.CenterMapX * zoom;
+        OffsetY = Bounds.Height / 2.0 - viewport.CenterMapY * zoom;
     }
 
     /// <summary>
@@ -547,6 +584,15 @@ public class MapCanvas : Control
             UpdateFogBitmapRegion(new PixelRect(0, 0, FogMask.Width, FogMask.Height));
             InvalidateVisual();
         }
+
+        if (change.Property == BoundsProperty
+            || change.Property == MapImageProperty
+            || change.Property == ZoomLevelProperty
+            || change.Property == OffsetXProperty
+            || change.Property == OffsetYProperty)
+        {
+            RaiseViewportChanged();
+        }
     }
 
     /// <summary>
@@ -581,6 +627,10 @@ public class MapCanvas : Control
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
+
+        if (!IsDmMode)
+            return;
+
         var point = e.GetCurrentPoint(this);
 
         if (point.Properties.IsMiddleButtonPressed)
@@ -599,15 +649,13 @@ public class MapCanvas : Control
                 _isPanning = true;
                 _lastPanPoint = point.Position;
             }
-            else if (IsDmMode)
-            {
+            else
                 StartPainting(point.Position, erase: false);
-            }
             e.Handled = true;
             return;
         }
 
-        if (point.Properties.IsRightButtonPressed && IsDmMode && ActiveTool != ToolType.Pan)
+        if (point.Properties.IsRightButtonPressed && ActiveTool != ToolType.Pan)
         {
             StartPainting(point.Position, erase: true);
             e.Handled = true;
@@ -644,6 +692,9 @@ public class MapCanvas : Control
         var point = e.GetCurrentPoint(this);
         _lastMousePosition = point.Position;
 
+        if (!IsDmMode)
+            return;
+
         if (_isPanning)
         {
             var delta = point.Position - _lastPanPoint;
@@ -654,20 +705,22 @@ public class MapCanvas : Control
             return;
         }
 
-        if (_isPainting && IsDmMode)
+        if (_isPainting)
         {
             RaiseBrushStroke(point.Position);
             e.Handled = true;
         }
 
-        if (IsDmMode)
-            InvalidateVisual();
+        InvalidateVisual();
     }
 
     /// <inheritdoc/>
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
         base.OnPointerReleased(e);
+
+        if (!IsDmMode)
+            return;
 
         if (_isDraggingShape)
         {
@@ -694,10 +747,13 @@ public class MapCanvas : Control
     {
         base.OnPointerWheelChanged(e);
 
+        if (!IsDmMode)
+            return;
+
         var mousePos = e.GetPosition(this);
         var oldZoom = ZoomLevel;
         var zoomFactor = e.Delta.Y > 0 ? 1.1 : 1.0 / 1.1;
-        var newZoom = Math.Clamp(oldZoom * zoomFactor, 0.1, 10.0);
+        var newZoom = Math.Clamp(oldZoom * zoomFactor, MinZoomLevel, MaxZoomLevel);
 
         // Zoom centered on mouse position
         OffsetX = mousePos.X - ((mousePos.X - OffsetX) * (newZoom / oldZoom));
@@ -705,6 +761,18 @@ public class MapCanvas : Control
         ZoomLevel = newZoom;
 
         e.Handled = true;
+    }
+
+    /// <summary>
+    /// Raises <see cref="ViewportChanged"/> when the control has valid layout bounds and a viewport
+    /// can be meaningfully mirrored to other clients.
+    /// </summary>
+    void RaiseViewportChanged()
+    {
+        if (Bounds.Width <= 0 || Bounds.Height <= 0)
+            return;
+
+        ViewportChanged?.Invoke(this, GetViewport());
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 using System;
 using System.Reactive.Disposables;
 
+using Avalonia;
 using Avalonia.Controls;
 
 using DMap.Controls;
@@ -42,6 +43,25 @@ public partial class PlayerView : ReactiveUserControl<PlayerViewModel>
             _activationDisposables.Add(
                 vm.WhenAnyValue(x => x.FogMask)
                     .Subscribe(_ => canvas.RebuildFogBitmap()));
+
+            _activationDisposables.Add(
+                vm.WhenAnyValue(x => x.Viewport)
+                    .Subscribe(viewport =>
+                    {
+                        if (viewport is not null)
+                            canvas.ApplyViewport(viewport);
+                    }));
+
+            _activationDisposables.Add(
+                Disposable.Create(() => canvas.PropertyChanged -= OnCanvasPropertyChanged));
+
+            canvas.PropertyChanged += OnCanvasPropertyChanged;
+
+            void OnCanvasPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+            {
+                if (e.Property == BoundsProperty && vm.Viewport is not null)
+                    canvas.ApplyViewport(vm.Viewport);
+            }
 
             vm.FogUpdated += OnFogUpdated;
             _activationDisposables.Add(

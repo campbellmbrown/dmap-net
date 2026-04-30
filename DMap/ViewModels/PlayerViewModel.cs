@@ -122,6 +122,16 @@ public class PlayerViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
+    /// Latest DM viewport received from the network. The player view applies this to the canvas and
+    /// reapplies it after player-side layout changes so the camera stays aligned to the DM.
+    /// </summary>
+    public ViewportPayload? Viewport
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    /// <summary>
     /// Initiates a connection to <see cref="SelectedDm"/>.
     /// Enabled only when a DM is selected and no connection is active or pending.
     /// </summary>
@@ -154,6 +164,7 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         _clientService.FogDeltaReceived += OnFogDeltaReceived;
         _clientService.FogFullReceived += OnFogFullReceived;
         _clientService.FogAppearanceReceived += OnFogAppearanceReceived;
+        _clientService.ViewportReceived += OnViewportReceived;
         _clientService.Disconnected += OnDisconnected;
 
         var canConnect = this.WhenAnyValue(
@@ -228,6 +239,7 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         IsConnected = false;
         MapImage = null;
         FogMask = null;
+        Viewport = null;
         StatusText = "Disconnected. Searching for DM sessions...";
     }
 
@@ -290,12 +302,19 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         });
     }
 
+    /// <summary>Stores the latest DM viewport so the player view can apply it to the local canvas.</summary>
+    void OnViewportReceived(object? sender, ViewportPayload viewport)
+    {
+        Dispatcher.UIThread.Post(() => Viewport = viewport);
+    }
+
     /// <summary>Updates connection state and status text when the DM disconnects.</summary>
     void OnDisconnected(object? sender, EventArgs e)
     {
         Dispatcher.UIThread.Post(() =>
         {
             IsConnected = false;
+            Viewport = null;
             StatusText = "Disconnected from DM. Searching for sessions...";
         });
     }
