@@ -20,7 +20,17 @@
         <Style Selector="Separator.toolbar">
             <Setter Property="Width" Value="1" />
             <Setter Property="Height" Value="16" />
-            <Setter Property="Margin" Value="2,0" />
+            <Setter Property="Margin" Value="0" />
+        </Style>
+        <Style Selector="Button.toolbar">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.toolbar Image">
+            <Setter Property="Width" Value="20" />
+            <Setter Property="Height" Value="20" />
         </Style>
         <Style Selector="Button.icon">
             <Setter Property="Background" Value="Transparent" />
@@ -131,32 +141,32 @@
             </MenuItem>
         </Menu>
 
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8"
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4"
                     Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                    Margin="0" Height="40">
+                    Margin="4,0,0,0" Height="40">
 
-            <Button Classes="icon" Command="{Binding UndoCommand}" ToolTip.Tip="Undo">
+            <Button Classes="toolbar" Command="{Binding UndoCommand}" ToolTip.Tip="Undo">
                 <Image Source="{SvgImage /Assets/Icons/undo-2.svg}" />
             </Button>
-            <Button Classes="icon" Command="{Binding RedoCommand}" ToolTip.Tip="Redo">
+            <Button Classes="toolbar" Command="{Binding RedoCommand}" ToolTip.Tip="Redo">
                 <Image Source="{SvgImage /Assets/Icons/redo-2.svg}" />
             </Button>
             <Separator Classes="toolbar" />
-            <Button Classes="icon" Command="{Binding ToggleMapVisibilityCommand}" ToolTip.Tip="Toggle Map">
+            <Button Classes="toolbar" Command="{Binding ToggleMapVisibilityCommand}" ToolTip.Tip="Toggle Map">
                 <Panel>
                     <Image Source="{SvgImage /Assets/Icons/image.svg}" IsVisible="{Binding IsMapVisible}" />
                     <Image Source="{SvgImage /Assets/Icons/image-off.svg}" IsVisible="{Binding !IsMapVisible}" />
                 </Panel>
             </Button>
             <Separator Classes="toolbar" />
-            <Button Classes="icon" Command="{Binding TogglePauseUpdatesCommand}" ToolTip.Tip="Pause/Resume Player Updates">
+            <Button Classes="toolbar" Command="{Binding TogglePauseUpdatesCommand}" ToolTip.Tip="Pause/Resume Player Updates">
                 <Panel>
                     <Image Source="{SvgImage /Assets/Icons/radio.svg}" IsVisible="{Binding !IsUpdatesPaused}" />
                     <Image Source="{SvgImage /Assets/Icons/radio-off.svg}" IsVisible="{Binding IsUpdatesPaused}" />
                 </Panel>
             </Button>
             <Separator Classes="toolbar" />
-            <Button Classes="icon" Command="{Binding ZoomOutCommand}" ToolTip.Tip="Zoom Out">
+            <Button Classes="toolbar" Command="{Binding ZoomOutCommand}" ToolTip.Tip="Zoom Out">
                 <Image Source="{SvgImage /Assets/Icons/zoom-out.svg}" />
             </Button>
             <NumericUpDown Value="{Binding ZoomPercent}"
@@ -165,11 +175,11 @@
                            ShowButtonSpinner="False"
                            Width="64" Height="20" FontSize="11"
                            ToolTip.Tip="Zoom level" />
-            <Button Classes="icon" Command="{Binding ZoomInCommand}" ToolTip.Tip="Zoom In">
+            <Button Classes="toolbar" Command="{Binding ZoomInCommand}" ToolTip.Tip="Zoom In">
                 <Image Source="{SvgImage /Assets/Icons/zoom-in.svg}" />
             </Button>
             <Separator Classes="toolbar" />
-            <Button Classes="icon" Command="{Binding ResetViewCommand}" ToolTip.Tip="Reset View">
+            <Button Classes="toolbar" Command="{Binding ResetViewCommand}" ToolTip.Tip="Reset View">
                 <Image Source="{SvgImage /Assets/Icons/scaling.svg}" />
             </Button>
 
