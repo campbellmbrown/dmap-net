@@ -226,7 +226,7 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     /// <summary>
     /// The fog overlay style. Changing this raises change notification for
-    /// <see cref="IsFogColorVisible"/> and broadcasts the new appearance to connected players.
+    /// <see cref="IsFogColorSelected"/> and broadcasts the new appearance to connected players.
     /// </summary>
     public FogType SelectedFogType
     {
@@ -234,10 +234,10 @@ public class DmViewModel : ViewModelBase, IDisposable
         set
         {
             this.RaiseAndSetIfChanged(ref field, value);
-            this.RaisePropertyChanged(nameof(IsFogColorVisible));
+            this.RaisePropertyChanged(nameof(IsFogColorSelected));
             BroadcastFogAppearance();
         }
-    }
+    } = FogType.Color;
 
     /// <summary>
     /// The flat fog colour used when <see cref="SelectedFogType"/> is <see cref="FogType.Color"/>.
@@ -260,8 +260,8 @@ public class DmViewModel : ViewModelBase, IDisposable
         private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    /// <summary><see langword="true"/> when the colour picker should be shown (i.e. flat-colour mode).</summary>
-    public bool IsFogColorVisible => SelectedFogType == FogType.Color;
+    /// <summary><see langword="true"/> when the colour picker should be visible (i.e. flat-colour mode).</summary>
+    public bool IsFogColorSelected => SelectedFogType == FogType.Color;
 
     /// <summary>All available fog types, used to populate the fog type selector.</summary>
     public IReadOnlyList<FogType> FogTypes { get; } = Enum.GetValues<FogType>();

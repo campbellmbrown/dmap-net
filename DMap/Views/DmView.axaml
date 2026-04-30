@@ -13,6 +13,7 @@
     <UserControl.Resources>
         <converters:BrushShapeIconConverter x:Key="BrushShapeIconConverter" />
         <converters:ShapeTypeIconConverter x:Key="ShapeTypeIconConverter" />
+        <converters:FogTypeIconConverter x:Key="FogTypeIconConverter" />
     </UserControl.Resources>
 
     <UserControl.Styles>
@@ -314,9 +315,19 @@
                             <TextBlock Text="Fog Type" FontWeight="SemiBold" />
                             <ComboBox ItemsSource="{Binding FogTypes}"
                                     SelectedItem="{Binding SelectedFogType}"
-                                    HorizontalAlignment="Stretch" />
+                                    HorizontalAlignment="Stretch">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:CompileBindings="False">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                            <Image Width="16" Height="16" Source="{Binding Converter={StaticResource FogTypeIconConverter}}" />
+                                            <TextBlock Text="{Binding}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
                             <TextBlock Text="Fog Colour" FontWeight="SemiBold" />
                             <ColorPicker Color="{Binding FogColor}"
+                                         IsEnabled="{Binding IsFogColorSelected}"
                                          IsAlphaVisible="False"
                                          IsAlphaEnabled="False"
                                          IsColorPreviewVisible="False" />
