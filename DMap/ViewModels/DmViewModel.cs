@@ -111,7 +111,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         set => this.RaiseAndSetIfChanged(ref field, value);
     } = DefaultShapeOpacity;
 
-        /// <summary>Opacity of the fog overlay rendered on the canvas, in the range [0, 1].</summary>
+    /// <summary>Opacity of the fog overlay rendered on the canvas, in the range [0, 1].</summary>
     public double FogOpacity
     {
         get;
