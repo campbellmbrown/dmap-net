@@ -206,63 +206,6 @@
                             ActiveTool="{Binding SelectedTool}"
                             BrushShape="{Binding SelectedBrushShape}"
                             ShapeType="{Binding SelectedShapeType}">
-                <controls:MapCanvas.ContextMenu>
-                    <ContextMenu x:DataType="vm:DmViewModel">
-                        <MenuItem Header="Open Map..." Command="{Binding LoadMapCommand}" InputGesture="Ctrl+O">
-                            <MenuItem.Icon>
-                                <Image Source="{SvgImage /Assets/Icons/map.svg}" />
-                            </MenuItem.Icon>
-                        </MenuItem>
-                        <Separator />
-                        <MenuItem Header="Tools">
-                            <MenuItem.Icon>
-                                <Image Source="{SvgImage /Assets/Icons/toolbox.svg}" />
-                            </MenuItem.Icon>
-                            <MenuItem Header="Brush" Command="{Binding SelectBrushCommand}">
-                                <MenuItem.Icon>
-                                    <Image Source="{SvgImage /Assets/Icons/brush.svg}" />
-                                </MenuItem.Icon>
-                            </MenuItem>
-                            <MenuItem Header="Shape" Command="{Binding SelectShapeCommand}">
-                                <MenuItem.Icon>
-                                    <Image Source="{SvgImage /Assets/Icons/shapes.svg}" />
-                                </MenuItem.Icon>
-                            </MenuItem>
-                            <MenuItem Header="Pan" Command="{Binding SelectPanCommand}">
-                                <MenuItem.Icon>
-                                    <Image Source="{SvgImage /Assets/Icons/hand.svg}" />
-                                </MenuItem.Icon>
-                            </MenuItem>
-                            <MenuItem Header="Fog" Command="{Binding SelectFogCommand}">
-                                <MenuItem.Icon>
-                                    <Image Source="{SvgImage /Assets/Icons/moon.svg}" />
-                                </MenuItem.Icon>
-                            </MenuItem>
-                        </MenuItem>
-                        <Separator />
-                        <MenuItem Header="Undo" Command="{Binding UndoCommand}" InputGesture="Ctrl+Z">
-                            <MenuItem.Icon>
-                                <Image Source="{SvgImage /Assets/Icons/undo-2.svg}" />
-                            </MenuItem.Icon>
-                        </MenuItem>
-                        <MenuItem Header="Redo" Command="{Binding RedoCommand}" InputGesture="Ctrl+Y">
-                            <MenuItem.Icon>
-                                <Image Source="{SvgImage /Assets/Icons/redo-2.svg}" />
-                            </MenuItem.Icon>
-                        </MenuItem>
-                        <Separator />
-                        <MenuItem Header="Reveal All" Command="{Binding RevealAllCommand}" InputGesture="Ctrl+Shift+E">
-                            <MenuItem.Icon>
-                                <Image Source="{SvgImage /Assets/Icons/eye.svg}" />
-                            </MenuItem.Icon>
-                        </MenuItem>
-                        <MenuItem Header="Refog All" Command="{Binding RefogAllCommand}" InputGesture="Ctrl+Shift+F">
-                            <MenuItem.Icon>
-                                <Image Source="{SvgImage /Assets/Icons/eye-off.svg}" />
-                            </MenuItem.Icon>
-                        </MenuItem>
-                    </ContextMenu>
-                </controls:MapCanvas.ContextMenu>
             </controls:MapCanvas>
 
             <!-- Floating side toolbar -->
@@ -331,15 +274,15 @@
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
-                            <TextBlock Text="{Binding BrushDiameter, StringFormat='Diameter: {0}'}" />
+                            <TextBlock Text="{Binding BrushDiameter, StringFormat='Diameter: {0}'}" FontWeight="SemiBold" />
                             <Slider Minimum="10" Maximum="300" Value="{Binding BrushDiameter}"
                                     TickFrequency="1" IsSnapToTickEnabled="True"
                                     HorizontalAlignment="Stretch" />
-                            <TextBlock Text="{Binding BrushSoftness, StringFormat='Softness: {0:F2}'}" />
+                            <TextBlock Text="{Binding BrushSoftness, StringFormat='Softness: {0:F2}'}" FontWeight="SemiBold" />
                             <Slider Minimum="0" Maximum="1" Value="{Binding BrushSoftness}"
                                     TickFrequency="0.01" IsSnapToTickEnabled="True"
                                     HorizontalAlignment="Stretch" />
-                            <TextBlock Text="{Binding BrushOpacity, StringFormat='Opacity: {0:F2}'}" />
+                            <TextBlock Text="{Binding BrushOpacity, StringFormat='Opacity: {0:F2}'}" FontWeight="SemiBold" />
                             <Slider Minimum="0" Maximum="1" Value="{Binding BrushOpacity}"
                                     TickFrequency="0.01" IsSnapToTickEnabled="True"
                                     HorizontalAlignment="Stretch" />
