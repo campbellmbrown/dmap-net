@@ -218,7 +218,7 @@
                         VerticalAlignment="Top"
                         BoxShadow="0 2 8 0 #40000000"
                         IsHitTestVisible="True">
-                    <StackPanel Spacing="4" Margin="4,8,4,8">
+                    <StackPanel Spacing="4" Margin="4">
 
                         <!-- Brush tool -->
                         <Panel>
@@ -317,8 +317,9 @@
                                     HorizontalAlignment="Stretch" />
                             <TextBlock Text="Fog Colour" FontWeight="SemiBold" />
                             <ColorPicker Color="{Binding FogColor}"
-                                        IsAlphaVisible="False"
-                                        IsAlphaEnabled="False" />
+                                         IsAlphaVisible="False"
+                                         IsAlphaEnabled="False"
+                                         IsColorPreviewVisible="False" />
                             <TextBlock Text="{Binding FogOpacity, StringFormat='Fog Opacity: {0:F2}'}" FontWeight="SemiBold" />
                             <Slider Minimum="0" Maximum="1" Value="{Binding FogOpacity}"
                                     TickFrequency="0.01" IsSnapToTickEnabled="True"
