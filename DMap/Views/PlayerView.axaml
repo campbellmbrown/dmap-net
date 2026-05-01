@@ -8,6 +8,13 @@
              x:Class="DMap.Views.PlayerView"
              x:DataType="vm:PlayerViewModel">
 
+    <UserControl.Styles>
+        <Style Selector="Border#TopHoverArea:pointerover StackPanel#TopMenu">
+            <Setter Property="Opacity" Value="1" />
+            <Setter Property="IsHitTestVisible" Value="True" />
+        </Style>
+    </UserControl.Styles>
+
     <Panel>
         <!-- Discovery / Connection Panel (shown when not connected) -->
         <StackPanel IsVisible="{Binding !IsConnected}"
@@ -36,16 +43,27 @@
         </StackPanel>
 
         <!-- Map Display (shown when connected) -->
-        <DockPanel IsVisible="{Binding IsConnected}">
-            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8"
-                        Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                        Height="40">
-                <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Margin="12,0" />
-                <Button Content="Disconnect" Command="{Binding DisconnectCommand}"
-                        Margin="8,4" VerticalAlignment="Center" />
-            </StackPanel>
+        <Grid IsVisible="{Binding IsConnected}" RowDefinitions="Auto,*">
+            <Border x:Name="TopHoverArea"
+                    Grid.Row="0"
+                    Background="Transparent"
+                    Height="48"
+                    VerticalAlignment="Top">
+                <StackPanel x:Name="TopMenu"
+                            Orientation="Horizontal"
+                            Spacing="8"
+                            Height="40"
+                            Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                            Opacity="0"
+                            IsHitTestVisible="False">
+                    <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Margin="12,0" />
+                    <Button Content="Disconnect" Command="{Binding DisconnectCommand}"
+                            Margin="8,4" VerticalAlignment="Center" />
+                </StackPanel>
+            </Border>
 
-            <controls:MapCanvas x:Name="MapCanvas"
+            <controls:MapCanvas Grid.Row="1"
+                                x:Name="MapCanvas"
                                 MapImage="{Binding MapImage}"
                                 FogMask="{Binding FogMask}"
                                 IsDmMode="False"
@@ -53,7 +71,7 @@
                                 FogType="{Binding FogType}"
                                 FogColor="{Binding FogColor}"
                                 FogSeed="{Binding FogSeed}" />
-        </DockPanel>
+        </Grid>
     </Panel>
 
 </UserControl>
