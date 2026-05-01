@@ -5,6 +5,7 @@ using System.Reactive;
 using System.Threading.Tasks;
 
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
@@ -131,6 +132,13 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    /// <summary>Current state of the player window shell.</summary>
+    public WindowState WindowState
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
     /// <summary>
     /// Initiates a connection to <see cref="SelectedDm"/>.
     /// Enabled only when a DM is selected and no connection is active or pending.
@@ -142,6 +150,9 @@ public class PlayerViewModel : ViewModelBase, IDisposable
     /// Enabled only when <see cref="IsConnected"/> is <see langword="true"/>.
     /// </summary>
     public ReactiveCommand<Unit, Unit> DisconnectCommand { get; }
+
+    /// <summary>Toggles the player window between normal and fullscreen states.</summary>
+    public ReactiveCommand<Unit, Unit> ToggleFullScreenCommand { get; }
 
     /// <summary>
     /// Raised after any fog update (initial session fog, incremental delta, or full replacement).
@@ -175,6 +186,13 @@ public class PlayerViewModel : ViewModelBase, IDisposable
 
         var canDisconnect = this.WhenAnyValue(x => x.IsConnected);
         DisconnectCommand = ReactiveCommand.CreateFromTask(DisconnectAsync, canDisconnect);
+
+        ToggleFullScreenCommand = ReactiveCommand.Create(ToggleFullScreen);
+    }
+
+    void ToggleFullScreen()
+    {
+        WindowState = WindowState == WindowState.FullScreen ? WindowState.Normal : WindowState.FullScreen;
     }
 
     /// <summary>
