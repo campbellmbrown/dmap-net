@@ -122,6 +122,13 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    /// <summary><see langword="true"/> while this client is generating a textured fog bitmap.</summary>
+    public bool IsFogGenerating
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
     /// <summary>
     /// Latest DM viewport received from the network. The player view applies this to the canvas and
     /// reapplies it after player-side layout changes so the camera stays aligned to the DM.

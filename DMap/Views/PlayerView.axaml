@@ -69,7 +69,8 @@
                                 FogOpacity="1.0"
                                 FogType="{Binding FogType}"
                                 FogColor="{Binding FogColor}"
-                                FogSeed="{Binding FogSeed}" />
+                                FogSeed="{Binding FogSeed}"
+                                IsFogGenerating="{Binding IsFogGenerating, Mode=OneWayToSource}" />
         </DockPanel>
     </Panel>
 

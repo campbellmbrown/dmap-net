@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 
 using Avalonia;
 using Avalonia.Controls;
@@ -107,6 +108,10 @@ public class MapCanvas : Control
     public static readonly StyledProperty<Guid> FogSeedProperty =
         AvaloniaProperty.Register<MapCanvas, Guid>(nameof(FogSeed), Guid.Empty);
 
+    /// <summary>Styled property indicating that a textured fog overlay is being generated in the background.</summary>
+    public static readonly StyledProperty<bool> IsFogGeneratingProperty =
+        AvaloniaProperty.Register<MapCanvas, bool>(nameof(IsFogGenerating));
+
     /// <summary>Styled property for the brush diameter preview in screen pixels.</summary>
     public static readonly StyledProperty<int> BrushDiameterProperty =
         AvaloniaProperty.Register<MapCanvas, int>(nameof(BrushDiameter), 50);
@@ -204,6 +209,13 @@ public class MapCanvas : Control
         set => SetValue(FogSeedProperty, value);
     }
 
+    /// <summary><see langword="true"/> while a non-colour fog texture is being generated client-side.</summary>
+    public bool IsFogGenerating
+    {
+        get => GetValue(IsFogGeneratingProperty);
+        private set => SetValue(IsFogGeneratingProperty, value);
+    }
+
     /// <summary>Brush diameter in map pixels, used to scale the cursor preview outline.</summary>
     public int BrushDiameter
     {
@@ -269,6 +281,7 @@ public class MapCanvas : Control
 
     WriteableBitmap? _fogBitmap;
     byte[]? _fogTexture;
+    int _fogGenerationVersion;
     bool _isPanning;
     Point _lastPanPoint;
     bool _isPainting;
@@ -319,6 +332,8 @@ public class MapCanvas : Control
         {
             _fogBitmap = null;
             _fogTexture = null;
+            _fogGenerationVersion++;
+            IsFogGenerating = false;
             return;
         }
 
@@ -328,8 +343,7 @@ public class MapCanvas : Control
             Avalonia.Platform.PixelFormat.Bgra8888,
             AlphaFormat.Premul);
 
-        RegenerateFogTexture();
-        UpdateFogBitmapRegion(new PixelRect(0, 0, mask.Width, mask.Height));
+        RefreshFogTextureAndBitmap();
     }
 
     /// <summary>
@@ -364,16 +378,57 @@ public class MapCanvas : Control
     /// Sized to match the current <see cref="FogMask"/>; cleared to <see langword="null"/> when in
     /// flat-colour mode or when no mask is loaded.
     /// </summary>
-    void RegenerateFogTexture()
+    void RefreshFogTextureAndBitmap()
     {
         var mask = FogMask;
         if (mask is null)
         {
             _fogTexture = null;
+            _fogGenerationVersion++;
+            IsFogGenerating = false;
             return;
         }
 
-        _fogTexture = _textureGenerator.Generate(mask.Width, mask.Height, FogType, FogSeed);
+        var type = FogType;
+        if (type == FogType.Color)
+        {
+            _fogTexture = null;
+            _fogGenerationVersion++;
+            IsFogGenerating = false;
+            UpdateFogBitmapRegion(new PixelRect(0, 0, mask.Width, mask.Height));
+            InvalidateVisual();
+            return;
+        }
+
+        _ = RefreshTexturedFogAsync(mask.Width, mask.Height, type, FogSeed, ++_fogGenerationVersion);
+    }
+
+    async Task RefreshTexturedFogAsync(int width, int height, FogType type, Guid seed, int generationVersion)
+    {
+        IsFogGenerating = true;
+        InvalidateVisual();
+
+        try
+        {
+            var texture = await Task.Run(() => _textureGenerator.Generate(width, height, type, seed));
+            var mask = FogMask;
+            if (generationVersion != _fogGenerationVersion
+                || mask is null
+                || mask.Width != width
+                || mask.Height != height
+                || FogType != type
+                || FogSeed != seed)
+                return;
+
+            _fogTexture = texture;
+            UpdateFogBitmapRegion(new PixelRect(0, 0, width, height));
+            InvalidateVisual();
+        }
+        finally
+        {
+            if (generationVersion == _fogGenerationVersion)
+                IsFogGenerating = false;
+        }
     }
 
     /// <summary>
@@ -393,6 +448,10 @@ public class MapCanvas : Control
         var texture = _fogTexture;
         var color = FogColor;
         var width = mask.Width;
+        var useTexture = FogType != FogType.Color;
+
+        if (useTexture && texture is null)
+            return;
 
         using var fb = _fogBitmap.Lock();
         unsafe
@@ -405,7 +464,7 @@ public class MapCanvas : Control
             var maxX = Math.Min(width, dirtyRect.X + dirtyRect.Width);
             var maxY = Math.Min(mask.Height, dirtyRect.Y + dirtyRect.Height);
 
-            if (texture is null)
+            if (!useTexture)
             {
                 byte cb = color.B, cg = color.G, cr = color.R;
                 for (var y = minY; y < maxY; y++)
@@ -424,6 +483,9 @@ public class MapCanvas : Control
             }
             else
             {
+                if (texture is null)
+                    return;
+
                 fixed (byte* texPtr = texture)
                 {
                     for (var y = minY; y < maxY; y++)
@@ -459,6 +521,9 @@ public class MapCanvas : Control
 
         var mapImage = MapImage;
         if (mapImage is null)
+            return;
+
+        if (FogType != FogType.Color && _fogTexture is null)
             return;
 
         var zoom = ZoomLevel;
@@ -577,9 +642,8 @@ public class MapCanvas : Control
             || change.Property == FogColorProperty;
 
         if (needsTextureRefresh)
-            RegenerateFogTexture();
-
-        if (needsBitmapRefresh)
+            RefreshFogTextureAndBitmap();
+        else if (needsBitmapRefresh)
         {
             UpdateFogBitmapRegion(new PixelRect(0, 0, FogMask.Width, FogMask.Height));
             InvalidateVisual();

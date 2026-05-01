@@ -34,6 +34,7 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
         InitializeComponent();
 
         var canvas = this.FindControl<MapCanvas>("MapCanvas")!;
+        FogGenerationDialog? fogGenerationDialog = null;
         canvas.ViewportChanged += (_, viewport) => ViewModel?.UpdateViewport(viewport);
 
         canvas.BrushStrokeStarted += (_, _) => ViewModel?.BeginBrushStroke();
@@ -57,6 +58,10 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
             vm.UpdateViewport(canvas.GetViewport());
 
             _activationDisposables.Add(
+                vm.WhenAnyValue(x => x.IsFogGenerating)
+                    .Subscribe(isGenerating => SetFogGenerationDialogVisible(isGenerating)));
+
+            _activationDisposables.Add(
                 vm.WhenAnyValue(x => x.FogMask)
                     .Subscribe(_ => canvas.RebuildFogBitmap()));
 
@@ -76,10 +81,34 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
 
             disposables(Disposable.Create(() =>
             {
+                fogGenerationDialog?.Close();
+                fogGenerationDialog = null;
                 _activationDisposables?.Dispose();
                 _activationDisposables = null;
             }));
         });
+
+        void SetFogGenerationDialogVisible(bool isVisible)
+        {
+            if (isVisible)
+            {
+                if (fogGenerationDialog is not null)
+                    return;
+
+                fogGenerationDialog = new FogGenerationDialog();
+                fogGenerationDialog.Closed += (_, _) => fogGenerationDialog = null;
+
+                if (TopLevel.GetTopLevel(this) is Window owner)
+                    _ = fogGenerationDialog.ShowDialog(owner);
+                else
+                    fogGenerationDialog.Show();
+
+                return;
+            }
+
+            fogGenerationDialog?.Close();
+            fogGenerationDialog = null;
+        }
     }
 
     /// <summary>

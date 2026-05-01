@@ -29,6 +29,7 @@ public partial class PlayerView : ReactiveUserControl<PlayerViewModel>
         InitializeComponent();
 
         var canvas = this.FindControl<MapCanvas>("MapCanvas")!;
+        FogGenerationDialog? fogGenerationDialog = null;
 
         this.WhenActivated(disposables =>
         {
@@ -39,6 +40,10 @@ public partial class PlayerView : ReactiveUserControl<PlayerViewModel>
                 return;
 
             var vm = ViewModel;
+
+            _activationDisposables.Add(
+                vm.WhenAnyValue(x => x.IsFogGenerating)
+                    .Subscribe(isGenerating => SetFogGenerationDialogVisible(isGenerating)));
 
             _activationDisposables.Add(
                 vm.WhenAnyValue(x => x.FogMask)
@@ -69,10 +74,34 @@ public partial class PlayerView : ReactiveUserControl<PlayerViewModel>
 
             disposables(Disposable.Create(() =>
             {
+                fogGenerationDialog?.Close();
+                fogGenerationDialog = null;
                 _activationDisposables?.Dispose();
                 _activationDisposables = null;
             }));
         });
+
+        void SetFogGenerationDialogVisible(bool isVisible)
+        {
+            if (isVisible)
+            {
+                if (fogGenerationDialog is not null)
+                    return;
+
+                fogGenerationDialog = new FogGenerationDialog();
+                fogGenerationDialog.Closed += (_, _) => fogGenerationDialog = null;
+
+                if (TopLevel.GetTopLevel(this) is Window owner)
+                    _ = fogGenerationDialog.ShowDialog(owner);
+                else
+                    fogGenerationDialog.Show();
+
+                return;
+            }
+
+            fogGenerationDialog?.Close();
+            fogGenerationDialog = null;
+        }
     }
 
     /// <summary>

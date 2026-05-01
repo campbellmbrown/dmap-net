@@ -260,6 +260,13 @@ public class DmViewModel : ViewModelBase, IDisposable
         private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    /// <summary><see langword="true"/> while this client is generating a textured fog bitmap.</summary>
+    public bool IsFogGenerating
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
     /// <summary><see langword="true"/> when the colour picker should be visible (i.e. flat-colour mode).</summary>
     public bool IsFogColorSelected => SelectedFogType == FogType.Color;
 

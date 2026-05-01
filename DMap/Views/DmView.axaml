@@ -212,6 +212,7 @@
                             FogType="{Binding SelectedFogType}"
                             FogColor="{Binding FogColor}"
                             FogSeed="{Binding FogSeed}"
+                            IsFogGenerating="{Binding IsFogGenerating, Mode=OneWayToSource}"
                             ShowMap="{Binding IsMapVisible}"
                             BrushDiameter="{Binding BrushDiameter}"
                             ActiveTool="{Binding SelectedTool}"
