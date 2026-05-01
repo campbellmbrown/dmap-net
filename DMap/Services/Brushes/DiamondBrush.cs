@@ -24,10 +24,8 @@ public sealed class DiamondBrush : IBrush
 
         var innerRadius = radius * (1.0 - settings.Softness);
 
-        var minX = Math.Max(0, (int)Math.Floor(Math.Min(x1, x2) - radius));
-        var minY = Math.Max(0, (int)Math.Floor(Math.Min(y1, y2) - radius));
-        var maxX = Math.Min(mask.Width - 1, (int)Math.Ceiling(Math.Max(x1, x2) + radius));
-        var maxY = Math.Min(mask.Height - 1, (int)Math.Ceiling(Math.Max(y1, y2) + radius));
+        if (!BrushHelper.TryGetClippedStrokeBounds(mask, x1, y1, x2, y2, radius, out var minX, out var minY, out var maxX, out var maxY))
+            return default;
 
         var dx = (double)(x2 - x1);
         var dy = (double)(y2 - y1);

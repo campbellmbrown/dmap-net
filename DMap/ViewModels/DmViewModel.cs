@@ -585,11 +585,17 @@ public class DmViewModel : ViewModelBase, IDisposable
             return;
 
         var shapeRect = ComputeShapeRect(cx1, cy1, cx2, cy2);
+        if (IsEmpty(shapeRect))
+            return;
+
         var before = FogDeltaCommand.CaptureFromMask(_fogService.Mask, shapeRect);
 
         var dirtyRect = (SelectedShapeType is ShapeType.Ellipse or ShapeType.Circle)
             ? _fogService.ApplyEllipse(cx1, cy1, cx2, cy2, (float)ShapeSoftness, (float)ShapeOpacity, isErasing)
             : _fogService.ApplyRectangle(cx1, cy1, cx2, cy2, (float)ShapeSoftness, (float)ShapeOpacity, isErasing);
+
+        if (IsEmpty(dirtyRect))
+            return;
 
         var after = FogDeltaCommand.CaptureFromMask(_fogService.Mask, shapeRect);
         _undoRedo.Push(new FogDeltaCommand(shapeRect, before, after));
@@ -607,6 +613,9 @@ public class DmViewModel : ViewModelBase, IDisposable
         var minY = Math.Max(0, Math.Min(y1, y2));
         var maxX = Math.Min(_fogService.Mask!.Width - 1, Math.Max(x1, x2));
         var maxY = Math.Min(_fogService.Mask!.Height - 1, Math.Max(y1, y2));
+        if (minX > maxX || minY > maxY)
+            return default;
+
         return new PixelRect(minX, minY, maxX - minX + 1, maxY - minY + 1);
     }
 
@@ -646,6 +655,8 @@ public class DmViewModel : ViewModelBase, IDisposable
         };
         var settings = new BrushSettings(BrushDiameter, (float)BrushSoftness, (float)BrushOpacity, Erase: isErasing);
         var dirtyRect = _fogService.ApplyBrush(brush, x1, y1, x2, y2, settings);
+        if (IsEmpty(dirtyRect))
+            return;
 
         FogUpdated?.Invoke(this, dirtyRect);
         SendFogDelta(dirtyRect);
@@ -673,6 +684,9 @@ public class DmViewModel : ViewModelBase, IDisposable
         if (_fogService.Mask is null)
             return;
 
+        if (IsEmpty(dirtyRect))
+            return;
+
         if (IsUpdatesPaused)
         {
             _hasPendingUpdates = true;
@@ -684,6 +698,8 @@ public class DmViewModel : ViewModelBase, IDisposable
 
         _ = _hostService.SendFogDeltaAsync(delta, default);
     }
+
+    static bool IsEmpty(PixelRect rect) => rect.Width <= 0 || rect.Height <= 0;
 
     /// <summary>
     /// Fires-and-forgets a broadcast of the current fog appearance (type + colour + seed)

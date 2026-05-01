@@ -157,7 +157,10 @@ public sealed class FogDelta
     /// <param name="height">Height of the region.</param>
     public static FogDelta FromMask(FogMask mask, int x, int y, int width, int height)
     {
-        var data = new byte[width * height];
+        if (width <= 0 || height <= 0)
+            return new FogDelta { X = x, Y = y, Width = 0, Height = 0 };
+
+        var data = new byte[checked(width * height)];
         for (var dy = 0; dy < height; dy++)
         {
             for (var dx = 0; dx < width; dx++)

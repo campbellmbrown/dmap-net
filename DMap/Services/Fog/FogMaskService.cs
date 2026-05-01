@@ -73,10 +73,13 @@ public sealed class FogMaskService : IFogMaskService
 
         var dirtyRect = brush.Apply(Mask, x1, y1, x2, y2, settings, _snapshot);
         if (dirtyRect.Width > 0 && dirtyRect.Height > 0)
+        {
             _strokeDirtyRect = _strokeDirtyRect.HasValue
                 ? UnionRects(_strokeDirtyRect.Value, dirtyRect)
                 : dirtyRect;
-        MaskChanged?.Invoke(this, dirtyRect);
+            MaskChanged?.Invoke(this, dirtyRect);
+        }
+
         return dirtyRect;
     }
 
@@ -86,18 +89,25 @@ public sealed class FogMaskService : IFogMaskService
         if (Mask is null)
             throw new InvalidOperationException(MaskNotInitialized);
 
-        var minX = Math.Max(0, Math.Min(x1, x2));
-        var minY = Math.Max(0, Math.Min(y1, y2));
-        var maxX = Math.Min(Mask.Width - 1, Math.Max(x1, x2));
-        var maxY = Math.Min(Mask.Height - 1, Math.Max(y1, y2));
+        var shapeMinX = Math.Min(x1, x2);
+        var shapeMinY = Math.Min(y1, y2);
+        var shapeMaxX = Math.Max(x1, x2);
+        var shapeMaxY = Math.Max(y1, y2);
+        var minX = Math.Max(0, shapeMinX);
+        var minY = Math.Max(0, shapeMinY);
+        var maxX = Math.Min(Mask.Width - 1, shapeMaxX);
+        var maxY = Math.Min(Mask.Height - 1, shapeMaxY);
 
-        var feather = softness * Math.Min(maxX - minX, maxY - minY) / 2.0f;
+        if (minX > maxX || minY > maxY)
+            return default;
+
+        var feather = softness * Math.Min(shapeMaxX - shapeMinX, shapeMaxY - shapeMinY) / 2.0f;
 
         for (var y = minY; y <= maxY; y++)
         {
             for (var x = minX; x <= maxX; x++)
             {
-                var coverage = RectCoverage(x, y, minX, minY, maxX, maxY, feather);
+                var coverage = RectCoverage(x, y, shapeMinX, shapeMinY, shapeMaxX, shapeMaxY, feather);
                 var snapshotValue = Mask[x, y];
                 BrushHelper.ApplyPixel(Mask, x, y, coverage, erase, snapshotValue, opacity);
             }
@@ -114,19 +124,26 @@ public sealed class FogMaskService : IFogMaskService
         if (Mask is null)
             throw new InvalidOperationException(MaskNotInitialized);
 
-        var minX = Math.Max(0, Math.Min(x1, x2));
-        var minY = Math.Max(0, Math.Min(y1, y2));
-        var maxX = Math.Min(Mask.Width - 1, Math.Max(x1, x2));
-        var maxY = Math.Min(Mask.Height - 1, Math.Max(y1, y2));
+        var shapeMinX = Math.Min(x1, x2);
+        var shapeMinY = Math.Min(y1, y2);
+        var shapeMaxX = Math.Max(x1, x2);
+        var shapeMaxY = Math.Max(y1, y2);
+        var minX = Math.Max(0, shapeMinX);
+        var minY = Math.Max(0, shapeMinY);
+        var maxX = Math.Min(Mask.Width - 1, shapeMaxX);
+        var maxY = Math.Min(Mask.Height - 1, shapeMaxY);
 
-        var rx = (maxX - minX) / 2.0;
-        var ry = (maxY - minY) / 2.0;
+        if (minX > maxX || minY > maxY)
+            return default;
+
+        var rx = (shapeMaxX - shapeMinX) / 2.0;
+        var ry = (shapeMaxY - shapeMinY) / 2.0;
 
         if (rx < 0.5 || ry < 0.5)
             return new PixelRect(0, 0, 0, 0);
 
-        var cx = minX + rx;
-        var cy = minY + ry;
+        var cx = shapeMinX + rx;
+        var cy = shapeMinY + ry;
 
         for (var y = minY; y <= maxY; y++)
         {

@@ -1,3 +1,5 @@
+using System;
+
 using DMap.Models;
 
 namespace DMap.Services.Brushes;
@@ -7,6 +9,21 @@ namespace DMap.Services.Brushes;
 /// </summary>
 internal static class BrushHelper
 {
+    /// <summary>
+    /// Computes the map-clipped bounds for a brush segment.
+    /// </summary>
+    internal static bool TryGetClippedStrokeBounds(
+        FogMask mask, int x1, int y1, int x2, int y2, double radius,
+        out int minX, out int minY, out int maxX, out int maxY)
+    {
+        minX = Math.Max(0, (int)Math.Floor(Math.Min(x1, x2) - radius));
+        minY = Math.Max(0, (int)Math.Floor(Math.Min(y1, y2) - radius));
+        maxX = Math.Min(mask.Width - 1, (int)Math.Ceiling(Math.Max(x1, x2) + radius));
+        maxY = Math.Min(mask.Height - 1, (int)Math.Ceiling(Math.Max(y1, y2) + radius));
+
+        return minX <= maxX && minY <= maxY;
+    }
+
     /// <summary>
     /// Writes the reveal value for a single fog pixel, respecting coverage, opacity, and erase mode.
     /// The operation only moves the pixel in the target direction (reveal or erase); it never
