@@ -219,6 +219,24 @@
                             ShapeType="{Binding SelectedShapeType}">
             </controls:MapCanvas>
 
+            <Border IsVisible="{Binding #MapCanvas.IsFogTextureGenerating}"
+                    Background="#66000000"
+                    ZIndex="1000">
+                <Border Width="360"
+                        Padding="20"
+                        CornerRadius="10"
+                        Background="{DynamicResource SystemControlBackgroundBaseHighBrush}"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="Generating fog texture..."
+                                   FontSize="16"
+                                   FontWeight="SemiBold" />
+                        <ProgressBar IsIndeterminate="True" Height="10" />
+                    </StackPanel>
+                </Border>
+            </Border>
+
             <!-- Floating side toolbar -->
             <StackPanel Orientation="Horizontal"
                         Spacing="10" Margin="8,8,0,0"

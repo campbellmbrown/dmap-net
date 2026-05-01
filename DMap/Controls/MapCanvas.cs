@@ -1,7 +1,10 @@
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Threading;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -127,6 +130,12 @@ public class MapCanvas : Control
     public static readonly StyledProperty<bool> ShowMapProperty =
         AvaloniaProperty.Register<MapCanvas, bool>(nameof(ShowMap), true);
 
+    /// <summary>Direct property indicating whether a textured fog is currently being generated.</summary>
+    public static readonly DirectProperty<MapCanvas, bool> IsFogTextureGeneratingProperty =
+        AvaloniaProperty.RegisterDirect<MapCanvas, bool>(
+            nameof(IsFogTextureGenerating),
+            o => o.IsFogTextureGenerating);
+
     /// <summary>The map background image, or <see langword="null"/> when no map is loaded.</summary>
     public Bitmap? MapImage
     {
@@ -242,6 +251,16 @@ public class MapCanvas : Control
         set => SetValue(ShowMapProperty, value);
     }
 
+    /// <summary>
+    /// <see langword="true"/> while a textured fog variant is being generated; always
+    /// <see langword="false"/> for <see cref="FogType.Color"/>.
+    /// </summary>
+    public bool IsFogTextureGenerating
+    {
+        get => _isFogTextureGenerating;
+        private set => SetAndRaise(IsFogTextureGeneratingProperty, ref _isFogTextureGenerating, value);
+    }
+
     /// <summary>Raised when the user presses the pointer to begin a brush stroke.</summary>
     public event EventHandler? BrushStrokeStarted;
 
@@ -278,6 +297,8 @@ public class MapCanvas : Control
     bool _isDraggingShape;
     Point _shapeDragStart;
     Point _lastMousePosition;
+    bool _isFogTextureGenerating;
+    int _fogTextureGenerationToken;
 
     static MapCanvas()
     {
@@ -328,7 +349,7 @@ public class MapCanvas : Control
             Avalonia.Platform.PixelFormat.Bgra8888,
             AlphaFormat.Premul);
 
-        RegenerateFogTexture();
+        _ = RegenerateFogTextureAsync();
         UpdateFogBitmapRegion(new PixelRect(0, 0, mask.Width, mask.Height));
     }
 
@@ -364,16 +385,40 @@ public class MapCanvas : Control
     /// Sized to match the current <see cref="FogMask"/>; cleared to <see langword="null"/> when in
     /// flat-colour mode or when no mask is loaded.
     /// </summary>
-    void RegenerateFogTexture()
+    async Task RegenerateFogTextureAsync()
     {
+        var generationToken = Interlocked.Increment(ref _fogTextureGenerationToken);
         var mask = FogMask;
         if (mask is null)
         {
             _fogTexture = null;
+            IsFogTextureGenerating = false;
             return;
         }
 
-        _fogTexture = _textureGenerator.Generate(mask.Width, mask.Height, FogType, FogSeed);
+        if (FogType == FogType.Color)
+        {
+            _fogTexture = null;
+            IsFogTextureGenerating = false;
+            return;
+        }
+
+        IsFogTextureGenerating = true;
+        var generatedTexture = await Task.Run(() => _textureGenerator.Generate(mask.Width, mask.Height, FogType, FogSeed));
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (generationToken != _fogTextureGenerationToken)
+                return;
+
+            _fogTexture = generatedTexture;
+            IsFogTextureGenerating = false;
+
+            if (FogMask is not null)
+            {
+                UpdateFogBitmapRegion(new PixelRect(0, 0, FogMask.Width, FogMask.Height));
+                InvalidateVisual();
+            }
+        });
     }
 
     /// <summary>
@@ -577,7 +622,7 @@ public class MapCanvas : Control
             || change.Property == FogColorProperty;
 
         if (needsTextureRefresh)
-            RegenerateFogTexture();
+            _ = RegenerateFogTextureAsync();
 
         if (needsBitmapRefresh)
         {
