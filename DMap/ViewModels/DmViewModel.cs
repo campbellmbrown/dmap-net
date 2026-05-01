@@ -342,12 +342,12 @@ public class DmViewModel : ViewModelBase, IDisposable
         private set => this.RaiseAndSetIfChanged(ref field, value);
     } = true;
 
-    /// <summary>Toggles whether fog updates are held locally or sent to connected players immediately.</summary>
+    /// <summary>Toggles whether fog and viewport updates are held locally or sent to connected players immediately.</summary>
     public ReactiveCommand<Unit, Unit> TogglePauseUpdatesCommand { get; }
 
     /// <summary>
-    /// When <see langword="true"/>, fog changes are applied locally but not broadcast to players.
-    /// Resuming sends a single full-mask delta to bring all players up to date.
+    /// When <see langword="true"/>, fog and viewport changes are applied locally but not broadcast to players.
+    /// Resuming sends a single full-mask delta and latest viewport to bring all players up to date.
     /// </summary>
     public bool IsUpdatesPaused
     {
@@ -377,6 +377,7 @@ public class DmViewModel : ViewModelBase, IDisposable
     byte[]? _mapImageBytes;
     MapSession? _session;
     bool _hasPendingUpdates;
+    bool _hasPendingViewportUpdate;
     ViewportPayload? _latestViewport;
     bool _isViewportBroadcastQueued;
     /// <summary>Fires every 2 seconds on the UI thread to refresh <see cref="MemoryUsage"/>.</summary>
@@ -665,7 +666,7 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// <summary>
     /// Updates the authoritative DM viewport snapshot and queues a broadcast to players.
     /// Repeated updates within a single UI tick are coalesced into a single send using the
-    /// most recent viewport values.
+    /// most recent viewport values. When updates are paused, only the snapshot is retained.
     /// </summary>
     public void UpdateViewport(ViewportPayload viewport)
     {
@@ -728,7 +729,16 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// </summary>
     void QueueViewportBroadcast()
     {
-        if (_session is null || _latestViewport is null || _isViewportBroadcastQueued)
+        if (_session is null || _latestViewport is null)
+            return;
+
+        if (IsUpdatesPaused)
+        {
+            _hasPendingViewportUpdate = true;
+            return;
+        }
+
+        if (_isViewportBroadcastQueued)
             return;
 
         _isViewportBroadcastQueued = true;
@@ -738,23 +748,35 @@ public class DmViewModel : ViewModelBase, IDisposable
             if (_session is null || _latestViewport is null)
                 return;
 
+            if (IsUpdatesPaused)
+            {
+                _hasPendingViewportUpdate = true;
+                return;
+            }
+
             _ = _hostService.SendViewportAsync(_latestViewport, default);
         }, DispatcherPriority.Background);
     }
 
     /// <summary>
-    /// Sends the full current fog mask to all players as a single delta, catching them up on
+    /// Sends the full current fog mask and latest viewport to all players, catching them up on
     /// every change made while updates were paused.
     /// </summary>
     void FlushPendingUpdates()
     {
-        if (!_hasPendingUpdates || _fogService.Mask is null)
-            return;
+        if (_hasPendingUpdates && _fogService.Mask is not null)
+        {
+            _hasPendingUpdates = false;
+            var mask = _fogService.Mask;
+            var delta = FogDelta.FromMask(mask, 0, 0, mask.Width, mask.Height);
+            _ = _hostService.SendFogDeltaAsync(delta, default);
+        }
 
-        _hasPendingUpdates = false;
-        var mask = _fogService.Mask;
-        var delta = FogDelta.FromMask(mask, 0, 0, mask.Width, mask.Height);
-        _ = _hostService.SendFogDeltaAsync(delta, default);
+        if (_hasPendingViewportUpdate && _session is not null && _latestViewport is not null)
+        {
+            _hasPendingViewportUpdate = false;
+            _ = _hostService.SendViewportAsync(_latestViewport, default);
+        }
     }
 
     /// <summary>
