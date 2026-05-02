@@ -140,7 +140,11 @@
                 </MenuItem>
             </MenuItem>
             <MenuItem Header="Help">
-                <MenuItem Header="About DMap" Command="{Binding ShowAboutCommand}" />
+                <MenuItem Header="About DMap" Command="{Binding ShowAboutCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{SvgImage /Assets/Icons/info.svg}" />
+                    </MenuItem.Icon>
+                </MenuItem>
             </MenuItem>
         </Menu>
 

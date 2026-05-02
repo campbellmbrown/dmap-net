@@ -4,7 +4,9 @@ Changelog
 Unreleased
 ----------
 
-No unreleased changes.
+.. No unreleased changes.
+
+* Added icon to the "About DMap" menu item in the Help menu.
 
 v1.0.0
 ------
