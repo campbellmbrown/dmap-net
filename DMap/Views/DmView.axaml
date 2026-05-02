@@ -207,6 +207,7 @@
             <controls:MapCanvas x:Name="MapCanvas"
                             MapImage="{Binding MapImage}"
                             FogMask="{Binding FogMask}"
+                            SmoothViewportTransitions="True"
                             ZoomLevel="{Binding ZoomLevel, Mode=TwoWay}"
                             OffsetX="{Binding OffsetX, Mode=TwoWay}"
                             OffsetY="{Binding OffsetY, Mode=TwoWay}"

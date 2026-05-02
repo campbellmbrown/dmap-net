@@ -65,6 +65,7 @@
             <controls:MapCanvas x:Name="MapCanvas"
                                 MapImage="{Binding MapImage}"
                                 FogMask="{Binding FogMask}"
+                                SmoothViewportTransitions="True"
                                 IsDmMode="False"
                                 FogOpacity="1.0"
                                 FogType="{Binding FogType}"

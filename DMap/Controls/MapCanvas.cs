@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 using Avalonia;
@@ -7,6 +8,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Avalonia.Threading;
 
 using DMap.Models;
 using DMap.Services.Fog;
@@ -67,6 +69,13 @@ public class MapCanvas : Control
 {
     const double MinZoomLevel = 0.1;
     const double MaxZoomLevel = 10.0;
+    const double ViewportSpringAngularFrequency = 18.0;
+    const double ViewportSpringDampingRatio = 0.82;
+    const double MaxSpringStepSeconds = 0.05;
+    const double ZoomSettleThreshold = 0.0005;
+    const double ZoomVelocitySettleThreshold = 0.005;
+    const double OffsetSettleThreshold = 0.1;
+    const double OffsetVelocitySettleThreshold = 2.0;
 
     /// <summary>Styled property for the map background image.</summary>
     public static readonly StyledProperty<Bitmap?> MapImageProperty =
@@ -87,6 +96,10 @@ public class MapCanvas : Control
     /// <summary>Styled property for the vertical pan offset in screen pixels.</summary>
     public static readonly StyledProperty<double> OffsetYProperty =
         AvaloniaProperty.Register<MapCanvas, double>(nameof(OffsetY));
+
+    /// <summary>Styled property controlling whether target viewport changes are rendered through a damped spring.</summary>
+    public static readonly StyledProperty<bool> SmoothViewportTransitionsProperty =
+        AvaloniaProperty.Register<MapCanvas, bool>(nameof(SmoothViewportTransitions));
 
     /// <summary>Styled property that enables DM editing mode (brush/shape input, cursor preview).</summary>
     public static readonly StyledProperty<bool> IsDmModeProperty =
@@ -165,6 +178,16 @@ public class MapCanvas : Control
     {
         get => GetValue(OffsetYProperty);
         set => SetValue(OffsetYProperty, value);
+    }
+
+    /// <summary>
+    /// When enabled, the rendered viewport follows <see cref="ZoomLevel"/>, <see cref="OffsetX"/>,
+    /// and <see cref="OffsetY"/> with a damped spring so changing targets stay continuous.
+    /// </summary>
+    public bool SmoothViewportTransitions
+    {
+        get => GetValue(SmoothViewportTransitionsProperty);
+        set => SetValue(SmoothViewportTransitionsProperty, value);
     }
 
     /// <summary>
@@ -291,6 +314,21 @@ public class MapCanvas : Control
     bool _isDraggingShape;
     Point _shapeDragStart;
     Point _lastMousePosition;
+    readonly DispatcherTimer _viewportSpringTimer;
+    readonly Stopwatch _viewportSpringClock = new();
+    bool _hasDisplayViewport;
+    double _displayZoom = 1.0;
+    double _displayOffsetX;
+    double _displayOffsetY;
+    double _zoomVelocity;
+    double _offsetXVelocity;
+    double _offsetYVelocity;
+    bool _isRetargetingWheelZoom;
+    bool _hasZoomAnchor;
+    double _zoomAnchorScreenX;
+    double _zoomAnchorScreenY;
+    double _zoomAnchorMapX;
+    double _zoomAnchorMapY;
 
     static MapCanvas()
     {
@@ -307,6 +345,7 @@ public class MapCanvas : Control
     {
         ClipToBounds = true;
         Focusable = true;
+        _viewportSpringTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(1000.0 / 60.0), DispatcherPriority.Render, (_, _) => TickViewportSpring());
     }
 
     /// <summary>
@@ -367,10 +406,32 @@ public class MapCanvas : Control
     /// </summary>
     public void ApplyViewport(ViewportPayload viewport)
     {
+        var hadDisplayViewport = _hasDisplayViewport;
         var zoom = Math.Clamp(viewport.ZoomLevel, MinZoomLevel, MaxZoomLevel);
         ZoomLevel = zoom;
         OffsetX = Bounds.Width / 2.0 - viewport.CenterMapX * zoom;
         OffsetY = Bounds.Height / 2.0 - viewport.CenterMapY * zoom;
+
+        if (!hadDisplayViewport)
+        {
+            SnapDisplayViewportToTarget();
+            StopViewportSpring();
+        }
+    }
+
+    /// <inheritdoc/>
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        EnsureDisplayViewport();
+        StartViewportSpringIfNeeded();
+    }
+
+    /// <inheritdoc/>
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        StopViewportSpring();
     }
 
     /// <summary>
@@ -526,9 +587,10 @@ public class MapCanvas : Control
         if (FogType != FogType.Color && _fogTexture is null)
             return;
 
-        var zoom = ZoomLevel;
-        var offsetX = OffsetX;
-        var offsetY = OffsetY;
+        EnsureDisplayViewport();
+        var zoom = _displayZoom;
+        var offsetX = _displayOffsetX;
+        var offsetY = _displayOffsetY;
 
         var transform = Matrix.CreateScale(zoom, zoom) * Matrix.CreateTranslation(offsetX, offsetY);
 
@@ -632,6 +694,33 @@ public class MapCanvas : Control
         base.OnPropertyChanged(change);
         if (change.Property == ActiveToolProperty || change.Property == IsDmModeProperty)
             UpdateCursor();
+
+        if (change.Property == SmoothViewportTransitionsProperty)
+        {
+            if (SmoothViewportTransitions)
+                StartViewportSpringIfNeeded();
+            else
+            {
+                SnapDisplayViewportToTarget();
+                StopViewportSpring();
+            }
+        }
+
+        if (change.Property == ZoomLevelProperty
+            || change.Property == OffsetXProperty
+            || change.Property == OffsetYProperty)
+        {
+            if (!_isRetargetingWheelZoom)
+                ClearZoomAnchor();
+
+            if (SmoothViewportTransitions)
+            {
+                EnsureDisplayViewport();
+                StartViewportSpringIfNeeded();
+            }
+            else
+                SnapDisplayViewportToTarget();
+        }
 
         if (FogMask is null)
             return;
@@ -764,6 +853,8 @@ public class MapCanvas : Control
             var delta = point.Position - _lastPanPoint;
             OffsetX += delta.X;
             OffsetY += delta.Y;
+            SnapDisplayViewportToTarget();
+            StopViewportSpring();
             _lastPanPoint = point.Position;
             e.Handled = true;
             return;
@@ -815,14 +906,32 @@ public class MapCanvas : Control
             return;
 
         var mousePos = e.GetPosition(this);
-        var oldZoom = ZoomLevel;
+        EnsureDisplayViewport();
+
+        var oldZoom = Math.Clamp(ZoomLevel, MinZoomLevel, MaxZoomLevel);
         var zoomFactor = e.Delta.Y > 0 ? 1.1 : 1.0 / 1.1;
         var newZoom = Math.Clamp(oldZoom * zoomFactor, MinZoomLevel, MaxZoomLevel);
+        var anchorMapX = (mousePos.X - _displayOffsetX) / _displayZoom;
+        var anchorMapY = (mousePos.Y - _displayOffsetY) / _displayZoom;
 
-        // Zoom centered on mouse position
-        OffsetX = mousePos.X - ((mousePos.X - OffsetX) * (newZoom / oldZoom));
-        OffsetY = mousePos.Y - ((mousePos.Y - OffsetY) * (newZoom / oldZoom));
-        ZoomLevel = newZoom;
+        _hasZoomAnchor = true;
+        _zoomAnchorScreenX = mousePos.X;
+        _zoomAnchorScreenY = mousePos.Y;
+        _zoomAnchorMapX = anchorMapX;
+        _zoomAnchorMapY = anchorMapY;
+
+        _isRetargetingWheelZoom = true;
+        try
+        {
+            // Retarget around the map point currently visible under the pointer.
+            OffsetX = mousePos.X - anchorMapX * newZoom;
+            OffsetY = mousePos.Y - anchorMapY * newZoom;
+            ZoomLevel = newZoom;
+        }
+        finally
+        {
+            _isRetargetingWheelZoom = false;
+        }
 
         e.Handled = true;
     }
@@ -845,12 +954,13 @@ public class MapCanvas : Control
     /// </summary>
     void InitBrushMapPos(Point screenPos)
     {
-        var zoom = ZoomLevel;
+        EnsureDisplayViewport();
+        var zoom = _displayZoom;
         if (zoom <= 0)
             return;
 
-        _lastBrushMapX = (int)((screenPos.X - OffsetX) / zoom);
-        _lastBrushMapY = (int)((screenPos.Y - OffsetY) / zoom);
+        _lastBrushMapX = (int)((screenPos.X - _displayOffsetX) / zoom);
+        _lastBrushMapY = (int)((screenPos.Y - _displayOffsetY) / zoom);
     }
 
     /// <summary>
@@ -859,12 +969,13 @@ public class MapCanvas : Control
     /// </summary>
     void RaiseBrushStroke(Point screenTo)
     {
-        var zoom = ZoomLevel;
+        EnsureDisplayViewport();
+        var zoom = _displayZoom;
         if (zoom <= 0)
             return;
 
-        var mapX2 = (int)((screenTo.X - OffsetX) / zoom);
-        var mapY2 = (int)((screenTo.Y - OffsetY) / zoom);
+        var mapX2 = (int)((screenTo.X - _displayOffsetX) / zoom);
+        var mapY2 = (int)((screenTo.Y - _displayOffsetY) / zoom);
 
         BrushStrokeApplied?.Invoke(this, new BrushStrokeEventArgs
         {
@@ -885,11 +996,12 @@ public class MapCanvas : Control
     /// </summary>
     void FireShapeStroke(Point screenStart, Point screenEnd)
     {
-        var zoom = ZoomLevel;
-        var mapX1 = (int)((screenStart.X - OffsetX) / zoom);
-        var mapY1 = (int)((screenStart.Y - OffsetY) / zoom);
-        var mapX2 = (int)((screenEnd.X - OffsetX) / zoom);
-        var mapY2 = (int)((screenEnd.Y - OffsetY) / zoom);
+        EnsureDisplayViewport();
+        var zoom = _displayZoom;
+        var mapX1 = (int)((screenStart.X - _displayOffsetX) / zoom);
+        var mapY1 = (int)((screenStart.Y - _displayOffsetY) / zoom);
+        var mapX2 = (int)((screenEnd.X - _displayOffsetX) / zoom);
+        var mapY2 = (int)((screenEnd.Y - _displayOffsetY) / zoom);
 
         ShapeStrokeApplied?.Invoke(this, new ShapeStrokeEventArgs
         {
@@ -907,4 +1019,123 @@ public class MapCanvas : Control
     /// </summary>
     static Rect MakeRect(Point a, Point b) =>
         new(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y), Math.Abs(b.X - a.X), Math.Abs(b.Y - a.Y));
+
+    /// <summary>Initialises the rendered viewport to the current target camera if needed.</summary>
+    void EnsureDisplayViewport()
+    {
+        if (_hasDisplayViewport)
+            return;
+
+        SnapDisplayViewportToTarget();
+    }
+
+    /// <summary>Synchronises the rendered camera with the target camera and clears spring velocity.</summary>
+    void SnapDisplayViewportToTarget()
+    {
+        _displayZoom = Math.Clamp(ZoomLevel <= 0 ? 1.0 : ZoomLevel, MinZoomLevel, MaxZoomLevel);
+        _displayOffsetX = OffsetX;
+        _displayOffsetY = OffsetY;
+        _zoomVelocity = 0;
+        _offsetXVelocity = 0;
+        _offsetYVelocity = 0;
+        ClearZoomAnchor();
+        _hasDisplayViewport = true;
+        InvalidateVisual();
+    }
+
+    /// <summary>Starts ticking the viewport spring when the rendered camera differs from the target.</summary>
+    void StartViewportSpringIfNeeded()
+    {
+        if (!SmoothViewportTransitions)
+            return;
+
+        EnsureDisplayViewport();
+        if (IsDisplayViewportSettled())
+            return;
+
+        if (_viewportSpringTimer.IsEnabled)
+            return;
+
+        _viewportSpringClock.Restart();
+        _viewportSpringTimer.Start();
+    }
+
+    /// <summary>Stops the viewport spring timer and resets elapsed-time tracking.</summary>
+    void StopViewportSpring()
+    {
+        _viewportSpringTimer.Stop();
+        _viewportSpringClock.Reset();
+    }
+
+    /// <summary>Advances the rendered viewport toward the current target camera by one spring step.</summary>
+    void TickViewportSpring()
+    {
+        var elapsed = _viewportSpringClock.Elapsed.TotalSeconds;
+        _viewportSpringClock.Restart();
+        var dt = Math.Clamp(elapsed, 0.0, MaxSpringStepSeconds);
+        if (dt <= 0)
+            return;
+
+        var targetZoom = Math.Clamp(ZoomLevel <= 0 ? 1.0 : ZoomLevel, MinZoomLevel, MaxZoomLevel);
+        var displayZoomLog = Math.Log(Math.Clamp(_displayZoom, MinZoomLevel, MaxZoomLevel));
+        var targetZoomLog = Math.Log(targetZoom);
+
+        displayZoomLog = StepSpring(displayZoomLog, targetZoomLog, ref _zoomVelocity, dt);
+        _displayZoom = Math.Clamp(Math.Exp(displayZoomLog), MinZoomLevel, MaxZoomLevel);
+        if (_hasZoomAnchor)
+        {
+            _displayOffsetX = _zoomAnchorScreenX - _zoomAnchorMapX * _displayZoom;
+            _displayOffsetY = _zoomAnchorScreenY - _zoomAnchorMapY * _displayZoom;
+            _offsetXVelocity = 0;
+            _offsetYVelocity = 0;
+        }
+        else
+        {
+            _displayOffsetX = StepSpring(_displayOffsetX, OffsetX, ref _offsetXVelocity, dt);
+            _displayOffsetY = StepSpring(_displayOffsetY, OffsetY, ref _offsetYVelocity, dt);
+        }
+
+        if (IsDisplayViewportSettled())
+        {
+            SnapDisplayViewportToTarget();
+            StopViewportSpring();
+            return;
+        }
+
+        InvalidateVisual();
+    }
+
+    /// <summary>Returns whether the rendered camera is close enough to snap to the target.</summary>
+    bool IsDisplayViewportSettled()
+    {
+        var targetZoom = Math.Clamp(ZoomLevel <= 0 ? 1.0 : ZoomLevel, MinZoomLevel, MaxZoomLevel);
+        var zoomDelta = Math.Abs(Math.Log(Math.Clamp(_displayZoom, MinZoomLevel, MaxZoomLevel) / targetZoom));
+        return zoomDelta < ZoomSettleThreshold
+            && Math.Abs(_zoomVelocity) < ZoomVelocitySettleThreshold
+            && Math.Abs(_displayOffsetX - OffsetX) < OffsetSettleThreshold
+            && Math.Abs(_displayOffsetY - OffsetY) < OffsetSettleThreshold
+            && Math.Abs(_offsetXVelocity) < OffsetVelocitySettleThreshold
+            && Math.Abs(_offsetYVelocity) < OffsetVelocitySettleThreshold;
+    }
+
+    /// <summary>Damped spring integration for a single scalar channel.</summary>
+    static double StepSpring(double current, double target, ref double velocity, double dt)
+    {
+        var displacement = current - target;
+        var acceleration = -ViewportSpringAngularFrequency * ViewportSpringAngularFrequency * displacement
+            - 2.0 * ViewportSpringDampingRatio * ViewportSpringAngularFrequency * velocity;
+
+        velocity += acceleration * dt;
+        return current + velocity * dt;
+    }
+
+    /// <summary>Clears any active wheel-zoom anchor so normal viewport changes can spring freely.</summary>
+    void ClearZoomAnchor()
+    {
+        _hasZoomAnchor = false;
+        _zoomAnchorScreenX = 0;
+        _zoomAnchorScreenY = 0;
+        _zoomAnchorMapX = 0;
+        _zoomAnchorMapY = 0;
+    }
 }
