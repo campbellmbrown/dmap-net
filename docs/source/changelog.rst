@@ -9,8 +9,8 @@ Unreleased
 * Added icon to the "About DMap" menu item in the Help menu.
 * Linux release builds are now single-file executables.
 
-v1.0.0
-------
+:release-link:`v1.0.0`
+----------------------
 
 * Load common image formats for battle maps (PNG, JPG, JPEG, BMP, GIF, WebP).
 * Reveal or hide fog of war with a freehand circle, square, or diamond brush tool with configurable diameter, edge softness, and opacity.
