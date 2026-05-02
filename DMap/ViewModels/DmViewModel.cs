@@ -329,6 +329,9 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// <summary>Opens the player discovery window so the DM can monitor connected players.</summary>
     public ReactiveCommand<Unit, Unit> OpenPlayerWindowCommand { get; }
 
+    /// <summary>Opens the application information window.</summary>
+    public ReactiveCommand<Unit, Unit> ShowAboutCommand { get; }
+
     /// <summary>Toggles whether the map image is rendered or replaced with a white background for fog inspection.</summary>
     public ReactiveCommand<Unit, Unit> ToggleMapVisibilityCommand { get; }
 
@@ -366,6 +369,12 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// Handled in <see cref="Views.DmView"/>.
     /// </summary>
     public Interaction<PlayerViewModel, Unit> ShowPlayerWindow { get; } = new();
+
+    /// <summary>
+    /// Interaction that requests the view to display the application information dialog.
+    /// Handled in <see cref="Views.DmView"/>.
+    /// </summary>
+    public Interaction<Unit, Unit> ShowAboutDialog { get; } = new();
 
     /// <summary>
     /// Raised after any fog modification (brush, shape, undo, redo, reveal-all, refog-all).
@@ -427,6 +436,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         UndoCommand = ReactiveCommand.Create(ExecuteUndo, canUndo);
         RedoCommand = ReactiveCommand.Create(ExecuteRedo, canRedo);
         OpenPlayerWindowCommand = ReactiveCommand.CreateFromTask(OpenPlayerWindowAsync);
+        ShowAboutCommand = ReactiveCommand.CreateFromTask(async () => await ShowAboutDialog.Handle(Unit.Default));
         ToggleMapVisibilityCommand = ReactiveCommand.Create(() => { IsMapVisible = !IsMapVisible; });
         TogglePauseUpdatesCommand = ReactiveCommand.Create(() =>
         {

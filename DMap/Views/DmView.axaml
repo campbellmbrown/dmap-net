@@ -139,6 +139,9 @@
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
+            <MenuItem Header="Help">
+                <MenuItem Header="About DMap" Command="{Binding ShowAboutCommand}" />
+            </MenuItem>
         </Menu>
 
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4"

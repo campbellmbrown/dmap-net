@@ -79,6 +79,9 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
             _activationDisposables.Add(
                 vm.ShowPlayerWindow.RegisterHandler(HandleShowPlayerWindow));
 
+            _activationDisposables.Add(
+                vm.ShowAboutDialog.RegisterHandler(HandleShowAboutDialog));
+
             disposables(Disposable.Create(() =>
             {
                 fogGenerationDialog?.Close();
@@ -160,6 +163,21 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
             windowDisposables.Dispose();
             playerVm.Dispose();
         };
+        context.SetOutput(Unit.Default);
+    }
+
+    /// <summary>
+    /// Handles the <see cref="DmViewModel.ShowAboutDialog"/> interaction by showing the
+    /// application information dialog as a modal window when an owner is available.
+    /// </summary>
+    async Task HandleShowAboutDialog(IInteractionContext<Unit, Unit> context)
+    {
+        var window = new AboutWindow();
+        if (TopLevel.GetTopLevel(this) is Window owner)
+            await window.ShowDialog(owner);
+        else
+            window.Show();
+
         context.SetOutput(Unit.Default);
     }
 
