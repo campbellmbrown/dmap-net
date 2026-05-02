@@ -1,6 +1,11 @@
 Changelog
 =========
 
+Unreleased
+----------
+
+No unreleased changes.
+
 v1.0.0
 ------
 
