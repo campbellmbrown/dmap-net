@@ -7,6 +7,7 @@ Unreleased
 .. No unreleased changes.
 
 * Added icon to the "About DMap" menu item in the Help menu.
+* Linux release builds are now single-file executables.
 
 v1.0.0
 ------

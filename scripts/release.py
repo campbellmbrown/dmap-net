@@ -19,23 +19,27 @@ def run(command: list[str]) -> None:
     subprocess.run(command, cwd=ROOT, check=True)
 
 
-def dotnet_publish(runtime: str) -> Path:
+def dotnet_publish(runtime: str, single_file: bool = False) -> Path:
     output_dir = OUTPUT / runtime
-    run(
-        [
-            "dotnet",
-            "publish",
-            PROJECT,
-            "--configuration",
-            "Release",
-            "--runtime",
-            runtime,
-            "--self-contained",
-            "true",
-            "--output",
-            output_dir,
-        ]
-    )
+    command = [
+        "dotnet",
+        "publish",
+        PROJECT,
+        "--configuration",
+        "Release",
+        "--runtime",
+        runtime,
+        "--self-contained",
+        "true",
+        "--output",
+        output_dir,
+    ]
+    if single_file:
+        command.append("-p:PublishSingleFile=true")
+        command.append("-p:IncludeNativeLibrariesForSelfExtract=true")
+        command.append("-p:DebugType=embedded")
+
+    run(command)
     return output_dir
 
 
@@ -79,7 +83,7 @@ def main() -> None:
     RELEASE.mkdir(parents=True)
 
     tag = version()
-    linux_dir = dotnet_publish("linux-x64")
+    linux_dir = dotnet_publish("linux-x64", single_file=True)
     windows_dir = dotnet_publish("win-x64")
 
     linux_archive = package_linux(linux_dir, tag)
