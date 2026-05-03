@@ -51,6 +51,12 @@ public interface IPlayerClientService : IDisposable
     event EventHandler<ViewportPayload>? ViewportReceived;
 
     /// <summary>
+    /// Raised when a <see cref="MessageType.Cursor"/> frame is received.
+    /// The event argument carries the DM cursor position, icon, size, and visibility.
+    /// </summary>
+    event EventHandler<CursorPayload>? CursorReceived;
+
+    /// <summary>
     /// Raised when the connection to the DM is closed, either because the DM disconnected,
     /// the network failed, or <see cref="DisconnectAsync"/> was called.
     /// </summary>

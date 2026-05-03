@@ -30,21 +30,25 @@ public sealed class DiscoveryService : IDiscoveryService
     /// <inheritdoc/>
     public Task StartBroadcastingAsync(MapSession session, int tcpPort, CancellationToken ct)
     {
+        StopCurrentSession();
+
         _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         _udpClient = new UdpClient();
         _udpClient.EnableBroadcast = true;
+        var udpClient = _udpClient;
+        var token = _cts.Token;
 
         var packet = BuildBroadcastPacket(session, tcpPort);
         var endpoint = new IPEndPoint(IPAddress.Broadcast, DiscoveryPort);
 
         _ = Task.Run(async () =>
         {
-            while (!_cts.Token.IsCancellationRequested)
+            while (!token.IsCancellationRequested)
             {
                 try
                 {
-                    await _udpClient.SendAsync(packet, endpoint, _cts.Token);
-                    await Task.Delay(2000, _cts.Token);
+                    await udpClient.SendAsync(packet, endpoint, token);
+                    await Task.Delay(2000, token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -55,7 +59,7 @@ public sealed class DiscoveryService : IDiscoveryService
                     // Ignore transient UDP errors
                 }
             }
-        }, _cts.Token);
+        }, token);
 
         return Task.CompletedTask;
     }
@@ -63,17 +67,21 @@ public sealed class DiscoveryService : IDiscoveryService
     /// <inheritdoc/>
     public Task StartListeningAsync(CancellationToken ct)
     {
+        StopCurrentSession();
+
         _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        _udpClient = new UdpClient(DiscoveryPort);
+        _udpClient = CreateBroadcastListener();
         _udpClient.EnableBroadcast = true;
+        var udpClient = _udpClient;
+        var token = _cts.Token;
 
         _ = Task.Run(async () =>
         {
-            while (!_cts.Token.IsCancellationRequested)
+            while (!token.IsCancellationRequested)
             {
                 try
                 {
-                    var result = await _udpClient.ReceiveAsync(_cts.Token);
+                    var result = await udpClient.ReceiveAsync(token);
                     var dm = ParseBroadcastPacket(result.Buffer, result.RemoteEndPoint);
                     if (dm is not null)
                         DmDiscovered?.Invoke(this, dm);
@@ -87,9 +95,21 @@ public sealed class DiscoveryService : IDiscoveryService
                     // Ignore malformed packets
                 }
             }
-        }, _cts.Token);
+        }, token);
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Creates a UDP listener that can share the discovery port with other in-process
+    /// player windows listening for the same DM broadcasts.
+    /// </summary>
+    static UdpClient CreateBroadcastListener()
+    {
+        var client = new UdpClient(AddressFamily.InterNetwork);
+        client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+        client.Client.Bind(new IPEndPoint(IPAddress.Any, DiscoveryPort));
+        return client;
     }
 
     /// <summary>
@@ -158,8 +178,16 @@ public sealed class DiscoveryService : IDiscoveryService
     /// <inheritdoc/>
     public void Dispose()
     {
+        StopCurrentSession();
+    }
+
+    void StopCurrentSession()
+    {
         _cts?.Cancel();
         _cts?.Dispose();
+        _cts = null;
+
         _udpClient?.Dispose();
+        _udpClient = null;
     }
 }

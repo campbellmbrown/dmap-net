@@ -1,0 +1,27 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="DMap.Views.FogGenerationDialog"
+        Title="Generating fog"
+        Width="340"
+        Height="128"
+        CanResize="False"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        WindowDecorations="BorderOnly"
+        Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
+
+    <Border Padding="20"
+            Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
+        <StackPanel Spacing="14"
+                    VerticalAlignment="Center">
+            <TextBlock Text="Generating fog"
+                       FontSize="16"
+                       FontWeight="SemiBold"
+                       HorizontalAlignment="Center" />
+            <ProgressBar IsIndeterminate="True"
+                         Height="6"
+                         Minimum="0"
+                         Maximum="100" />
+        </StackPanel>
+    </Border>
+</Window>

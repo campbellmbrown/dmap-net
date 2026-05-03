@@ -16,4 +16,7 @@ public enum ToolType
 
     /// <summary>Fog appearance settings (type and colour). Does not modify the fog mask.</summary>
     Fog,
+
+    /// <summary>Player-visible map cursor used as a pointer or marker. Does not modify the fog mask.</summary>
+    Cursor,
 }

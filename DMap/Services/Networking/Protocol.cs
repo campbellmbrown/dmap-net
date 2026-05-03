@@ -28,6 +28,9 @@ public enum MessageType
 
     /// <summary>Viewport camera state (map center and zoom) broadcast from the DM to players.</summary>
     Viewport = 6,
+
+    /// <summary>Player-visible cursor state broadcast from the DM to players.</summary>
+    Cursor = 7,
 }
 
 /// <summary>
@@ -122,6 +125,56 @@ public sealed class ViewportPayload
 }
 
 /// <summary>
+/// Player-visible cursor state broadcast from the DM. Coordinates are in map pixels, while
+/// size is in screen pixels so player windows render the cursor consistently at every zoom.
+/// </summary>
+public sealed class CursorPayload
+{
+    /// <summary>Map-space X coordinate for the cursor anchor.</summary>
+    public double MapX { get; init; }
+
+    /// <summary>Map-space Y coordinate for the cursor anchor.</summary>
+    public double MapY { get; init; }
+
+    /// <summary>Icon rendered for the cursor.</summary>
+    public CursorType CursorType { get; init; }
+
+    /// <summary>Cursor icon size in screen pixels.</summary>
+    public int CursorSize { get; init; }
+
+    /// <summary><see langword="true"/> when the cursor should be visible to players.</summary>
+    public bool IsVisible { get; init; }
+
+    /// <summary>
+    /// Serializes this payload to a fixed 25-byte buffer.
+    /// Format: MapX (8 bytes) | MapY (8 bytes) | CursorType (4 bytes) | CursorSize (4 bytes) | IsVisible (1 byte).
+    /// </summary>
+    public byte[] Serialize()
+    {
+        var bytes = new byte[25];
+        BitConverter.TryWriteBytes(bytes.AsSpan(0, 8), MapX);
+        BitConverter.TryWriteBytes(bytes.AsSpan(8, 8), MapY);
+        BitConverter.TryWriteBytes(bytes.AsSpan(16, 4), (int)CursorType);
+        BitConverter.TryWriteBytes(bytes.AsSpan(20, 4), CursorSize);
+        bytes[24] = IsVisible ? (byte)1 : (byte)0;
+        return bytes;
+    }
+
+    /// <summary>Reconstructs a <see cref="CursorPayload"/> from the buffer produced by <see cref="Serialize"/>.</summary>
+    public static CursorPayload Deserialize(byte[] bytes)
+    {
+        return new CursorPayload
+        {
+            MapX = BitConverter.ToDouble(bytes, 0),
+            MapY = BitConverter.ToDouble(bytes, 8),
+            CursorType = (CursorType)BitConverter.ToInt32(bytes, 16),
+            CursorSize = BitConverter.ToInt32(bytes, 20),
+            IsVisible = bytes[24] != 0,
+        };
+    }
+}
+
+/// <summary>
 /// A rectangular region of fog mask data that can be serialized for network transmission.
 /// Used for incremental fog updates so only the changed area is sent over the wire.
 /// The payload contains authoritative mask bytes for the addressed region, not a reveal-only diff.
@@ -157,7 +210,10 @@ public sealed class FogDelta
     /// <param name="height">Height of the region.</param>
     public static FogDelta FromMask(FogMask mask, int x, int y, int width, int height)
     {
-        var data = new byte[width * height];
+        if (width <= 0 || height <= 0)
+            return new FogDelta { X = x, Y = y, Width = 0, Height = 0 };
+
+        var data = new byte[checked(width * height)];
         for (var dy = 0; dy < height; dy++)
         {
             for (var dx = 0; dx < width; dx++)

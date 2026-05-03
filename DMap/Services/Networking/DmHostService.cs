@@ -30,11 +30,20 @@ public sealed class DmHostService : IDmHostService
     /// <summary>Cached session info payload sent to new clients on connect, or <see langword="null"/> before hosting starts.</summary>
     byte[]? _pendingSessionInfo;
 
+    /// <summary>Cached session metadata used to rebuild the late-join handshake after fog changes.</summary>
+    MapSession? _pendingSession;
+
+    /// <summary>Cached authoritative fog mask for players that connect after incremental updates.</summary>
+    FogMask? _pendingFogMask;
+
     /// <summary>Cached fog appearance payload sent to new clients on connect, or <see langword="null"/> if never set.</summary>
     byte[]? _pendingFogAppearance;
 
     /// <summary>Cached viewport payload sent to new clients on connect, or <see langword="null"/> if never set.</summary>
     byte[]? _pendingViewport;
+
+    /// <summary>Cached cursor payload sent to new clients on connect, or <see langword="null"/> if never set.</summary>
+    byte[]? _pendingCursor;
 
     /// <inheritdoc/>
     public int Port { get; set; }
@@ -96,12 +105,16 @@ public sealed class DmHostService : IDmHostService
             byte[]? pendingMapImage;
             byte[]? pendingFogAppearance;
             byte[]? pendingViewport;
+            byte[]? pendingCursor;
             lock (_clientsLock)
             {
-                pendingSessionInfo = _pendingSessionInfo;
+                pendingSessionInfo = _pendingSession is not null && _pendingFogMask is not null
+                    ? SerializeSessionInfo(_pendingSession, _pendingFogMask)
+                    : _pendingSessionInfo;
                 pendingMapImage = _pendingMapImage;
                 pendingFogAppearance = _pendingFogAppearance;
                 pendingViewport = _pendingViewport;
+                pendingCursor = _pendingCursor;
             }
 
             if (pendingSessionInfo is not null)
@@ -115,6 +128,9 @@ public sealed class DmHostService : IDmHostService
 
             if (pendingViewport is not null)
                 await ProtocolFraming.WriteFrameAsync(stream, MessageType.Viewport, pendingViewport, default);
+
+            if (pendingCursor is not null)
+                await ProtocolFraming.WriteFrameAsync(stream, MessageType.Cursor, pendingCursor, default);
 
             // Keep connection alive until cancelled or disconnected
             var buffer = new byte[1];
@@ -158,20 +174,12 @@ public sealed class DmHostService : IDmHostService
     /// <inheritdoc/>
     public Task SendSessionInfoAsync(MapSession session, FogMask mask, CancellationToken ct)
     {
-        using var ms = new MemoryStream();
-        using var writer = new BinaryWriter(ms);
-        writer.Write(session.SessionId.ToByteArray());
-        writer.Write(session.MapWidth);
-        writer.Write(session.MapHeight);
-
-        using (var deflate = new DeflateStream(ms, CompressionLevel.Fastest, leaveOpen: true))
-        {
-            deflate.Write(mask.Data, 0, mask.Data.Length);
-        }
-
-        var payload = ms.ToArray();
+        var cachedMask = mask.Clone();
+        var payload = SerializeSessionInfo(session, cachedMask);
         lock (_clientsLock)
         {
+            _pendingSession = session;
+            _pendingFogMask = cachedMask;
             _pendingSessionInfo = payload;
         }
         return BroadcastAsync(MessageType.SessionInfo, payload, ct);
@@ -181,6 +189,12 @@ public sealed class DmHostService : IDmHostService
     public Task SendFogDeltaAsync(FogDelta delta, CancellationToken ct)
     {
         var payload = delta.Serialize();
+        lock (_clientsLock)
+        {
+            if (_pendingSession is not null && _pendingFogMask is not null)
+                ApplyDeltaToPendingMask(delta);
+        }
+
         return BroadcastAsync(MessageType.FogDelta, payload, ct);
     }
 
@@ -208,8 +222,29 @@ public sealed class DmHostService : IDmHostService
     }
 
     /// <inheritdoc/>
+    public Task SendCursorAsync(CursorPayload cursor, CancellationToken ct)
+    {
+        var payload = cursor.Serialize();
+        lock (_clientsLock)
+        {
+            _pendingCursor = payload;
+        }
+
+        return BroadcastAsync(MessageType.Cursor, payload, ct);
+    }
+
+    /// <inheritdoc/>
     public Task SendFogFullAsync(FogMask mask, CancellationToken ct)
     {
+        lock (_clientsLock)
+        {
+            if (_pendingSession is not null)
+            {
+                _pendingFogMask = mask.Clone();
+                _pendingSessionInfo = SerializeSessionInfo(_pendingSession, _pendingFogMask);
+            }
+        }
+
         using var ms = new MemoryStream();
         using var writer = new BinaryWriter(ms);
         writer.Write(mask.Width);
@@ -221,6 +256,41 @@ public sealed class DmHostService : IDmHostService
         }
 
         return BroadcastAsync(MessageType.FogFull, ms.ToArray(), ct);
+    }
+
+    /// <summary>Serializes session metadata plus a full fog mask for the initial player handshake.</summary>
+    static byte[] SerializeSessionInfo(MapSession session, FogMask mask)
+    {
+        using var ms = new MemoryStream();
+        using var writer = new BinaryWriter(ms);
+        writer.Write(session.SessionId.ToByteArray());
+        writer.Write(session.MapWidth);
+        writer.Write(session.MapHeight);
+
+        using (var deflate = new DeflateStream(ms, CompressionLevel.Fastest, leaveOpen: true))
+        {
+            deflate.Write(mask.Data, 0, mask.Data.Length);
+        }
+
+        return ms.ToArray();
+    }
+
+    /// <summary>Applies an outgoing fog delta to the cached full mask used for late joiners.</summary>
+    void ApplyDeltaToPendingMask(FogDelta delta)
+    {
+        if (_pendingFogMask is null)
+            return;
+
+        for (var dy = 0; dy < delta.Height; dy++)
+        {
+            for (var dx = 0; dx < delta.Width; dx++)
+            {
+                var mx = delta.X + dx;
+                var my = delta.Y + dy;
+                if (mx >= 0 && mx < _pendingFogMask.Width && my >= 0 && my < _pendingFogMask.Height)
+                    _pendingFogMask[mx, my] = delta.Data[dy * delta.Width + dx];
+            }
+        }
     }
 
     /// <summary>

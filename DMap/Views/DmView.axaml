@@ -14,6 +14,8 @@
         <converters:BrushShapeIconConverter x:Key="BrushShapeIconConverter" />
         <converters:ShapeTypeIconConverter x:Key="ShapeTypeIconConverter" />
         <converters:FogTypeIconConverter x:Key="FogTypeIconConverter" />
+        <converters:CursorTypeIconConverter x:Key="CursorTypeIconConverter" />
+        <converters:CursorTypeDisplayNameConverter x:Key="CursorTypeDisplayNameConverter" />
     </UserControl.Resources>
 
     <UserControl.Styles>
@@ -53,9 +55,9 @@
         <KeyBinding Gesture="Ctrl+Z" Command="{Binding UndoCommand}" />
         <KeyBinding Gesture="Ctrl+Y" Command="{Binding RedoCommand}" />
         <KeyBinding Gesture="Ctrl+Shift+Z" Command="{Binding RedoCommand}" />
-        <KeyBinding Gesture="Ctrl+OemPlus" Command="{Binding ZoomInCommand}" />
-        <KeyBinding Gesture="Ctrl+OemMinus" Command="{Binding ZoomOutCommand}" />
-        <KeyBinding Gesture="Ctrl+D0" Command="{Binding ResetViewCommand}" />
+        <KeyBinding Gesture="Ctrl+OemPlus" Command="{Binding #MapCanvas.ZoomInCommand}" />
+        <KeyBinding Gesture="Ctrl+OemMinus" Command="{Binding #MapCanvas.ZoomOutCommand}" />
+        <KeyBinding Gesture="Ctrl+D0" Command="{Binding #MapCanvas.RefitViewCommand}" />
         <KeyBinding Gesture="Ctrl+Shift+E" Command="{Binding RevealAllCommand}" />
         <KeyBinding Gesture="Ctrl+Shift+F" Command="{Binding RefogAllCommand}" />
         <KeyBinding Gesture="Ctrl+M" Command="{Binding ToggleMapVisibilityCommand}" />
@@ -79,19 +81,19 @@
                 </MenuItem>
             </MenuItem>
             <MenuItem Header="View">
-                <MenuItem Header="Zoom In" Command="{Binding ZoomInCommand}" InputGesture="Ctrl+OemPlus">
+                <MenuItem Header="Zoom In" Command="{Binding #MapCanvas.ZoomInCommand}" InputGesture="Ctrl+OemPlus">
                     <MenuItem.Icon>
                         <Image Source="{SvgImage /Assets/Icons/zoom-in.svg}" />
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="Zoom Out" Command="{Binding ZoomOutCommand}" InputGesture="Ctrl+OemMinus">
+                <MenuItem Header="Zoom Out" Command="{Binding #MapCanvas.ZoomOutCommand}" InputGesture="Ctrl+OemMinus">
                     <MenuItem.Icon>
                         <Image Source="{SvgImage /Assets/Icons/zoom-out.svg}" />
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="Reset View" Command="{Binding ResetViewCommand}" InputGesture="Ctrl+D0">
+                <MenuItem Header="Refit View" Command="{Binding #MapCanvas.RefitViewCommand}" InputGesture="Ctrl+D0">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/scaling.svg}" />
+                        <Image Source="{SvgImage /Assets/Icons/scan-eye.svg}" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator />
@@ -139,6 +141,13 @@
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
+            <MenuItem Header="Help">
+                <MenuItem Header="About DMap" Command="{Binding ShowAboutCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{SvgImage /Assets/Icons/info.svg}" />
+                    </MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
         </Menu>
 
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4"
@@ -166,21 +175,21 @@
                 </Panel>
             </Button>
             <Separator Classes="toolbar" />
-            <Button Classes="toolbar" Command="{Binding ZoomOutCommand}" ToolTip.Tip="Zoom Out">
+            <Button Classes="toolbar" Command="{Binding #MapCanvas.ZoomOutCommand}" ToolTip.Tip="Zoom Out">
                 <Image Source="{SvgImage /Assets/Icons/zoom-out.svg}" />
             </Button>
-            <NumericUpDown Value="{Binding ZoomPercent}"
+            <NumericUpDown Value="{Binding #MapCanvas.ZoomPercent, Mode=TwoWay}"
                            Minimum="10" Maximum="1000" Increment="10"
                            FormatString="0'%'"
                            ShowButtonSpinner="False"
                            Width="64" Height="20" FontSize="11"
-                           ToolTip.Tip="Zoom level" />
-            <Button Classes="toolbar" Command="{Binding ZoomInCommand}" ToolTip.Tip="Zoom In">
+                           ToolTip.Tip="Zoom level relative to fitted map height" />
+            <Button Classes="toolbar" Command="{Binding #MapCanvas.ZoomInCommand}" ToolTip.Tip="Zoom In">
                 <Image Source="{SvgImage /Assets/Icons/zoom-in.svg}" />
             </Button>
             <Separator Classes="toolbar" />
-            <Button Classes="toolbar" Command="{Binding ResetViewCommand}" ToolTip.Tip="Reset View">
-                <Image Source="{SvgImage /Assets/Icons/scaling.svg}" />
+            <Button Classes="toolbar" Command="{Binding #MapCanvas.RefitViewCommand}" ToolTip.Tip="Refit View">
+                <Image Source="{SvgImage /Assets/Icons/scan-eye.svg}" />
             </Button>
 
         </StackPanel>
@@ -204,19 +213,20 @@
             <controls:MapCanvas x:Name="MapCanvas"
                             MapImage="{Binding MapImage}"
                             FogMask="{Binding FogMask}"
-                            ZoomLevel="{Binding ZoomLevel, Mode=TwoWay}"
-                            OffsetX="{Binding OffsetX, Mode=TwoWay}"
-                            OffsetY="{Binding OffsetY, Mode=TwoWay}"
                             IsDmMode="True"
                             FogOpacity="{Binding FogOpacity}"
                             FogType="{Binding SelectedFogType}"
                             FogColor="{Binding FogColor}"
                             FogSeed="{Binding FogSeed}"
+                            IsFogGenerating="{Binding IsFogGenerating, Mode=OneWayToSource}"
                             ShowMap="{Binding IsMapVisible}"
                             BrushDiameter="{Binding BrushDiameter}"
                             ActiveTool="{Binding SelectedTool}"
                             BrushShape="{Binding SelectedBrushShape}"
-                            ShapeType="{Binding SelectedShapeType}">
+                            ShapeType="{Binding SelectedShapeType}"
+                            CursorType="{Binding SelectedCursorType}"
+                            CursorSize="{Binding CursorSize}"
+                            ShowCursorOnlyWhilePressed="{Binding ShowCursorOnlyWhilePressed}">
             </controls:MapCanvas>
 
             <!-- Floating side toolbar -->
@@ -252,6 +262,14 @@
                             <Border Background="#330078D4" CornerRadius="4" IsVisible="{Binding IsFogSelected}" />
                             <Button Classes="icon" Command="{Binding SelectFogCommand}" ToolTip.Tip="Fog">
                                 <Image Source="{SvgImage /Assets/Icons/cloud-fog.svg}" />
+                            </Button>
+                        </Panel>
+
+                        <!-- Cursor tool -->
+                        <Panel>
+                            <Border Background="#330078D4" CornerRadius="4" IsVisible="{Binding IsCursorSelected}" />
+                            <Button Classes="icon" Command="{Binding SelectCursorCommand}" ToolTip.Tip="Cursor">
+                                <Image Source="{SvgImage /Assets/Icons/crosshair.svg}" />
                             </Button>
                         </Panel>
 
@@ -345,6 +363,27 @@
                             <Slider Minimum="0" Maximum="1" Value="{Binding FogOpacity}"
                                     TickFrequency="0.01" IsSnapToTickEnabled="True"
                                     HorizontalAlignment="Stretch" />
+                        </StackPanel>
+                        <StackPanel Spacing="8" MinWidth="200" IsVisible="{Binding IsCursorSelected}">
+                            <TextBlock Text="Cursor Type" FontWeight="SemiBold" />
+                            <ComboBox ItemsSource="{Binding CursorTypes}"
+                                    SelectedItem="{Binding SelectedCursorType}"
+                                    HorizontalAlignment="Stretch">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:CompileBindings="False">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                            <Image Width="16" Height="16" Source="{Binding Converter={StaticResource CursorTypeIconConverter}}" />
+                                            <TextBlock Text="{Binding}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBlock Text="{Binding CursorSize, StringFormat='Size: {0}'}" FontWeight="SemiBold" />
+                            <Slider Minimum="16" Maximum="256" Value="{Binding CursorSize}"
+                                    TickFrequency="1" IsSnapToTickEnabled="True"
+                                    HorizontalAlignment="Stretch" />
+                            <ToggleSwitch IsChecked="{Binding ShowCursorOnlyWhilePressed}"
+                                          Content="Only show while holding left click" />
                         </StackPanel>
                     </Panel>
                 </Border>

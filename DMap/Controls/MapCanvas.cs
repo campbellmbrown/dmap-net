@@ -1,14 +1,17 @@
 using System;
+using System.Collections.Generic;
+using System.Windows.Input;
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
-using Avalonia.Platform;
+using Avalonia.Svg.Skia;
 
+using DMap.Commands;
 using DMap.Models;
-using DMap.Services.Fog;
 using DMap.Services.Networking;
 
 namespace DMap.Controls;
@@ -64,9 +67,6 @@ public class ShapeStrokeEventArgs : EventArgs
 /// </summary>
 public class MapCanvas : Control
 {
-    const double MinZoomLevel = 0.1;
-    const double MaxZoomLevel = 10.0;
-
     /// <summary>Styled property for the map background image.</summary>
     public static readonly StyledProperty<Bitmap?> MapImageProperty =
         AvaloniaProperty.Register<MapCanvas, Bitmap?>(nameof(MapImage));
@@ -75,17 +75,13 @@ public class MapCanvas : Control
     public static readonly StyledProperty<FogMask?> FogMaskProperty =
         AvaloniaProperty.Register<MapCanvas, FogMask?>(nameof(FogMask));
 
-    /// <summary>Styled property for the canvas zoom multiplier (default 1.0).</summary>
-    public static readonly StyledProperty<double> ZoomLevelProperty =
-        AvaloniaProperty.Register<MapCanvas, double>(nameof(ZoomLevel), 1.0);
-
-    /// <summary>Styled property for the horizontal pan offset in screen pixels.</summary>
-    public static readonly StyledProperty<double> OffsetXProperty =
-        AvaloniaProperty.Register<MapCanvas, double>(nameof(OffsetX));
-
-    /// <summary>Styled property for the vertical pan offset in screen pixels.</summary>
-    public static readonly StyledProperty<double> OffsetYProperty =
-        AvaloniaProperty.Register<MapCanvas, double>(nameof(OffsetY));
+    /// <summary>Direct property for fit-relative zoom shown in the DM toolbar.</summary>
+    public static readonly DirectProperty<MapCanvas, double> ZoomPercentProperty =
+        AvaloniaProperty.RegisterDirect<MapCanvas, double>(
+            nameof(ZoomPercent),
+            canvas => canvas.ZoomPercent,
+            (canvas, value) => canvas.ZoomPercent = value,
+            defaultBindingMode: BindingMode.TwoWay);
 
     /// <summary>Styled property that enables DM editing mode (brush/shape input, cursor preview).</summary>
     public static readonly StyledProperty<bool> IsDmModeProperty =
@@ -107,6 +103,10 @@ public class MapCanvas : Control
     public static readonly StyledProperty<Guid> FogSeedProperty =
         AvaloniaProperty.Register<MapCanvas, Guid>(nameof(FogSeed), Guid.Empty);
 
+    /// <summary>Styled property indicating that a textured fog overlay is being generated in the background.</summary>
+    public static readonly StyledProperty<bool> IsFogGeneratingProperty =
+        AvaloniaProperty.Register<MapCanvas, bool>(nameof(IsFogGenerating));
+
     /// <summary>Styled property for the brush diameter preview in screen pixels.</summary>
     public static readonly StyledProperty<int> BrushDiameterProperty =
         AvaloniaProperty.Register<MapCanvas, int>(nameof(BrushDiameter), 50);
@@ -122,6 +122,30 @@ public class MapCanvas : Control
     /// <summary>Styled property for the shape type used in cursor preview and shape strokes.</summary>
     public static readonly StyledProperty<ShapeType> ShapeTypeProperty =
         AvaloniaProperty.Register<MapCanvas, ShapeType>(nameof(ShapeType), ShapeType.Rectangle);
+
+    /// <summary>Styled property for the player-visible cursor icon type.</summary>
+    public static readonly StyledProperty<CursorType> CursorTypeProperty =
+        AvaloniaProperty.Register<MapCanvas, CursorType>(nameof(CursorType), CursorType.Crosshair);
+
+    /// <summary>Styled property for the player-visible cursor icon size in screen pixels.</summary>
+    public static readonly StyledProperty<int> CursorSizeProperty =
+        AvaloniaProperty.Register<MapCanvas, int>(nameof(CursorSize), 64);
+
+    /// <summary>Styled property controlling whether the cursor only appears while left click is held.</summary>
+    public static readonly StyledProperty<bool> ShowCursorOnlyWhilePressedProperty =
+        AvaloniaProperty.Register<MapCanvas, bool>(nameof(ShowCursorOnlyWhilePressed));
+
+    /// <summary>Styled property for the player-visible cursor X coordinate in map space.</summary>
+    public static readonly StyledProperty<double> CursorMapXProperty =
+        AvaloniaProperty.Register<MapCanvas, double>(nameof(CursorMapX));
+
+    /// <summary>Styled property for the player-visible cursor Y coordinate in map space.</summary>
+    public static readonly StyledProperty<double> CursorMapYProperty =
+        AvaloniaProperty.Register<MapCanvas, double>(nameof(CursorMapY));
+
+    /// <summary>Styled property controlling whether the player-visible cursor is rendered.</summary>
+    public static readonly StyledProperty<bool> IsCursorVisibleProperty =
+        AvaloniaProperty.Register<MapCanvas, bool>(nameof(IsCursorVisible));
 
     /// <summary>Styled property controlling whether the map image is rendered (true) or replaced with white (false).</summary>
     public static readonly StyledProperty<bool> ShowMapProperty =
@@ -141,25 +165,48 @@ public class MapCanvas : Control
         set => SetValue(FogMaskProperty, value);
     }
 
-    /// <summary>Zoom multiplier applied via a scale transform before the pan offset.</summary>
+    /// <summary>Actual zoom multiplier applied via a scale transform before the pan offset.</summary>
     public double ZoomLevel
     {
-        get => GetValue(ZoomLevelProperty);
-        set => SetValue(ZoomLevelProperty, value);
+        get => _viewport.ZoomLevel;
+        set
+        {
+            _viewport.SetZoomLevel(value, Bounds.Size, MapImage?.Size);
+            OnViewportStateChanged();
+        }
+    }
+
+    /// <summary>Zoom level expressed as a percentage of the height-fit zoom, where 100% fits map height to canvas height.</summary>
+    public double ZoomPercent
+    {
+        get => _zoomPercent;
+        set
+        {
+            _viewport.SetZoomPercent(value, Bounds.Size, MapImage?.Size);
+            OnViewportStateChanged();
+        }
     }
 
     /// <summary>Horizontal translation of the canvas in screen pixels.</summary>
     public double OffsetX
     {
-        get => GetValue(OffsetXProperty);
-        set => SetValue(OffsetXProperty, value);
+        get => _viewport.OffsetX;
+        set
+        {
+            _viewport.SetOffset(value, OffsetY);
+            OnViewportStateChanged();
+        }
     }
 
     /// <summary>Vertical translation of the canvas in screen pixels.</summary>
     public double OffsetY
     {
-        get => GetValue(OffsetYProperty);
-        set => SetValue(OffsetYProperty, value);
+        get => _viewport.OffsetY;
+        set
+        {
+            _viewport.SetOffset(OffsetX, value);
+            OnViewportStateChanged();
+        }
     }
 
     /// <summary>
@@ -204,6 +251,13 @@ public class MapCanvas : Control
         set => SetValue(FogSeedProperty, value);
     }
 
+    /// <summary><see langword="true"/> while a non-colour fog texture is being generated client-side.</summary>
+    public bool IsFogGenerating
+    {
+        get => GetValue(IsFogGeneratingProperty);
+        private set => SetValue(IsFogGeneratingProperty, value);
+    }
+
     /// <summary>Brush diameter in map pixels, used to scale the cursor preview outline.</summary>
     public int BrushDiameter
     {
@@ -230,6 +284,48 @@ public class MapCanvas : Control
     {
         get => GetValue(ShapeTypeProperty);
         set => SetValue(ShapeTypeProperty, value);
+    }
+
+    /// <summary>Player-visible cursor icon type.</summary>
+    public CursorType CursorType
+    {
+        get => GetValue(CursorTypeProperty);
+        set => SetValue(CursorTypeProperty, value);
+    }
+
+    /// <summary>Player-visible cursor icon size in screen pixels.</summary>
+    public int CursorSize
+    {
+        get => GetValue(CursorSizeProperty);
+        set => SetValue(CursorSizeProperty, value);
+    }
+
+    /// <summary><see langword="true"/> when the cursor should only be visible while left click is held.</summary>
+    public bool ShowCursorOnlyWhilePressed
+    {
+        get => GetValue(ShowCursorOnlyWhilePressedProperty);
+        set => SetValue(ShowCursorOnlyWhilePressedProperty, value);
+    }
+
+    /// <summary>Player-visible cursor X coordinate in map space.</summary>
+    public double CursorMapX
+    {
+        get => GetValue(CursorMapXProperty);
+        set => SetValue(CursorMapXProperty, value);
+    }
+
+    /// <summary>Player-visible cursor Y coordinate in map space.</summary>
+    public double CursorMapY
+    {
+        get => GetValue(CursorMapYProperty);
+        set => SetValue(CursorMapYProperty, value);
+    }
+
+    /// <summary><see langword="true"/> when the player-visible cursor should be rendered.</summary>
+    public bool IsCursorVisible
+    {
+        get => GetValue(IsCursorVisibleProperty);
+        set => SetValue(IsCursorVisibleProperty, value);
     }
 
     /// <summary>
@@ -265,10 +361,22 @@ public class MapCanvas : Control
     /// </summary>
     public event EventHandler<ViewportPayload>? ViewportChanged;
 
-    static readonly FogTextureGenerator _textureGenerator = new();
+    /// <summary>
+    /// Raised whenever the DM cursor state changes, expressed in map-space coordinates.
+    /// </summary>
+    public event EventHandler<CursorPayload>? CursorUpdated;
 
-    WriteableBitmap? _fogBitmap;
-    byte[]? _fogTexture;
+    /// <summary>Increases the fit-relative zoom by 20%.</summary>
+    public ICommand ZoomInCommand { get; }
+
+    /// <summary>Decreases the fit-relative zoom by ~17%.</summary>
+    public ICommand ZoomOutCommand { get; }
+
+    /// <summary>Fits the map height to the canvas and aligns its top and bottom edges with the canvas.</summary>
+    public ICommand RefitViewCommand { get; }
+
+    readonly MapViewportController _viewport = new();
+    readonly FogBitmapController _fogBitmapController;
     bool _isPanning;
     Point _lastPanPoint;
     bool _isPainting;
@@ -276,16 +384,20 @@ public class MapCanvas : Control
     int _lastBrushMapX;
     int _lastBrushMapY;
     bool _isDraggingShape;
+    bool _isCursorPressed;
     Point _shapeDragStart;
     Point _lastMousePosition;
+    double _zoomPercent = 100.0;
+    static readonly Uri _iconBaseUri = new("avares://DMap/Assets/Icons/");
+    static readonly IReadOnlyDictionary<CursorType, IImage> _cursorIcons = CreateCursorIcons();
 
     static MapCanvas()
     {
         AffectsRender<MapCanvas>(
-            MapImageProperty, FogMaskProperty, ZoomLevelProperty,
-            OffsetXProperty, OffsetYProperty, FogOpacityProperty,
+            MapImageProperty, FogMaskProperty, FogOpacityProperty,
             BrushDiameterProperty, ActiveToolProperty, BrushShapeProperty,
-            ShapeTypeProperty, ShowMapProperty,
+            ShapeTypeProperty, CursorTypeProperty, CursorSizeProperty, CursorMapXProperty,
+            CursorMapYProperty, IsCursorVisibleProperty, ShowMapProperty,
             FogTypeProperty, FogColorProperty, FogSeedProperty);
     }
 
@@ -294,6 +406,24 @@ public class MapCanvas : Control
     {
         ClipToBounds = true;
         Focusable = true;
+        _fogBitmapController = new FogBitmapController();
+        _fogBitmapController.Invalidated += (_, _) => InvalidateVisual();
+        _fogBitmapController.IsGeneratingChanged += (_, isGenerating) => IsFogGenerating = isGenerating;
+        ZoomInCommand = new RelayCommand(() => ZoomLevel *= 1.2);
+        ZoomOutCommand = new RelayCommand(() => ZoomLevel /= 1.2);
+        RefitViewCommand = new RelayCommand(RefitViewToMapHeight);
+    }
+
+    static Dictionary<CursorType, IImage> CreateCursorIcons()
+    {
+        var icons = new Dictionary<CursorType, IImage>();
+        foreach (var cursorType in Enum.GetValues<CursorType>())
+        {
+            var uri = new Uri(_iconBaseUri, CursorTypeMetadata.GetIconFileName(cursorType));
+            icons[cursorType] = new SvgImage { Source = SvgSource.Load(uri.ToString(), null) };
+        }
+
+        return icons;
     }
 
     /// <summary>
@@ -301,51 +431,27 @@ public class MapCanvas : Control
     /// Call this after the fog mask has been modified to sync the bitmap without rebuilding it entirely.
     /// </summary>
     /// <param name="dirtyRect">The region of the mask that changed.</param>
-    public void InvalidateFogRegion(PixelRect dirtyRect)
-    {
-        UpdateFogBitmapRegion(dirtyRect);
-        InvalidateVisual();
-    }
+    public void InvalidateFogRegion(PixelRect dirtyRect) =>
+        _fogBitmapController.InvalidateRegion(dirtyRect, GetFogBitmapSettings());
 
     /// <summary>
     /// Discards the existing fog bitmap and builds a new <see cref="WriteableBitmap"/> sized to match
     /// the current <see cref="FogMask"/>. Call this when the mask is replaced entirely (e.g. new map load
     /// or full fog received from the DM).
     /// </summary>
-    public void RebuildFogBitmap()
-    {
-        var mask = FogMask;
-        if (mask is null)
-        {
-            _fogBitmap = null;
-            _fogTexture = null;
-            return;
-        }
+    public void RebuildFogBitmap() =>
+        _fogBitmapController.Rebuild(GetFogBitmapSettings());
 
-        _fogBitmap = new WriteableBitmap(
-            new PixelSize(mask.Width, mask.Height),
-            new Vector(96, 96),
-            Avalonia.Platform.PixelFormat.Bgra8888,
-            AlphaFormat.Premul);
-
-        RegenerateFogTexture();
-        UpdateFogBitmapRegion(new PixelRect(0, 0, mask.Width, mask.Height));
-    }
+    /// <summary>Captures current fog rendering inputs for the fog bitmap controller.</summary>
+    FogBitmapSettings GetFogBitmapSettings() =>
+        new(FogMask, FogType, FogColor, FogOpacity, FogSeed);
 
     /// <summary>
     /// Returns the current viewport expressed as a map-space center coordinate plus zoom so it can
     /// be mirrored on canvases with different screen sizes.
     /// </summary>
     public ViewportPayload GetViewport()
-    {
-        var zoom = ZoomLevel <= 0 ? 1.0 : ZoomLevel;
-        return new ViewportPayload
-        {
-            CenterMapX = (Bounds.Width / 2.0 - OffsetX) / zoom,
-            CenterMapY = (Bounds.Height / 2.0 - OffsetY) / zoom,
-            ZoomLevel = zoom,
-        };
-    }
+        => _viewport.GetViewport(Bounds.Size);
 
     /// <summary>
     /// Applies a remotely provided viewport by deriving local screen offsets from the current control
@@ -353,10 +459,8 @@ public class MapCanvas : Control
     /// </summary>
     public void ApplyViewport(ViewportPayload viewport)
     {
-        var zoom = Math.Clamp(viewport.ZoomLevel, MinZoomLevel, MaxZoomLevel);
-        ZoomLevel = zoom;
-        OffsetX = Bounds.Width / 2.0 - viewport.CenterMapX * zoom;
-        OffsetY = Bounds.Height / 2.0 - viewport.CenterMapY * zoom;
+        _viewport.ApplyViewport(viewport, Bounds.Size, MapImage?.Size);
+        OnViewportStateChanged();
     }
 
     /// <summary>
@@ -376,91 +480,34 @@ public class MapCanvas : Control
             InvalidateVisual();
     }
 
-    /// <summary>
-    /// Regenerates the cached fog texture for the current <see cref="FogType"/> and <see cref="FogSeed"/>.
-    /// Sized to match the current <see cref="FogMask"/>; cleared to <see langword="null"/> when in
-    /// flat-colour mode or when no mask is loaded.
+    /// Returns the zoom where the map height exactly matches the current canvas height.
+    /// This is the DM-facing 100% zoom baseline.
     /// </summary>
-    void RegenerateFogTexture()
-    {
-        var mask = FogMask;
-        if (mask is null)
-        {
-            _fogTexture = null;
-            return;
-        }
+    public double GetHeightFitZoomLevel()
+        => MapViewportController.GetHeightFitZoomLevel(Bounds.Size, MapImage?.Size);
 
-        _fogTexture = _textureGenerator.Generate(mask.Width, mask.Height, FogType, FogSeed);
+    /// <summary>
+    /// Fits the map vertically so its top and bottom edges align with the canvas, and centers it horizontally.
+    /// </summary>
+    public void RefitViewToMapHeight()
+    {
+        if (_viewport.RefitToMapHeight(Bounds.Size, MapImage?.Size))
+            OnViewportStateChanged();
     }
 
-    /// <summary>
-    /// Writes premultiplied BGRA8888 pixels into the fog bitmap for <paramref name="dirtyRect"/>.
-    /// The colour at each pixel comes from <see cref="FogColor"/> in flat-colour mode or from the
-    /// pre-generated noise texture in textured modes; alpha is derived from the fog mask value and
-    /// <see cref="FogOpacity"/> so a fully fogged pixel (mask = 0) gets full fog opacity and a fully
-    /// revealed pixel (mask = 255) is transparent.
-    /// </summary>
-    void UpdateFogBitmapRegion(PixelRect dirtyRect)
+    /// <summary>Refreshes dependent canvas state after the camera changes.</summary>
+    void OnViewportStateChanged()
     {
-        var mask = FogMask;
-        if (mask is null || _fogBitmap is null)
-            return;
+        UpdateZoomPercent();
+        InvalidateVisual();
+        RaiseViewportChanged();
+    }
 
-        var fogOpacity = FogOpacity;
-        var texture = _fogTexture;
-        var color = FogColor;
-        var width = mask.Width;
-
-        using var fb = _fogBitmap.Lock();
-        unsafe
-        {
-            var ptr = (byte*)fb.Address;
-            var stride = fb.RowBytes;
-
-            var minX = Math.Max(0, dirtyRect.X);
-            var minY = Math.Max(0, dirtyRect.Y);
-            var maxX = Math.Min(width, dirtyRect.X + dirtyRect.Width);
-            var maxY = Math.Min(mask.Height, dirtyRect.Y + dirtyRect.Height);
-
-            if (texture is null)
-            {
-                byte cb = color.B, cg = color.G, cr = color.R;
-                for (var y = minY; y < maxY; y++)
-                {
-                    var row = ptr + y * stride;
-                    for (var x = minX; x < maxX; x++)
-                    {
-                        var alpha = fogOpacity * (255 - mask[x, y]) / 255;
-                        var offset = x * 4;
-                        row[offset + 0] = (byte)(cb * alpha);
-                        row[offset + 1] = (byte)(cg * alpha);
-                        row[offset + 2] = (byte)(cr * alpha);
-                        row[offset + 3] = (byte)(alpha * 255);
-                    }
-                }
-            }
-            else
-            {
-                fixed (byte* texPtr = texture)
-                {
-                    for (var y = minY; y < maxY; y++)
-                    {
-                        var row = ptr + y * stride;
-                        var texRow = texPtr + y * width * 3;
-                        for (var x = minX; x < maxX; x++)
-                        {
-                            var alpha = fogOpacity * (255 - mask[x, y]) / 255;
-                            var offset = x * 4;
-                            var texOffset = x * 3;
-                            row[offset + 0] = (byte)(texRow[texOffset + 0] * alpha);
-                            row[offset + 1] = (byte)(texRow[texOffset + 1] * alpha);
-                            row[offset + 2] = (byte)(texRow[texOffset + 2] * alpha);
-                            row[offset + 3] = (byte)(alpha * 255);
-                        }
-                    }
-                }
-            }
-        }
+    /// <summary>Updates <see cref="ZoomPercent"/> after actual zoom or the height-fit baseline changes.</summary>
+    void UpdateZoomPercent()
+    {
+        var percent = _viewport.GetZoomPercent(Bounds.Size, MapImage?.Size);
+        SetAndRaise(ZoomPercentProperty, ref _zoomPercent, percent);
     }
 
     /// <summary>
@@ -478,6 +525,9 @@ public class MapCanvas : Control
         if (mapImage is null)
             return;
 
+        if (!_fogBitmapController.CanRender(GetFogBitmapSettings()))
+            return;
+
         var zoom = ZoomLevel;
         var offsetX = OffsetX;
         var offsetY = OffsetY;
@@ -492,15 +542,35 @@ public class MapCanvas : Control
             else
                 context.FillRectangle(Brushes.White, imageRect);
 
-            if (_fogBitmap != null)
+            if (_fogBitmapController.Bitmap != null)
             {
-                var fogRect = new Rect(0, 0, _fogBitmap.Size.Width, _fogBitmap.Size.Height);
-                context.DrawImage(_fogBitmap, fogRect);
+                var fogRect = new Rect(0, 0, _fogBitmapController.Bitmap.Size.Width, _fogBitmapController.Bitmap.Size.Height);
+                context.DrawImage(_fogBitmapController.Bitmap, fogRect);
             }
+
         }
 
-        if (IsDmMode && IsPointerOver)
+        if (ShouldRenderCursor())
+            RenderCursor(context, CursorMapX, CursorMapY);
+
+        if (IsDmMode && IsPointerOver && ActiveTool != ToolType.Cursor)
             RenderToolOverlay(context, zoom);
+    }
+
+    /// <summary>Returns <see langword="true"/> when the configured cursor icon should be drawn.</summary>
+    bool ShouldRenderCursor() =>
+        IsCursorVisible && !_isPanning && (!IsDmMode || ActiveTool == ToolType.Cursor);
+
+    /// <summary>Draws the selected cursor icon at a map-space point using screen-pixel size.</summary>
+    void RenderCursor(DrawingContext context, double mapX, double mapY)
+    {
+        if (!_cursorIcons.TryGetValue(CursorType, out var icon))
+            return;
+
+        var size = Math.Max(1, CursorSize);
+        var x = mapX * ZoomLevel + OffsetX - size / 2.0;
+        var y = mapY * ZoomLevel + OffsetY - size / 2.0;
+        context.DrawImage(icon, new Rect(x, y, size, size));
     }
 
     /// <summary>
@@ -575,7 +645,21 @@ public class MapCanvas : Control
     protected override void OnPointerEntered(PointerEventArgs e)
     {
         base.OnPointerEntered(e);
+        _lastMousePosition = e.GetPosition(this);
+        UpdateCursorMapPosition(_lastMousePosition);
+        RaiseCursorUpdated();
         UpdateCursor();
+    }
+
+    /// <inheritdoc/>
+    protected override void OnPointerExited(PointerEventArgs e)
+    {
+        base.OnPointerExited(e);
+        _isCursorPressed = false;
+        if (ActiveTool == ToolType.Cursor)
+            RaiseCursorUpdated(forceVisible: false);
+        UpdateCursor();
+        InvalidateVisual();
     }
 
     /// <inheritdoc/>
@@ -583,7 +667,31 @@ public class MapCanvas : Control
     {
         base.OnPropertyChanged(change);
         if (change.Property == ActiveToolProperty || change.Property == IsDmModeProperty)
+        {
+            if (ActiveTool != ToolType.Cursor)
+                _isCursorPressed = false;
+            RaiseCursorUpdated();
             UpdateCursor();
+        }
+
+        if (change.Property == CursorTypeProperty
+            || change.Property == CursorSizeProperty
+            || change.Property == ShowCursorOnlyWhilePressedProperty)
+        {
+            RaiseCursorUpdated();
+            UpdateCursor();
+        }
+
+        if (change.Property == MapImageProperty && MapImage is not null)
+            RefitViewToMapHeight();
+
+        if (change.Property == BoundsProperty)
+        {
+            UpdateZoomPercent();
+        }
+
+        if (change.Property == BoundsProperty)
+            RaiseViewportChanged();
 
         if (FogMask is null)
             return;
@@ -594,21 +702,10 @@ public class MapCanvas : Control
             || change.Property == FogColorProperty;
 
         if (needsTextureRefresh)
-            RegenerateFogTexture();
-
-        if (needsBitmapRefresh)
+            _fogBitmapController.RefreshTextureAndBitmap(GetFogBitmapSettings());
+        else if (needsBitmapRefresh)
         {
-            UpdateFogBitmapRegion(new PixelRect(0, 0, FogMask.Width, FogMask.Height));
-            InvalidateVisual();
-        }
-
-        if (change.Property == BoundsProperty
-            || change.Property == MapImageProperty
-            || change.Property == ZoomLevelProperty
-            || change.Property == OffsetXProperty
-            || change.Property == OffsetYProperty)
-        {
-            RaiseViewportChanged();
+            _fogBitmapController.InvalidateRegion(new PixelRect(0, 0, FogMask.Width, FogMask.Height), GetFogBitmapSettings());
         }
     }
 
@@ -619,21 +716,33 @@ public class MapCanvas : Control
     /// </summary>
     void UpdateCursor()
     {
-        if (!IsDmMode || ActiveTool == ToolType.Fog)
+        if (!IsDmMode)
         {
             Cursor = Cursor.Default;
-            return;
-        }
-
-        if (_isPainting)
-        {
-            Cursor = new Cursor(StandardCursorType.None);
             return;
         }
 
         if (_isPanning || ActiveTool == ToolType.Pan)
         {
             Cursor = new Cursor(StandardCursorType.SizeAll);
+            return;
+        }
+
+        if (ActiveTool == ToolType.Fog)
+        {
+            Cursor = Cursor.Default;
+            return;
+        }
+
+        if (ActiveTool == ToolType.Cursor)
+        {
+            Cursor = IsCursorVisible ? new Cursor(StandardCursorType.None) : Cursor.Default;
+            return;
+        }
+
+        if (_isPainting)
+        {
+            Cursor = new Cursor(StandardCursorType.None);
             return;
         }
 
@@ -656,6 +765,17 @@ public class MapCanvas : Control
         {
             _isPanning = true;
             _lastPanPoint = point.Position;
+            UpdateCursor();
+            e.Handled = true;
+            return;
+        }
+
+        if (ActiveTool == ToolType.Cursor)
+        {
+            UpdateCursorMapPosition(point.Position);
+            if (point.Properties.IsLeftButtonPressed)
+                _isCursorPressed = true;
+            RaiseCursorUpdated();
             UpdateCursor();
             e.Handled = true;
             return;
@@ -710,6 +830,7 @@ public class MapCanvas : Control
         base.OnPointerMoved(e);
         var point = e.GetCurrentPoint(this);
         _lastMousePosition = point.Position;
+        UpdateCursorMapPosition(point.Position);
 
         if (!IsDmMode)
             return;
@@ -717,9 +838,18 @@ public class MapCanvas : Control
         if (_isPanning)
         {
             var delta = point.Position - _lastPanPoint;
-            OffsetX += delta.X;
-            OffsetY += delta.Y;
+            _viewport.PanBy(delta);
+            OnViewportStateChanged();
             _lastPanPoint = point.Position;
+            e.Handled = true;
+            return;
+        }
+
+        if (ActiveTool == ToolType.Cursor)
+        {
+            RaiseCursorUpdated();
+            UpdateCursor();
+            InvalidateVisual();
             e.Handled = true;
             return;
         }
@@ -740,6 +870,26 @@ public class MapCanvas : Control
 
         if (!IsDmMode)
             return;
+
+        if (_isPanning)
+        {
+            _isPanning = false;
+            UpdateCursor();
+            e.Handled = true;
+            return;
+        }
+
+        if (ActiveTool == ToolType.Cursor)
+        {
+            var point = e.GetCurrentPoint(this);
+            UpdateCursorMapPosition(point.Position);
+            _isCursorPressed = point.Properties.IsLeftButtonPressed;
+            RaiseCursorUpdated();
+            UpdateCursor();
+            InvalidateVisual();
+            e.Handled = true;
+            return;
+        }
 
         if (_isDraggingShape)
         {
@@ -770,14 +920,9 @@ public class MapCanvas : Control
             return;
 
         var mousePos = e.GetPosition(this);
-        var oldZoom = ZoomLevel;
         var zoomFactor = e.Delta.Y > 0 ? 1.1 : 1.0 / 1.1;
-        var newZoom = Math.Clamp(oldZoom * zoomFactor, MinZoomLevel, MaxZoomLevel);
-
-        // Zoom centered on mouse position
-        OffsetX = mousePos.X - ((mousePos.X - OffsetX) * (newZoom / oldZoom));
-        OffsetY = mousePos.Y - ((mousePos.Y - OffsetY) * (newZoom / oldZoom));
-        ZoomLevel = newZoom;
+        _viewport.ZoomAround(mousePos, zoomFactor, Bounds.Size, MapImage?.Size);
+        OnViewportStateChanged();
 
         e.Handled = true;
     }
@@ -806,18 +951,48 @@ public class MapCanvas : Control
         ViewportChanged?.Invoke(this, GetViewport());
     }
 
+    /// <summary>Stores the current cursor position in map-space styled properties.</summary>
+    void UpdateCursorMapPosition(Point screenPosition)
+    {
+        var mapPosition = _viewport.ScreenToMap(screenPosition);
+        SetValue(CursorMapXProperty, mapPosition.X);
+        SetValue(CursorMapYProperty, mapPosition.Y);
+    }
+
+    /// <summary>
+    /// Updates local cursor visibility and raises <see cref="CursorUpdated"/> for DM cursor changes.
+    /// </summary>
+    void RaiseCursorUpdated(bool? forceVisible = null)
+    {
+        if (!IsDmMode)
+            return;
+
+        var visible = forceVisible ?? (ActiveTool == ToolType.Cursor
+            && IsPointerOver
+            && (!ShowCursorOnlyWhilePressed || _isCursorPressed));
+
+        SetValue(IsCursorVisibleProperty, visible);
+        CursorUpdated?.Invoke(this, new CursorPayload
+        {
+            MapX = CursorMapX,
+            MapY = CursorMapY,
+            CursorType = CursorType,
+            CursorSize = Math.Max(1, CursorSize),
+            IsVisible = visible,
+        });
+
+        InvalidateVisual();
+    }
+
     /// <summary>
     /// Records the current pointer position converted to map coordinates as the starting
     /// point for the next brush stroke segment.
     /// </summary>
     void InitBrushMapPos(Point screenPos)
     {
-        var zoom = ZoomLevel;
-        if (zoom <= 0)
-            return;
-
-        _lastBrushMapX = (int)((screenPos.X - OffsetX) / zoom);
-        _lastBrushMapY = (int)((screenPos.Y - OffsetY) / zoom);
+        var mapPos = _viewport.ScreenToMap(screenPos);
+        _lastBrushMapX = (int)mapPos.X;
+        _lastBrushMapY = (int)mapPos.Y;
     }
 
     /// <summary>
@@ -826,12 +1001,9 @@ public class MapCanvas : Control
     /// </summary>
     void RaiseBrushStroke(Point screenTo)
     {
-        var zoom = ZoomLevel;
-        if (zoom <= 0)
-            return;
-
-        var mapX2 = (int)((screenTo.X - OffsetX) / zoom);
-        var mapY2 = (int)((screenTo.Y - OffsetY) / zoom);
+        var mapTo = _viewport.ScreenToMap(screenTo);
+        var mapX2 = (int)mapTo.X;
+        var mapY2 = (int)mapTo.Y;
 
         BrushStrokeApplied?.Invoke(this, new BrushStrokeEventArgs
         {
@@ -852,11 +1024,12 @@ public class MapCanvas : Control
     /// </summary>
     void FireShapeStroke(Point screenStart, Point screenEnd)
     {
-        var zoom = ZoomLevel;
-        var mapX1 = (int)((screenStart.X - OffsetX) / zoom);
-        var mapY1 = (int)((screenStart.Y - OffsetY) / zoom);
-        var mapX2 = (int)((screenEnd.X - OffsetX) / zoom);
-        var mapY2 = (int)((screenEnd.Y - OffsetY) / zoom);
+        var mapStart = _viewport.ScreenToMap(screenStart);
+        var mapEnd = _viewport.ScreenToMap(screenEnd);
+        var mapX1 = (int)mapStart.X;
+        var mapY1 = (int)mapStart.Y;
+        var mapX2 = (int)mapEnd.X;
+        var mapY2 = (int)mapEnd.Y;
 
         ShapeStrokeApplied?.Invoke(this, new ShapeStrokeEventArgs
         {

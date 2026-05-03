@@ -79,4 +79,12 @@ public interface IDmHostService : IDisposable
     /// <param name="viewport">Viewport settings.</param>
     /// <param name="ct">Cancellation token.</param>
     Task SendViewportAsync(ViewportPayload viewport, CancellationToken ct);
+
+    /// <summary>
+    /// Broadcasts the current player-visible cursor state to all connected players,
+    /// and caches the payload so newly connecting players join with the latest cursor visibility.
+    /// </summary>
+    /// <param name="cursor">Cursor state.</param>
+    /// <param name="ct">Cancellation token.</param>
+    Task SendCursorAsync(CursorPayload cursor, CancellationToken ct);
 }

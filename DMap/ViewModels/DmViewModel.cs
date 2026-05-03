@@ -37,11 +37,9 @@ public class DmViewModel : ViewModelBase, IDisposable
     const double DefaultShapeSoftness = 0.0;
     const double DefaultShapeOpacity = 1.0;
 
-    const double DefaultZoomLevel = 1.0;
-    const double MinZoomLevel = 0.1;
-    const double MaxZoomLevel = 10.0;
-
     const double DefaultFogOpacity = 0.5;
+
+    const int DefaultCursorSize = 64;
 
     readonly IFogMaskService _fogService;
     readonly IUndoRedoService _undoRedo;
@@ -118,44 +116,6 @@ public class DmViewModel : ViewModelBase, IDisposable
         set => this.RaiseAndSetIfChanged(ref field, value);
     } = DefaultFogOpacity;
 
-    /// <summary>Horizontal pan offset of the map canvas in screen pixels.</summary>
-    public double OffsetX
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    }
-
-    /// <summary>Vertical pan offset of the map canvas in screen pixels.</summary>
-    public double OffsetY
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    }
-
-    /// <summary>
-    /// Current zoom multiplier applied to the canvas transform.
-    /// Changing this value also raises <see cref="ZoomPercent"/> change notification.
-    /// </summary>
-    public double ZoomLevel
-    {
-        get;
-        set
-        {
-            this.RaiseAndSetIfChanged(ref field, value);
-            this.RaisePropertyChanged(nameof(ZoomPercent));
-        }
-    } = DefaultZoomLevel;
-
-    /// <summary>
-    /// <see cref="ZoomLevel"/> expressed as a percentage in [10, 1000], rounded to the nearest integer.
-    /// Setting this property converts the value and clamps it within allowed bounds.
-    /// </summary>
-    public decimal ZoomPercent
-    {
-        get => (decimal)Math.Round(ZoomLevel * 100);
-        set => ZoomLevel = Math.Clamp((double)value / 100.0, MinZoomLevel, MaxZoomLevel);
-    }
-
     /// <summary>Number of player TCP connections currently open on the host service.</summary>
     public int ConnectedPlayers
     {
@@ -174,7 +134,7 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// The currently active editing tool.
     /// Changing this value also raises change notifications for the derived
     /// <see cref="IsBrushSelected"/>, <see cref="IsShapeSelected"/>, <see cref="IsPanSelected"/>,
-    /// and <see cref="IsFogSelected"/> properties.
+    /// <see cref="IsFogSelected"/>, and <see cref="IsCursorSelected"/> properties.
     /// </summary>
     public ToolType SelectedTool
     {
@@ -186,6 +146,7 @@ public class DmViewModel : ViewModelBase, IDisposable
             this.RaisePropertyChanged(nameof(IsShapeSelected));
             this.RaisePropertyChanged(nameof(IsPanSelected));
             this.RaisePropertyChanged(nameof(IsFogSelected));
+            this.RaisePropertyChanged(nameof(IsCursorSelected));
         }
     }
 
@@ -200,6 +161,9 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     /// <summary><see langword="true"/> when the Fog tool is active.</summary>
     public bool IsFogSelected => SelectedTool == ToolType.Fog;
+
+    /// <summary><see langword="true"/> when the Cursor tool is active.</summary>
+    public bool IsCursorSelected => SelectedTool == ToolType.Cursor;
 
     /// <summary>The brush shape (circle, square, or diamond) used when the Brush tool is active.</summary>
     public BrushShape SelectedBrushShape
@@ -260,11 +224,42 @@ public class DmViewModel : ViewModelBase, IDisposable
         private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    /// <summary><see langword="true"/> while this client is generating a textured fog bitmap.</summary>
+    public bool IsFogGenerating
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
     /// <summary><see langword="true"/> when the colour picker should be visible (i.e. flat-colour mode).</summary>
     public bool IsFogColorSelected => SelectedFogType == FogType.Color;
 
     /// <summary>All available fog types, used to populate the fog type selector.</summary>
     public IReadOnlyList<FogType> FogTypes { get; } = Enum.GetValues<FogType>();
+
+    /// <summary>Cursor icon rendered locally and broadcast to connected players.</summary>
+    public CursorType SelectedCursorType
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = CursorType.Crosshair;
+
+    /// <summary>Cursor icon size in screen pixels.</summary>
+    public int CursorSize
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = DefaultCursorSize;
+
+    /// <summary><see langword="true"/> when the cursor should only appear while left click is held.</summary>
+    public bool ShowCursorOnlyWhilePressed
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    /// <summary>All available cursor icon types, used to populate the cursor selector.</summary>
+    public IReadOnlyList<CursorType> CursorTypes { get; } = Enum.GetValues<CursorType>();
 
     /// <summary><see langword="true"/> when at least one operation is available to undo.</summary>
     public bool CanUndo
@@ -283,15 +278,6 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// <summary>Opens a file picker and loads the selected image as the map background.</summary>
     public ReactiveCommand<Unit, Unit> LoadMapCommand { get; }
 
-    /// <summary>Increases the zoom level by 20%.</summary>
-    public ReactiveCommand<Unit, Unit> ZoomInCommand { get; }
-
-    /// <summary>Decreases the zoom level by ~17%.</summary>
-    public ReactiveCommand<Unit, Unit> ZoomOutCommand { get; }
-
-    /// <summary>Resets zoom to 100% and clears the pan offset.</summary>
-    public ReactiveCommand<Unit, Unit> ResetViewCommand { get; }
-
     /// <summary>Activates the Brush tool.</summary>
     public ReactiveCommand<Unit, Unit> SelectBrushCommand { get; }
 
@@ -303,6 +289,9 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     /// <summary>Activates the Fog tool.</summary>
     public ReactiveCommand<Unit, Unit> SelectFogCommand { get; }
+
+    /// <summary>Activates the Cursor tool.</summary>
+    public ReactiveCommand<Unit, Unit> SelectCursorCommand { get; }
 
     /// <summary>Sets all fog mask pixels to 255 (fully revealed) and pushes an undo entry.</summary>
     public ReactiveCommand<Unit, Unit> RevealAllCommand { get; }
@@ -322,6 +311,9 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// <summary>Opens the player discovery window so the DM can monitor connected players.</summary>
     public ReactiveCommand<Unit, Unit> OpenPlayerWindowCommand { get; }
 
+    /// <summary>Opens the application information window.</summary>
+    public ReactiveCommand<Unit, Unit> ShowAboutCommand { get; }
+
     /// <summary>Toggles whether the map image is rendered or replaced with a white background for fog inspection.</summary>
     public ReactiveCommand<Unit, Unit> ToggleMapVisibilityCommand { get; }
 
@@ -335,12 +327,12 @@ public class DmViewModel : ViewModelBase, IDisposable
         private set => this.RaiseAndSetIfChanged(ref field, value);
     } = true;
 
-    /// <summary>Toggles whether fog updates are held locally or sent to connected players immediately.</summary>
+    /// <summary>Toggles whether fog and viewport updates are held locally or sent to connected players immediately.</summary>
     public ReactiveCommand<Unit, Unit> TogglePauseUpdatesCommand { get; }
 
     /// <summary>
-    /// When <see langword="true"/>, fog changes are applied locally but not broadcast to players.
-    /// Resuming sends a single full-mask delta to bring all players up to date.
+    /// When <see langword="true"/>, fog and viewport changes are applied locally but not broadcast to players.
+    /// Resuming sends a single full-mask delta and latest viewport to bring all players up to date.
     /// </summary>
     public bool IsUpdatesPaused
     {
@@ -361,6 +353,12 @@ public class DmViewModel : ViewModelBase, IDisposable
     public Interaction<PlayerViewModel, Unit> ShowPlayerWindow { get; } = new();
 
     /// <summary>
+    /// Interaction that requests the view to display the application information dialog.
+    /// Handled in <see cref="Views.DmView"/>.
+    /// </summary>
+    public Interaction<Unit, Unit> ShowAboutDialog { get; } = new();
+
+    /// <summary>
     /// Raised after any fog modification (brush, shape, undo, redo, reveal-all, refog-all).
     /// The event argument is the bounding rectangle of the changed region. The view uses
     /// this to update only the affected portion of the fog bitmap rather than rebuilding it entirely.
@@ -370,8 +368,12 @@ public class DmViewModel : ViewModelBase, IDisposable
     byte[]? _mapImageBytes;
     MapSession? _session;
     bool _hasPendingUpdates;
+    bool _hasPendingViewportUpdate;
+    bool _hasPendingCursorUpdate;
     ViewportPayload? _latestViewport;
+    CursorPayload? _latestCursor;
     bool _isViewportBroadcastQueued;
+    bool _isCursorBroadcastQueued;
     /// <summary>Fires every 2 seconds on the UI thread to refresh <see cref="MemoryUsage"/>.</summary>
     readonly DispatcherTimer _memoryTimer;
 
@@ -397,13 +399,11 @@ public class DmViewModel : ViewModelBase, IDisposable
         _memoryTimer.Start();
 
         LoadMapCommand = ReactiveCommand.CreateFromTask(LoadMapAsync);
-        ZoomInCommand = ReactiveCommand.Create(() => { ZoomLevel = Math.Min(ZoomLevel * 1.2, 10.0); });
-        ZoomOutCommand = ReactiveCommand.Create(() => { ZoomLevel = Math.Max(ZoomLevel / 1.2, 0.1); });
-        ResetViewCommand = ReactiveCommand.Create(() => { ZoomLevel = 1.0; OffsetX = 0; OffsetY = 0; });
         SelectBrushCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Brush; });
         SelectShapeCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Shape; });
         SelectPanCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Pan; });
         SelectFogCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Fog; });
+        SelectCursorCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Cursor; });
 
         var mapLoaded = this.WhenAnyValue(x => x.IsMapLoaded);
         RevealAllCommand = ReactiveCommand.Create(ExecuteRevealAll, mapLoaded);
@@ -419,6 +419,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         UndoCommand = ReactiveCommand.Create(ExecuteUndo, canUndo);
         RedoCommand = ReactiveCommand.Create(ExecuteRedo, canRedo);
         OpenPlayerWindowCommand = ReactiveCommand.CreateFromTask(OpenPlayerWindowAsync);
+        ShowAboutCommand = ReactiveCommand.CreateFromTask(async () => await ShowAboutDialog.Handle(Unit.Default));
         ToggleMapVisibilityCommand = ReactiveCommand.Create(() => { IsMapVisible = !IsMapVisible; });
         TogglePauseUpdatesCommand = ReactiveCommand.Create(() =>
         {
@@ -578,11 +579,17 @@ public class DmViewModel : ViewModelBase, IDisposable
             return;
 
         var shapeRect = ComputeShapeRect(cx1, cy1, cx2, cy2);
+        if (IsEmpty(shapeRect))
+            return;
+
         var before = FogDeltaCommand.CaptureFromMask(_fogService.Mask, shapeRect);
 
         var dirtyRect = (SelectedShapeType is ShapeType.Ellipse or ShapeType.Circle)
             ? _fogService.ApplyEllipse(cx1, cy1, cx2, cy2, (float)ShapeSoftness, (float)ShapeOpacity, isErasing)
             : _fogService.ApplyRectangle(cx1, cy1, cx2, cy2, (float)ShapeSoftness, (float)ShapeOpacity, isErasing);
+
+        if (IsEmpty(dirtyRect))
+            return;
 
         var after = FogDeltaCommand.CaptureFromMask(_fogService.Mask, shapeRect);
         _undoRedo.Push(new FogDeltaCommand(shapeRect, before, after));
@@ -600,6 +607,9 @@ public class DmViewModel : ViewModelBase, IDisposable
         var minY = Math.Max(0, Math.Min(y1, y2));
         var maxX = Math.Min(_fogService.Mask!.Width - 1, Math.Max(x1, x2));
         var maxY = Math.Min(_fogService.Mask!.Height - 1, Math.Max(y1, y2));
+        if (minX > maxX || minY > maxY)
+            return default;
+
         return new PixelRect(minX, minY, maxX - minX + 1, maxY - minY + 1);
     }
 
@@ -639,6 +649,8 @@ public class DmViewModel : ViewModelBase, IDisposable
         };
         var settings = new BrushSettings(BrushDiameter, (float)BrushSoftness, (float)BrushOpacity, Erase: isErasing);
         var dirtyRect = _fogService.ApplyBrush(brush, x1, y1, x2, y2, settings);
+        if (IsEmpty(dirtyRect))
+            return;
 
         FogUpdated?.Invoke(this, dirtyRect);
         SendFogDelta(dirtyRect);
@@ -647,12 +659,23 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// <summary>
     /// Updates the authoritative DM viewport snapshot and queues a broadcast to players.
     /// Repeated updates within a single UI tick are coalesced into a single send using the
-    /// most recent viewport values.
+    /// most recent viewport values. When updates are paused, only the snapshot is retained.
     /// </summary>
     public void UpdateViewport(ViewportPayload viewport)
     {
         _latestViewport = viewport;
         QueueViewportBroadcast();
+    }
+
+    /// <summary>
+    /// Updates the authoritative DM cursor snapshot and queues a broadcast to players.
+    /// Repeated updates within a single UI tick are coalesced into a single send using the
+    /// most recent cursor state. When updates are paused, only the snapshot is retained.
+    /// </summary>
+    public void UpdateCursor(CursorPayload cursor)
+    {
+        _latestCursor = cursor;
+        QueueCursorBroadcast();
     }
 
     /// <summary>
@@ -666,6 +689,9 @@ public class DmViewModel : ViewModelBase, IDisposable
         if (_fogService.Mask is null)
             return;
 
+        if (IsEmpty(dirtyRect))
+            return;
+
         if (IsUpdatesPaused)
         {
             _hasPendingUpdates = true;
@@ -677,6 +703,8 @@ public class DmViewModel : ViewModelBase, IDisposable
 
         _ = _hostService.SendFogDeltaAsync(delta, default);
     }
+
+    static bool IsEmpty(PixelRect rect) => rect.Width <= 0 || rect.Height <= 0;
 
     /// <summary>
     /// Fires-and-forgets a broadcast of the current fog appearance (type + colour + seed)
@@ -705,7 +733,16 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// </summary>
     void QueueViewportBroadcast()
     {
-        if (_session is null || _latestViewport is null || _isViewportBroadcastQueued)
+        if (_session is null || _latestViewport is null)
+            return;
+
+        if (IsUpdatesPaused)
+        {
+            _hasPendingViewportUpdate = true;
+            return;
+        }
+
+        if (_isViewportBroadcastQueued)
             return;
 
         _isViewportBroadcastQueued = true;
@@ -715,23 +752,76 @@ public class DmViewModel : ViewModelBase, IDisposable
             if (_session is null || _latestViewport is null)
                 return;
 
+            if (IsUpdatesPaused)
+            {
+                _hasPendingViewportUpdate = true;
+                return;
+            }
+
             _ = _hostService.SendViewportAsync(_latestViewport, default);
         }, DispatcherPriority.Background);
     }
 
     /// <summary>
-    /// Sends the full current fog mask to all players as a single delta, catching them up on
+    /// Queues a cursor broadcast for the next UI dispatch pass so rapid pointer movement
+    /// collapses into one authoritative send per UI tick.
+    /// </summary>
+    void QueueCursorBroadcast()
+    {
+        if (_session is null || _latestCursor is null)
+            return;
+
+        if (IsUpdatesPaused)
+        {
+            _hasPendingCursorUpdate = true;
+            return;
+        }
+
+        if (_isCursorBroadcastQueued)
+            return;
+
+        _isCursorBroadcastQueued = true;
+        Dispatcher.UIThread.Post(() =>
+        {
+            _isCursorBroadcastQueued = false;
+            if (_session is null || _latestCursor is null)
+                return;
+
+            if (IsUpdatesPaused)
+            {
+                _hasPendingCursorUpdate = true;
+                return;
+            }
+
+            _ = _hostService.SendCursorAsync(_latestCursor, default);
+        }, DispatcherPriority.Background);
+    }
+
+    /// <summary>
+    /// Sends the full current fog mask and latest viewport to all players, catching them up on
     /// every change made while updates were paused.
     /// </summary>
     void FlushPendingUpdates()
     {
-        if (!_hasPendingUpdates || _fogService.Mask is null)
-            return;
+        if (_hasPendingUpdates && _fogService.Mask is not null)
+        {
+            _hasPendingUpdates = false;
+            var mask = _fogService.Mask;
+            var delta = FogDelta.FromMask(mask, 0, 0, mask.Width, mask.Height);
+            _ = _hostService.SendFogDeltaAsync(delta, default);
+        }
 
-        _hasPendingUpdates = false;
-        var mask = _fogService.Mask;
-        var delta = FogDelta.FromMask(mask, 0, 0, mask.Width, mask.Height);
-        _ = _hostService.SendFogDeltaAsync(delta, default);
+        if (_hasPendingViewportUpdate && _session is not null && _latestViewport is not null)
+        {
+            _hasPendingViewportUpdate = false;
+            _ = _hostService.SendViewportAsync(_latestViewport, default);
+        }
+
+        if (_hasPendingCursorUpdate && _session is not null && _latestCursor is not null)
+        {
+            _hasPendingCursorUpdate = false;
+            _ = _hostService.SendCursorAsync(_latestCursor, default);
+        }
     }
 
     /// <summary>
@@ -753,6 +843,9 @@ public class DmViewModel : ViewModelBase, IDisposable
 
         if (_latestViewport is not null)
             await _hostService.SendViewportAsync(_latestViewport, default);
+
+        if (_latestCursor is not null)
+            await _hostService.SendCursorAsync(_latestCursor, default);
 
         await _discoveryService.StartBroadcastingAsync(_session, _hostService.Port, default);
     }

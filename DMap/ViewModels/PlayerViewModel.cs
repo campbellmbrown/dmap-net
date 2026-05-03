@@ -5,6 +5,7 @@ using System.Reactive;
 using System.Threading.Tasks;
 
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
@@ -79,27 +80,6 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    /// <summary>Horizontal pan offset of the map canvas in screen pixels.</summary>
-    public double OffsetX
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    }
-
-    /// <summary>Vertical pan offset of the map canvas in screen pixels.</summary>
-    public double OffsetY
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    }
-
-    /// <summary>Current zoom multiplier applied to the canvas transform.</summary>
-    public double ZoomLevel
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    } = 1.0;
-
     /// <summary>Fog overlay style as set by the DM. Defaults to flat black until the DM broadcasts an update.</summary>
     public FogType FogType
     {
@@ -121,6 +101,13 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    /// <summary><see langword="true"/> while this client is generating a textured fog bitmap.</summary>
+    public bool IsFogGenerating
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
     /// <summary>
     /// Latest DM viewport received from the network. The player view applies this to the canvas and
     /// reapplies it after player-side layout changes so the camera stays aligned to the DM.
@@ -129,6 +116,48 @@ public class PlayerViewModel : ViewModelBase, IDisposable
     {
         get;
         private set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    /// <summary>Latest DM cursor icon type received from the network.</summary>
+    public CursorType CursorType
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    } = CursorType.Crosshair;
+
+    /// <summary>Latest DM cursor size in screen pixels.</summary>
+    public int CursorSize
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    } = 64;
+
+    /// <summary>Latest DM cursor X coordinate in map space.</summary>
+    public double CursorMapX
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    /// <summary>Latest DM cursor Y coordinate in map space.</summary>
+    public double CursorMapY
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    /// <summary><see langword="true"/> when the DM cursor should be visible on the player map.</summary>
+    public bool IsCursorVisible
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    /// <summary>Current state of the player window shell.</summary>
+    public WindowState WindowState
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
     /// <summary>
@@ -142,6 +171,9 @@ public class PlayerViewModel : ViewModelBase, IDisposable
     /// Enabled only when <see cref="IsConnected"/> is <see langword="true"/>.
     /// </summary>
     public ReactiveCommand<Unit, Unit> DisconnectCommand { get; }
+
+    /// <summary>Toggles the player window between normal and fullscreen states.</summary>
+    public ReactiveCommand<Unit, Unit> ToggleFullScreenCommand { get; }
 
     /// <summary>
     /// Raised after any fog update (initial session fog, incremental delta, or full replacement).
@@ -165,6 +197,7 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         _clientService.FogFullReceived += OnFogFullReceived;
         _clientService.FogAppearanceReceived += OnFogAppearanceReceived;
         _clientService.ViewportReceived += OnViewportReceived;
+        _clientService.CursorReceived += OnCursorReceived;
         _clientService.Disconnected += OnDisconnected;
 
         var canConnect = this.WhenAnyValue(
@@ -175,6 +208,13 @@ public class PlayerViewModel : ViewModelBase, IDisposable
 
         var canDisconnect = this.WhenAnyValue(x => x.IsConnected);
         DisconnectCommand = ReactiveCommand.CreateFromTask(DisconnectAsync, canDisconnect);
+
+        ToggleFullScreenCommand = ReactiveCommand.Create(ToggleFullScreen);
+    }
+
+    void ToggleFullScreen()
+    {
+        WindowState = WindowState == WindowState.FullScreen ? WindowState.Normal : WindowState.FullScreen;
     }
 
     /// <summary>
@@ -240,6 +280,7 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         MapImage = null;
         FogMask = null;
         Viewport = null;
+        IsCursorVisible = false;
         StatusText = "Disconnected. Searching for DM sessions...";
     }
 
@@ -308,6 +349,19 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         Dispatcher.UIThread.Post(() => Viewport = viewport);
     }
 
+    /// <summary>Stores the latest DM cursor state so the player canvas can render it.</summary>
+    void OnCursorReceived(object? sender, CursorPayload cursor)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            CursorType = cursor.CursorType;
+            CursorSize = cursor.CursorSize;
+            CursorMapX = cursor.MapX;
+            CursorMapY = cursor.MapY;
+            IsCursorVisible = cursor.IsVisible;
+        });
+    }
+
     /// <summary>Updates connection state and status text when the DM disconnects.</summary>
     void OnDisconnected(object? sender, EventArgs e)
     {
@@ -315,6 +369,7 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         {
             IsConnected = false;
             Viewport = null;
+            IsCursorVisible = false;
             StatusText = "Disconnected from DM. Searching for sessions...";
         });
     }

@@ -3,7 +3,9 @@ using System.Reactive;
 using System.Reactive.Disposables;
 using System.Threading.Tasks;
 
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Platform.Storage;
 
 using DMap.Controls;
@@ -32,7 +34,9 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
         InitializeComponent();
 
         var canvas = this.FindControl<MapCanvas>("MapCanvas")!;
+        FogGenerationDialog? fogGenerationDialog = null;
         canvas.ViewportChanged += (_, viewport) => ViewModel?.UpdateViewport(viewport);
+        canvas.CursorUpdated += (_, cursor) => ViewModel?.UpdateCursor(cursor);
 
         canvas.BrushStrokeStarted += (_, _) => ViewModel?.BeginBrushStroke();
         canvas.BrushStrokeEnded += (_, _) => ViewModel?.EndBrushStroke();
@@ -55,12 +59,12 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
             vm.UpdateViewport(canvas.GetViewport());
 
             _activationDisposables.Add(
-                vm.WhenAnyValue(x => x.FogMask)
-                    .Subscribe(_ => canvas.RebuildFogBitmap()));
+                vm.WhenAnyValue(x => x.IsFogGenerating)
+                    .Subscribe(isGenerating => SetFogGenerationDialogVisible(isGenerating)));
 
             _activationDisposables.Add(
-                vm.WhenAnyValue(x => x.MapImage)
-                    .Subscribe(_ => vm.UpdateViewport(canvas.GetViewport())));
+                vm.WhenAnyValue(x => x.FogMask)
+                    .Subscribe(_ => canvas.RebuildFogBitmap()));
 
             vm.FogUpdated += OnFogUpdated;
             _activationDisposables.Add(
@@ -72,12 +76,39 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
             _activationDisposables.Add(
                 vm.ShowPlayerWindow.RegisterHandler(HandleShowPlayerWindow));
 
+            _activationDisposables.Add(
+                vm.ShowAboutDialog.RegisterHandler(HandleShowAboutDialog));
+
             disposables(Disposable.Create(() =>
             {
+                fogGenerationDialog?.Close();
+                fogGenerationDialog = null;
                 _activationDisposables?.Dispose();
                 _activationDisposables = null;
             }));
         });
+
+        void SetFogGenerationDialogVisible(bool isVisible)
+        {
+            if (isVisible)
+            {
+                if (fogGenerationDialog is not null)
+                    return;
+
+                fogGenerationDialog = new FogGenerationDialog();
+                fogGenerationDialog.Closed += (_, _) => fogGenerationDialog = null;
+
+                if (TopLevel.GetTopLevel(this) is Window owner)
+                    _ = fogGenerationDialog.ShowDialog(owner);
+                else
+                    fogGenerationDialog.Show();
+
+                return;
+            }
+
+            fogGenerationDialog?.Close();
+            fogGenerationDialog = null;
+        }
     }
 
     /// <summary>
@@ -98,15 +129,52 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
     void HandleShowPlayerWindow(IInteractionContext<PlayerViewModel, Unit> context)
     {
         var playerVm = context.Input;
+        // TODO: Move to view instead of programmatically creating the window here
         var window = new Window
         {
             Title = "DMap - Player",
             Content = new PlayerView { DataContext = playerVm },
             Width = 800,
             Height = 600,
+            ShowInTaskbar = true,
         };
+        var windowDisposables = new CompositeDisposable();
+
+        windowDisposables.Add(
+            playerVm.WhenAnyValue(x => x.WindowState)
+                .Subscribe(state => window.WindowState = state));
+
+        windowDisposables.Add(
+            window.GetObservable(Window.WindowStateProperty)
+                .Subscribe(state => playerVm.WindowState = state));
+
+        window.KeyBindings.Add(new KeyBinding
+        {
+            Gesture = new KeyGesture(Key.F11),
+            Command = playerVm.ToggleFullScreenCommand,
+        });
+
         window.Show();
-        window.Closed += (_, _) => playerVm.Dispose();
+        window.Closed += (_, _) =>
+        {
+            windowDisposables.Dispose();
+            playerVm.Dispose();
+        };
+        context.SetOutput(Unit.Default);
+    }
+
+    /// <summary>
+    /// Handles the <see cref="DmViewModel.ShowAboutDialog"/> interaction by showing the
+    /// application information dialog as a modal window when an owner is available.
+    /// </summary>
+    async Task HandleShowAboutDialog(IInteractionContext<Unit, Unit> context)
+    {
+        var window = new AboutWindow();
+        if (TopLevel.GetTopLevel(this) is Window owner)
+            await window.ShowDialog(owner);
+        else
+            window.Show();
+
         context.SetOutput(Unit.Default);
     }
 

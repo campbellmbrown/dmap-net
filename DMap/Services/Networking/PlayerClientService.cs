@@ -39,6 +39,9 @@ public sealed class PlayerClientService : IPlayerClientService
     public event EventHandler<ViewportPayload>? ViewportReceived;
 
     /// <inheritdoc/>
+    public event EventHandler<CursorPayload>? CursorReceived;
+
+    /// <inheritdoc/>
     public event EventHandler? Disconnected;
 
     /// <inheritdoc/>
@@ -87,6 +90,9 @@ public sealed class PlayerClientService : IPlayerClientService
                         break;
                     case MessageType.Viewport:
                         ViewportReceived?.Invoke(this, ViewportPayload.Deserialize(payload));
+                        break;
+                    case MessageType.Cursor:
+                        CursorReceived?.Invoke(this, CursorPayload.Deserialize(payload));
                         break;
                 }
             }
