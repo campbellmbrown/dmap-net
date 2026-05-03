@@ -10,6 +10,7 @@ Unreleased
 * Added icon to the "About DMap" menu item in the Help menu.
 * Updated the “Reset View” action: renamed to “Refit View”, updated icon, and now fits the map to the window.
 * Linux release builds are now single-file executables.
+* Allow cancelling shape drawing with the Escape key.
 
 :release-link:`v1.0.0`
 ----------------------
