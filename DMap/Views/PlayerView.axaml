@@ -70,6 +70,11 @@
                                 FogType="{Binding FogType}"
                                 FogColor="{Binding FogColor}"
                                 FogSeed="{Binding FogSeed}"
+                                CursorType="{Binding CursorType}"
+                                CursorSize="{Binding CursorSize}"
+                                CursorMapX="{Binding CursorMapX}"
+                                CursorMapY="{Binding CursorMapY}"
+                                IsCursorVisible="{Binding IsCursorVisible}"
                                 IsFogGenerating="{Binding IsFogGenerating, Mode=OneWayToSource}" />
         </DockPanel>
     </Panel>

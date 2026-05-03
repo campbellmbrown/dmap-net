@@ -118,6 +118,41 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    /// <summary>Latest DM cursor icon type received from the network.</summary>
+    public CursorType CursorType
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    } = CursorType.Crosshair;
+
+    /// <summary>Latest DM cursor size in screen pixels.</summary>
+    public int CursorSize
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    } = 64;
+
+    /// <summary>Latest DM cursor X coordinate in map space.</summary>
+    public double CursorMapX
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    /// <summary>Latest DM cursor Y coordinate in map space.</summary>
+    public double CursorMapY
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    /// <summary><see langword="true"/> when the DM cursor should be visible on the player map.</summary>
+    public bool IsCursorVisible
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
     /// <summary>Current state of the player window shell.</summary>
     public WindowState WindowState
     {
@@ -162,6 +197,7 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         _clientService.FogFullReceived += OnFogFullReceived;
         _clientService.FogAppearanceReceived += OnFogAppearanceReceived;
         _clientService.ViewportReceived += OnViewportReceived;
+        _clientService.CursorReceived += OnCursorReceived;
         _clientService.Disconnected += OnDisconnected;
 
         var canConnect = this.WhenAnyValue(
@@ -244,6 +280,7 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         MapImage = null;
         FogMask = null;
         Viewport = null;
+        IsCursorVisible = false;
         StatusText = "Disconnected. Searching for DM sessions...";
     }
 
@@ -312,6 +349,19 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         Dispatcher.UIThread.Post(() => Viewport = viewport);
     }
 
+    /// <summary>Stores the latest DM cursor state so the player canvas can render it.</summary>
+    void OnCursorReceived(object? sender, CursorPayload cursor)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            CursorType = cursor.CursorType;
+            CursorSize = cursor.CursorSize;
+            CursorMapX = cursor.MapX;
+            CursorMapY = cursor.MapY;
+            IsCursorVisible = cursor.IsVisible;
+        });
+    }
+
     /// <summary>Updates connection state and status text when the DM disconnects.</summary>
     void OnDisconnected(object? sender, EventArgs e)
     {
@@ -319,6 +369,7 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         {
             IsConnected = false;
             Viewport = null;
+            IsCursorVisible = false;
             StatusText = "Disconnected from DM. Searching for sessions...";
         });
     }

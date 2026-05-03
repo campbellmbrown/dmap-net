@@ -14,6 +14,8 @@
         <converters:BrushShapeIconConverter x:Key="BrushShapeIconConverter" />
         <converters:ShapeTypeIconConverter x:Key="ShapeTypeIconConverter" />
         <converters:FogTypeIconConverter x:Key="FogTypeIconConverter" />
+        <converters:CursorTypeIconConverter x:Key="CursorTypeIconConverter" />
+        <converters:CursorTypeDisplayNameConverter x:Key="CursorTypeDisplayNameConverter" />
     </UserControl.Resources>
 
     <UserControl.Styles>
@@ -221,7 +223,10 @@
                             BrushDiameter="{Binding BrushDiameter}"
                             ActiveTool="{Binding SelectedTool}"
                             BrushShape="{Binding SelectedBrushShape}"
-                            ShapeType="{Binding SelectedShapeType}">
+                            ShapeType="{Binding SelectedShapeType}"
+                            CursorType="{Binding SelectedCursorType}"
+                            CursorSize="{Binding CursorSize}"
+                            ShowCursorOnlyWhilePressed="{Binding ShowCursorOnlyWhilePressed}">
             </controls:MapCanvas>
 
             <!-- Floating side toolbar -->
@@ -257,6 +262,14 @@
                             <Border Background="#330078D4" CornerRadius="4" IsVisible="{Binding IsFogSelected}" />
                             <Button Classes="icon" Command="{Binding SelectFogCommand}" ToolTip.Tip="Fog">
                                 <Image Source="{SvgImage /Assets/Icons/cloud-fog.svg}" />
+                            </Button>
+                        </Panel>
+
+                        <!-- Cursor tool -->
+                        <Panel>
+                            <Border Background="#330078D4" CornerRadius="4" IsVisible="{Binding IsCursorSelected}" />
+                            <Button Classes="icon" Command="{Binding SelectCursorCommand}" ToolTip.Tip="Cursor">
+                                <Image Source="{SvgImage /Assets/Icons/crosshair.svg}" />
                             </Button>
                         </Panel>
 
@@ -350,6 +363,27 @@
                             <Slider Minimum="0" Maximum="1" Value="{Binding FogOpacity}"
                                     TickFrequency="0.01" IsSnapToTickEnabled="True"
                                     HorizontalAlignment="Stretch" />
+                        </StackPanel>
+                        <StackPanel Spacing="8" MinWidth="200" IsVisible="{Binding IsCursorSelected}">
+                            <TextBlock Text="Cursor Type" FontWeight="SemiBold" />
+                            <ComboBox ItemsSource="{Binding CursorTypes}"
+                                    SelectedItem="{Binding SelectedCursorType}"
+                                    HorizontalAlignment="Stretch">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:CompileBindings="False">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                            <Image Width="16" Height="16" Source="{Binding Converter={StaticResource CursorTypeIconConverter}}" />
+                                            <TextBlock Text="{Binding}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBlock Text="{Binding CursorSize, StringFormat='Size: {0}'}" FontWeight="SemiBold" />
+                            <Slider Minimum="16" Maximum="256" Value="{Binding CursorSize}"
+                                    TickFrequency="1" IsSnapToTickEnabled="True"
+                                    HorizontalAlignment="Stretch" />
+                            <ToggleSwitch IsChecked="{Binding ShowCursorOnlyWhilePressed}"
+                                          Content="Only show while holding left click" />
                         </StackPanel>
                     </Panel>
                 </Border>

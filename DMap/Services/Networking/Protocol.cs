@@ -28,6 +28,9 @@ public enum MessageType
 
     /// <summary>Viewport camera state (map center and zoom) broadcast from the DM to players.</summary>
     Viewport = 6,
+
+    /// <summary>Player-visible cursor state broadcast from the DM to players.</summary>
+    Cursor = 7,
 }
 
 /// <summary>
@@ -117,6 +120,56 @@ public sealed class ViewportPayload
             CenterMapX = BitConverter.ToDouble(bytes, 0),
             CenterMapY = BitConverter.ToDouble(bytes, 8),
             ZoomLevel = BitConverter.ToDouble(bytes, 16),
+        };
+    }
+}
+
+/// <summary>
+/// Player-visible cursor state broadcast from the DM. Coordinates are in map pixels, while
+/// size is in screen pixels so player windows render the cursor consistently at every zoom.
+/// </summary>
+public sealed class CursorPayload
+{
+    /// <summary>Map-space X coordinate for the cursor anchor.</summary>
+    public double MapX { get; init; }
+
+    /// <summary>Map-space Y coordinate for the cursor anchor.</summary>
+    public double MapY { get; init; }
+
+    /// <summary>Icon rendered for the cursor.</summary>
+    public CursorType CursorType { get; init; }
+
+    /// <summary>Cursor icon size in screen pixels.</summary>
+    public int CursorSize { get; init; }
+
+    /// <summary><see langword="true"/> when the cursor should be visible to players.</summary>
+    public bool IsVisible { get; init; }
+
+    /// <summary>
+    /// Serializes this payload to a fixed 25-byte buffer.
+    /// Format: MapX (8 bytes) | MapY (8 bytes) | CursorType (4 bytes) | CursorSize (4 bytes) | IsVisible (1 byte).
+    /// </summary>
+    public byte[] Serialize()
+    {
+        var bytes = new byte[25];
+        BitConverter.TryWriteBytes(bytes.AsSpan(0, 8), MapX);
+        BitConverter.TryWriteBytes(bytes.AsSpan(8, 8), MapY);
+        BitConverter.TryWriteBytes(bytes.AsSpan(16, 4), (int)CursorType);
+        BitConverter.TryWriteBytes(bytes.AsSpan(20, 4), CursorSize);
+        bytes[24] = IsVisible ? (byte)1 : (byte)0;
+        return bytes;
+    }
+
+    /// <summary>Reconstructs a <see cref="CursorPayload"/> from the buffer produced by <see cref="Serialize"/>.</summary>
+    public static CursorPayload Deserialize(byte[] bytes)
+    {
+        return new CursorPayload
+        {
+            MapX = BitConverter.ToDouble(bytes, 0),
+            MapY = BitConverter.ToDouble(bytes, 8),
+            CursorType = (CursorType)BitConverter.ToInt32(bytes, 16),
+            CursorSize = BitConverter.ToInt32(bytes, 20),
+            IsVisible = bytes[24] != 0,
         };
     }
 }

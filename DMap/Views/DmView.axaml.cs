@@ -36,6 +36,7 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
         var canvas = this.FindControl<MapCanvas>("MapCanvas")!;
         FogGenerationDialog? fogGenerationDialog = null;
         canvas.ViewportChanged += (_, viewport) => ViewModel?.UpdateViewport(viewport);
+        canvas.CursorUpdated += (_, cursor) => ViewModel?.UpdateCursor(cursor);
 
         canvas.BrushStrokeStarted += (_, _) => ViewModel?.BeginBrushStroke();
         canvas.BrushStrokeEnded += (_, _) => ViewModel?.EndBrushStroke();

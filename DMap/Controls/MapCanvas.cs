@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Windows.Input;
 
 using Avalonia;
@@ -7,6 +8,7 @@ using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Svg.Skia;
 
 using DMap.Commands;
 using DMap.Models;
@@ -120,6 +122,30 @@ public class MapCanvas : Control
     /// <summary>Styled property for the shape type used in cursor preview and shape strokes.</summary>
     public static readonly StyledProperty<ShapeType> ShapeTypeProperty =
         AvaloniaProperty.Register<MapCanvas, ShapeType>(nameof(ShapeType), ShapeType.Rectangle);
+
+    /// <summary>Styled property for the player-visible cursor icon type.</summary>
+    public static readonly StyledProperty<CursorType> CursorTypeProperty =
+        AvaloniaProperty.Register<MapCanvas, CursorType>(nameof(CursorType), CursorType.Crosshair);
+
+    /// <summary>Styled property for the player-visible cursor icon size in screen pixels.</summary>
+    public static readonly StyledProperty<int> CursorSizeProperty =
+        AvaloniaProperty.Register<MapCanvas, int>(nameof(CursorSize), 64);
+
+    /// <summary>Styled property controlling whether the cursor only appears while left click is held.</summary>
+    public static readonly StyledProperty<bool> ShowCursorOnlyWhilePressedProperty =
+        AvaloniaProperty.Register<MapCanvas, bool>(nameof(ShowCursorOnlyWhilePressed));
+
+    /// <summary>Styled property for the player-visible cursor X coordinate in map space.</summary>
+    public static readonly StyledProperty<double> CursorMapXProperty =
+        AvaloniaProperty.Register<MapCanvas, double>(nameof(CursorMapX));
+
+    /// <summary>Styled property for the player-visible cursor Y coordinate in map space.</summary>
+    public static readonly StyledProperty<double> CursorMapYProperty =
+        AvaloniaProperty.Register<MapCanvas, double>(nameof(CursorMapY));
+
+    /// <summary>Styled property controlling whether the player-visible cursor is rendered.</summary>
+    public static readonly StyledProperty<bool> IsCursorVisibleProperty =
+        AvaloniaProperty.Register<MapCanvas, bool>(nameof(IsCursorVisible));
 
     /// <summary>Styled property controlling whether the map image is rendered (true) or replaced with white (false).</summary>
     public static readonly StyledProperty<bool> ShowMapProperty =
@@ -260,6 +286,48 @@ public class MapCanvas : Control
         set => SetValue(ShapeTypeProperty, value);
     }
 
+    /// <summary>Player-visible cursor icon type.</summary>
+    public CursorType CursorType
+    {
+        get => GetValue(CursorTypeProperty);
+        set => SetValue(CursorTypeProperty, value);
+    }
+
+    /// <summary>Player-visible cursor icon size in screen pixels.</summary>
+    public int CursorSize
+    {
+        get => GetValue(CursorSizeProperty);
+        set => SetValue(CursorSizeProperty, value);
+    }
+
+    /// <summary><see langword="true"/> when the cursor should only be visible while left click is held.</summary>
+    public bool ShowCursorOnlyWhilePressed
+    {
+        get => GetValue(ShowCursorOnlyWhilePressedProperty);
+        set => SetValue(ShowCursorOnlyWhilePressedProperty, value);
+    }
+
+    /// <summary>Player-visible cursor X coordinate in map space.</summary>
+    public double CursorMapX
+    {
+        get => GetValue(CursorMapXProperty);
+        set => SetValue(CursorMapXProperty, value);
+    }
+
+    /// <summary>Player-visible cursor Y coordinate in map space.</summary>
+    public double CursorMapY
+    {
+        get => GetValue(CursorMapYProperty);
+        set => SetValue(CursorMapYProperty, value);
+    }
+
+    /// <summary><see langword="true"/> when the player-visible cursor should be rendered.</summary>
+    public bool IsCursorVisible
+    {
+        get => GetValue(IsCursorVisibleProperty);
+        set => SetValue(IsCursorVisibleProperty, value);
+    }
+
     /// <summary>
     /// When <see langword="false"/>, the map image is replaced with a white fill so the fog mask
     /// boundaries are easier to inspect. The fog overlay is still rendered.
@@ -293,6 +361,11 @@ public class MapCanvas : Control
     /// </summary>
     public event EventHandler<ViewportPayload>? ViewportChanged;
 
+    /// <summary>
+    /// Raised whenever the DM cursor state changes, expressed in map-space coordinates.
+    /// </summary>
+    public event EventHandler<CursorPayload>? CursorUpdated;
+
     /// <summary>Increases the fit-relative zoom by 20%.</summary>
     public ICommand ZoomInCommand { get; }
 
@@ -311,16 +384,20 @@ public class MapCanvas : Control
     int _lastBrushMapX;
     int _lastBrushMapY;
     bool _isDraggingShape;
+    bool _isCursorPressed;
     Point _shapeDragStart;
     Point _lastMousePosition;
     double _zoomPercent = 100.0;
+    static readonly Uri _iconBaseUri = new("avares://DMap/Assets/Icons/");
+    static readonly IReadOnlyDictionary<CursorType, IImage> _cursorIcons = CreateCursorIcons();
 
     static MapCanvas()
     {
         AffectsRender<MapCanvas>(
             MapImageProperty, FogMaskProperty, FogOpacityProperty,
             BrushDiameterProperty, ActiveToolProperty, BrushShapeProperty,
-            ShapeTypeProperty, ShowMapProperty,
+            ShapeTypeProperty, CursorTypeProperty, CursorSizeProperty, CursorMapXProperty,
+            CursorMapYProperty, IsCursorVisibleProperty, ShowMapProperty,
             FogTypeProperty, FogColorProperty, FogSeedProperty);
     }
 
@@ -335,6 +412,18 @@ public class MapCanvas : Control
         ZoomInCommand = new RelayCommand(() => ZoomLevel *= 1.2);
         ZoomOutCommand = new RelayCommand(() => ZoomLevel /= 1.2);
         RefitViewCommand = new RelayCommand(RefitViewToMapHeight);
+    }
+
+    static Dictionary<CursorType, IImage> CreateCursorIcons()
+    {
+        var icons = new Dictionary<CursorType, IImage>();
+        foreach (var cursorType in Enum.GetValues<CursorType>())
+        {
+            var uri = new Uri(_iconBaseUri, CursorTypeMetadata.GetIconFileName(cursorType));
+            icons[cursorType] = new SvgImage { Source = SvgSource.Load(uri.ToString(), null) };
+        }
+
+        return icons;
     }
 
     /// <summary>
@@ -442,10 +531,30 @@ public class MapCanvas : Control
                 var fogRect = new Rect(0, 0, _fogBitmapController.Bitmap.Size.Width, _fogBitmapController.Bitmap.Size.Height);
                 context.DrawImage(_fogBitmapController.Bitmap, fogRect);
             }
+
         }
 
-        if (IsDmMode && IsPointerOver)
+        if (ShouldRenderCursor())
+            RenderCursor(context, CursorMapX, CursorMapY);
+
+        if (IsDmMode && IsPointerOver && ActiveTool != ToolType.Cursor)
             RenderToolOverlay(context, zoom);
+    }
+
+    /// <summary>Returns <see langword="true"/> when the configured cursor icon should be drawn.</summary>
+    bool ShouldRenderCursor() =>
+        IsCursorVisible && !_isPanning && (!IsDmMode || ActiveTool == ToolType.Cursor);
+
+    /// <summary>Draws the selected cursor icon at a map-space point using screen-pixel size.</summary>
+    void RenderCursor(DrawingContext context, double mapX, double mapY)
+    {
+        if (!_cursorIcons.TryGetValue(CursorType, out var icon))
+            return;
+
+        var size = Math.Max(1, CursorSize);
+        var x = mapX * ZoomLevel + OffsetX - size / 2.0;
+        var y = mapY * ZoomLevel + OffsetY - size / 2.0;
+        context.DrawImage(icon, new Rect(x, y, size, size));
     }
 
     /// <summary>
@@ -520,7 +629,21 @@ public class MapCanvas : Control
     protected override void OnPointerEntered(PointerEventArgs e)
     {
         base.OnPointerEntered(e);
+        _lastMousePosition = e.GetPosition(this);
+        UpdateCursorMapPosition(_lastMousePosition);
+        RaiseCursorUpdated();
         UpdateCursor();
+    }
+
+    /// <inheritdoc/>
+    protected override void OnPointerExited(PointerEventArgs e)
+    {
+        base.OnPointerExited(e);
+        _isCursorPressed = false;
+        if (ActiveTool == ToolType.Cursor)
+            RaiseCursorUpdated(forceVisible: false);
+        UpdateCursor();
+        InvalidateVisual();
     }
 
     /// <inheritdoc/>
@@ -528,7 +651,20 @@ public class MapCanvas : Control
     {
         base.OnPropertyChanged(change);
         if (change.Property == ActiveToolProperty || change.Property == IsDmModeProperty)
+        {
+            if (ActiveTool != ToolType.Cursor)
+                _isCursorPressed = false;
+            RaiseCursorUpdated();
             UpdateCursor();
+        }
+
+        if (change.Property == CursorTypeProperty
+            || change.Property == CursorSizeProperty
+            || change.Property == ShowCursorOnlyWhilePressedProperty)
+        {
+            RaiseCursorUpdated();
+            UpdateCursor();
+        }
 
         if (change.Property == MapImageProperty && MapImage is not null)
             RefitViewToMapHeight();
@@ -564,21 +700,33 @@ public class MapCanvas : Control
     /// </summary>
     void UpdateCursor()
     {
-        if (!IsDmMode || ActiveTool == ToolType.Fog)
+        if (!IsDmMode)
         {
             Cursor = Cursor.Default;
-            return;
-        }
-
-        if (_isPainting)
-        {
-            Cursor = new Cursor(StandardCursorType.None);
             return;
         }
 
         if (_isPanning || ActiveTool == ToolType.Pan)
         {
             Cursor = new Cursor(StandardCursorType.SizeAll);
+            return;
+        }
+
+        if (ActiveTool == ToolType.Fog)
+        {
+            Cursor = Cursor.Default;
+            return;
+        }
+
+        if (ActiveTool == ToolType.Cursor)
+        {
+            Cursor = IsCursorVisible ? new Cursor(StandardCursorType.None) : Cursor.Default;
+            return;
+        }
+
+        if (_isPainting)
+        {
+            Cursor = new Cursor(StandardCursorType.None);
             return;
         }
 
@@ -599,6 +747,17 @@ public class MapCanvas : Control
         {
             _isPanning = true;
             _lastPanPoint = point.Position;
+            UpdateCursor();
+            e.Handled = true;
+            return;
+        }
+
+        if (ActiveTool == ToolType.Cursor)
+        {
+            UpdateCursorMapPosition(point.Position);
+            if (point.Properties.IsLeftButtonPressed)
+                _isCursorPressed = true;
+            RaiseCursorUpdated();
             UpdateCursor();
             e.Handled = true;
             return;
@@ -653,6 +812,7 @@ public class MapCanvas : Control
         base.OnPointerMoved(e);
         var point = e.GetCurrentPoint(this);
         _lastMousePosition = point.Position;
+        UpdateCursorMapPosition(point.Position);
 
         if (!IsDmMode)
             return;
@@ -663,6 +823,15 @@ public class MapCanvas : Control
             _viewport.PanBy(delta);
             OnViewportStateChanged();
             _lastPanPoint = point.Position;
+            e.Handled = true;
+            return;
+        }
+
+        if (ActiveTool == ToolType.Cursor)
+        {
+            RaiseCursorUpdated();
+            UpdateCursor();
+            InvalidateVisual();
             e.Handled = true;
             return;
         }
@@ -683,6 +852,26 @@ public class MapCanvas : Control
 
         if (!IsDmMode)
             return;
+
+        if (_isPanning)
+        {
+            _isPanning = false;
+            UpdateCursor();
+            e.Handled = true;
+            return;
+        }
+
+        if (ActiveTool == ToolType.Cursor)
+        {
+            var point = e.GetCurrentPoint(this);
+            UpdateCursorMapPosition(point.Position);
+            _isCursorPressed = point.Properties.IsLeftButtonPressed;
+            RaiseCursorUpdated();
+            UpdateCursor();
+            InvalidateVisual();
+            e.Handled = true;
+            return;
+        }
 
         if (_isDraggingShape)
         {
@@ -730,6 +919,39 @@ public class MapCanvas : Control
             return;
 
         ViewportChanged?.Invoke(this, GetViewport());
+    }
+
+    /// <summary>Stores the current cursor position in map-space styled properties.</summary>
+    void UpdateCursorMapPosition(Point screenPosition)
+    {
+        var mapPosition = _viewport.ScreenToMap(screenPosition);
+        SetValue(CursorMapXProperty, mapPosition.X);
+        SetValue(CursorMapYProperty, mapPosition.Y);
+    }
+
+    /// <summary>
+    /// Updates local cursor visibility and raises <see cref="CursorUpdated"/> for DM cursor changes.
+    /// </summary>
+    void RaiseCursorUpdated(bool? forceVisible = null)
+    {
+        if (!IsDmMode)
+            return;
+
+        var visible = forceVisible ?? (ActiveTool == ToolType.Cursor
+            && IsPointerOver
+            && (!ShowCursorOnlyWhilePressed || _isCursorPressed));
+
+        SetValue(IsCursorVisibleProperty, visible);
+        CursorUpdated?.Invoke(this, new CursorPayload
+        {
+            MapX = CursorMapX,
+            MapY = CursorMapY,
+            CursorType = CursorType,
+            CursorSize = Math.Max(1, CursorSize),
+            IsVisible = visible,
+        });
+
+        InvalidateVisual();
     }
 
     /// <summary>

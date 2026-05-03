@@ -42,6 +42,9 @@ public sealed class DmHostService : IDmHostService
     /// <summary>Cached viewport payload sent to new clients on connect, or <see langword="null"/> if never set.</summary>
     byte[]? _pendingViewport;
 
+    /// <summary>Cached cursor payload sent to new clients on connect, or <see langword="null"/> if never set.</summary>
+    byte[]? _pendingCursor;
+
     /// <inheritdoc/>
     public int Port { get; set; }
 
@@ -102,6 +105,7 @@ public sealed class DmHostService : IDmHostService
             byte[]? pendingMapImage;
             byte[]? pendingFogAppearance;
             byte[]? pendingViewport;
+            byte[]? pendingCursor;
             lock (_clientsLock)
             {
                 pendingSessionInfo = _pendingSession is not null && _pendingFogMask is not null
@@ -110,6 +114,7 @@ public sealed class DmHostService : IDmHostService
                 pendingMapImage = _pendingMapImage;
                 pendingFogAppearance = _pendingFogAppearance;
                 pendingViewport = _pendingViewport;
+                pendingCursor = _pendingCursor;
             }
 
             if (pendingSessionInfo is not null)
@@ -123,6 +128,9 @@ public sealed class DmHostService : IDmHostService
 
             if (pendingViewport is not null)
                 await ProtocolFraming.WriteFrameAsync(stream, MessageType.Viewport, pendingViewport, default);
+
+            if (pendingCursor is not null)
+                await ProtocolFraming.WriteFrameAsync(stream, MessageType.Cursor, pendingCursor, default);
 
             // Keep connection alive until cancelled or disconnected
             var buffer = new byte[1];
@@ -211,6 +219,18 @@ public sealed class DmHostService : IDmHostService
         }
 
         return BroadcastAsync(MessageType.Viewport, payload, ct);
+    }
+
+    /// <inheritdoc/>
+    public Task SendCursorAsync(CursorPayload cursor, CancellationToken ct)
+    {
+        var payload = cursor.Serialize();
+        lock (_clientsLock)
+        {
+            _pendingCursor = payload;
+        }
+
+        return BroadcastAsync(MessageType.Cursor, payload, ct);
     }
 
     /// <inheritdoc/>
