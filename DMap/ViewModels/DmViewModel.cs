@@ -37,10 +37,6 @@ public class DmViewModel : ViewModelBase, IDisposable
     const double DefaultShapeSoftness = 0.0;
     const double DefaultShapeOpacity = 1.0;
 
-    const double DefaultZoomLevel = 1.0;
-    const double MinZoomLevel = 0.1;
-    const double MaxZoomLevel = 10.0;
-
     const double DefaultFogOpacity = 0.5;
 
     readonly IFogMaskService _fogService;
@@ -117,44 +113,6 @@ public class DmViewModel : ViewModelBase, IDisposable
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
     } = DefaultFogOpacity;
-
-    /// <summary>Horizontal pan offset of the map canvas in screen pixels.</summary>
-    public double OffsetX
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    }
-
-    /// <summary>Vertical pan offset of the map canvas in screen pixels.</summary>
-    public double OffsetY
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    }
-
-    /// <summary>
-    /// Current zoom multiplier applied to the canvas transform.
-    /// Changing this value also raises <see cref="ZoomPercent"/> change notification.
-    /// </summary>
-    public double ZoomLevel
-    {
-        get;
-        set
-        {
-            this.RaiseAndSetIfChanged(ref field, value);
-            this.RaisePropertyChanged(nameof(ZoomPercent));
-        }
-    } = DefaultZoomLevel;
-
-    /// <summary>
-    /// <see cref="ZoomLevel"/> expressed as a percentage in [10, 1000], rounded to the nearest integer.
-    /// Setting this property converts the value and clamps it within allowed bounds.
-    /// </summary>
-    public decimal ZoomPercent
-    {
-        get => (decimal)Math.Round(ZoomLevel * 100);
-        set => ZoomLevel = Math.Clamp((double)value / 100.0, MinZoomLevel, MaxZoomLevel);
-    }
 
     /// <summary>Number of player TCP connections currently open on the host service.</summary>
     public int ConnectedPlayers
@@ -290,15 +248,6 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// <summary>Opens a file picker and loads the selected image as the map background.</summary>
     public ReactiveCommand<Unit, Unit> LoadMapCommand { get; }
 
-    /// <summary>Increases the zoom level by 20%.</summary>
-    public ReactiveCommand<Unit, Unit> ZoomInCommand { get; }
-
-    /// <summary>Decreases the zoom level by ~17%.</summary>
-    public ReactiveCommand<Unit, Unit> ZoomOutCommand { get; }
-
-    /// <summary>Resets zoom to 100% and clears the pan offset.</summary>
-    public ReactiveCommand<Unit, Unit> ResetViewCommand { get; }
-
     /// <summary>Activates the Brush tool.</summary>
     public ReactiveCommand<Unit, Unit> SelectBrushCommand { get; }
 
@@ -414,9 +363,6 @@ public class DmViewModel : ViewModelBase, IDisposable
         _memoryTimer.Start();
 
         LoadMapCommand = ReactiveCommand.CreateFromTask(LoadMapAsync);
-        ZoomInCommand = ReactiveCommand.Create(() => { ZoomLevel = Math.Min(ZoomLevel * 1.2, 10.0); });
-        ZoomOutCommand = ReactiveCommand.Create(() => { ZoomLevel = Math.Max(ZoomLevel / 1.2, 0.1); });
-        ResetViewCommand = ReactiveCommand.Create(() => { ZoomLevel = 1.0; OffsetX = 0; OffsetY = 0; });
         SelectBrushCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Brush; });
         SelectShapeCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Shape; });
         SelectPanCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Pan; });

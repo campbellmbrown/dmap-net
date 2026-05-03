@@ -65,10 +65,6 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
                 vm.WhenAnyValue(x => x.FogMask)
                     .Subscribe(_ => canvas.RebuildFogBitmap()));
 
-            _activationDisposables.Add(
-                vm.WhenAnyValue(x => x.MapImage)
-                    .Subscribe(_ => vm.UpdateViewport(canvas.GetViewport())));
-
             vm.FogUpdated += OnFogUpdated;
             _activationDisposables.Add(
                 Disposable.Create(() => vm.FogUpdated -= OnFogUpdated));

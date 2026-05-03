@@ -1,13 +1,16 @@
 using System;
 using System.Threading.Tasks;
+using System.Windows.Input;
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 
+using DMap.Commands;
 using DMap.Models;
 using DMap.Services.Fog;
 using DMap.Services.Networking;
@@ -65,8 +68,8 @@ public class ShapeStrokeEventArgs : EventArgs
 /// </summary>
 public class MapCanvas : Control
 {
-    const double MinZoomLevel = 0.1;
-    const double MaxZoomLevel = 10.0;
+    const double MinZoomPercent = 10.0;
+    const double MaxZoomPercent = 1000.0;
 
     /// <summary>Styled property for the map background image.</summary>
     public static readonly StyledProperty<Bitmap?> MapImageProperty =
@@ -79,6 +82,14 @@ public class MapCanvas : Control
     /// <summary>Styled property for the canvas zoom multiplier (default 1.0).</summary>
     public static readonly StyledProperty<double> ZoomLevelProperty =
         AvaloniaProperty.Register<MapCanvas, double>(nameof(ZoomLevel), 1.0);
+
+    /// <summary>Direct property for fit-relative zoom shown in the DM toolbar.</summary>
+    public static readonly DirectProperty<MapCanvas, double> ZoomPercentProperty =
+        AvaloniaProperty.RegisterDirect<MapCanvas, double>(
+            nameof(ZoomPercent),
+            canvas => canvas.ZoomPercent,
+            (canvas, value) => canvas.ZoomPercent = value,
+            defaultBindingMode: BindingMode.TwoWay);
 
     /// <summary>Styled property for the horizontal pan offset in screen pixels.</summary>
     public static readonly StyledProperty<double> OffsetXProperty =
@@ -146,11 +157,23 @@ public class MapCanvas : Control
         set => SetValue(FogMaskProperty, value);
     }
 
-    /// <summary>Zoom multiplier applied via a scale transform before the pan offset.</summary>
+    /// <summary>Actual zoom multiplier applied via a scale transform before the pan offset.</summary>
     public double ZoomLevel
     {
         get => GetValue(ZoomLevelProperty);
-        set => SetValue(ZoomLevelProperty, value);
+        set => SetValue(ZoomLevelProperty, ClampZoomLevel(value));
+    }
+
+    /// <summary>Zoom level expressed as a percentage of the height-fit zoom, where 100% fits map height to canvas height.</summary>
+    public double ZoomPercent
+    {
+        get => _zoomPercent;
+        set
+        {
+            value = Math.Clamp(value, MinZoomPercent, MaxZoomPercent);
+            ZoomLevel = ZoomPercentToZoomLevel(value);
+            SetAndRaise(ZoomPercentProperty, ref _zoomPercent, value);
+        }
     }
 
     /// <summary>Horizontal translation of the canvas in screen pixels.</summary>
@@ -277,6 +300,15 @@ public class MapCanvas : Control
     /// </summary>
     public event EventHandler<ViewportPayload>? ViewportChanged;
 
+    /// <summary>Increases the fit-relative zoom by 20%.</summary>
+    public ICommand ZoomInCommand { get; }
+
+    /// <summary>Decreases the fit-relative zoom by ~17%.</summary>
+    public ICommand ZoomOutCommand { get; }
+
+    /// <summary>Fits the map height to the canvas and aligns its top and bottom edges with the canvas.</summary>
+    public ICommand RefitViewCommand { get; }
+
     static readonly FogTextureGenerator _textureGenerator = new();
 
     WriteableBitmap? _fogBitmap;
@@ -291,6 +323,7 @@ public class MapCanvas : Control
     bool _isDraggingShape;
     Point _shapeDragStart;
     Point _lastMousePosition;
+    double _zoomPercent = 100.0;
 
     static MapCanvas()
     {
@@ -307,6 +340,9 @@ public class MapCanvas : Control
     {
         ClipToBounds = true;
         Focusable = true;
+        ZoomInCommand = new RelayCommand(() => ZoomLevel *= 1.2);
+        ZoomOutCommand = new RelayCommand(() => ZoomLevel /= 1.2);
+        RefitViewCommand = new RelayCommand(RefitViewToMapHeight);
     }
 
     /// <summary>
@@ -367,10 +403,56 @@ public class MapCanvas : Control
     /// </summary>
     public void ApplyViewport(ViewportPayload viewport)
     {
-        var zoom = Math.Clamp(viewport.ZoomLevel, MinZoomLevel, MaxZoomLevel);
+        var zoom = viewport.ZoomLevel;
+        if (double.IsNaN(zoom) || double.IsInfinity(zoom) || zoom <= 0)
+            zoom = GetHeightFitZoomLevel();
+
         ZoomLevel = zoom;
         OffsetX = Bounds.Width / 2.0 - viewport.CenterMapX * zoom;
         OffsetY = Bounds.Height / 2.0 - viewport.CenterMapY * zoom;
+    }
+
+    /// <summary>
+    /// Returns the zoom where the map height exactly matches the current canvas height.
+    /// This is the DM-facing 100% zoom baseline.
+    /// </summary>
+    public double GetHeightFitZoomLevel()
+    {
+        var mapImage = MapImage;
+        if (mapImage is null || Bounds.Height <= 0 || mapImage.Size.Height <= 0)
+            return 1.0;
+
+        return Bounds.Height / mapImage.Size.Height;
+    }
+
+    /// <summary>
+    /// Fits the map vertically so its top and bottom edges align with the canvas, and centers it horizontally.
+    /// </summary>
+    public void RefitViewToMapHeight()
+    {
+        var mapImage = MapImage;
+        if (mapImage is null || Bounds.Height <= 0 || mapImage.Size.Height <= 0)
+            return;
+
+        var zoom = GetHeightFitZoomLevel();
+        ZoomLevel = zoom;
+        OffsetX = (Bounds.Width - mapImage.Size.Width * zoom) / 2.0;
+        OffsetY = 0;
+    }
+
+    /// <summary>Converts a fit-relative zoom percentage to the actual canvas zoom multiplier.</summary>
+    double ZoomPercentToZoomLevel(double zoomPercent) =>
+        GetHeightFitZoomLevel() * Math.Clamp(zoomPercent, MinZoomPercent, MaxZoomPercent) / 100.0;
+
+    /// <summary>Clamps actual canvas zoom to the allowed fit-relative zoom range.</summary>
+    double ClampZoomLevel(double zoomLevel) =>
+        Math.Clamp(zoomLevel, ZoomPercentToZoomLevel(MinZoomPercent), ZoomPercentToZoomLevel(MaxZoomPercent));
+
+    /// <summary>Updates <see cref="ZoomPercent"/> after actual zoom or the height-fit baseline changes.</summary>
+    void UpdateZoomPercent()
+    {
+        var percent = Math.Clamp(ZoomLevel / GetHeightFitZoomLevel() * 100.0, MinZoomPercent, MaxZoomPercent);
+        SetAndRaise(ZoomPercentProperty, ref _zoomPercent, percent);
     }
 
     /// <summary>
@@ -633,6 +715,25 @@ public class MapCanvas : Control
         if (change.Property == ActiveToolProperty || change.Property == IsDmModeProperty)
             UpdateCursor();
 
+        if (change.Property == MapImageProperty && MapImage is not null)
+            RefitViewToMapHeight();
+
+        if (change.Property == BoundsProperty
+            || change.Property == MapImageProperty
+            || change.Property == ZoomLevelProperty)
+        {
+            UpdateZoomPercent();
+        }
+
+        if (change.Property == BoundsProperty
+            || change.Property == MapImageProperty
+            || change.Property == ZoomLevelProperty
+            || change.Property == OffsetXProperty
+            || change.Property == OffsetYProperty)
+        {
+            RaiseViewportChanged();
+        }
+
         if (FogMask is null)
             return;
 
@@ -647,15 +748,6 @@ public class MapCanvas : Control
         {
             UpdateFogBitmapRegion(new PixelRect(0, 0, FogMask.Width, FogMask.Height));
             InvalidateVisual();
-        }
-
-        if (change.Property == BoundsProperty
-            || change.Property == MapImageProperty
-            || change.Property == ZoomLevelProperty
-            || change.Property == OffsetXProperty
-            || change.Property == OffsetYProperty)
-        {
-            RaiseViewportChanged();
         }
     }
 
@@ -817,7 +909,7 @@ public class MapCanvas : Control
         var mousePos = e.GetPosition(this);
         var oldZoom = ZoomLevel;
         var zoomFactor = e.Delta.Y > 0 ? 1.1 : 1.0 / 1.1;
-        var newZoom = Math.Clamp(oldZoom * zoomFactor, MinZoomLevel, MaxZoomLevel);
+        var newZoom = ClampZoomLevel(oldZoom * zoomFactor);
 
         // Zoom centered on mouse position
         OffsetX = mousePos.X - ((mousePos.X - OffsetX) * (newZoom / oldZoom));

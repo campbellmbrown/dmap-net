@@ -80,27 +80,6 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    /// <summary>Horizontal pan offset of the map canvas in screen pixels.</summary>
-    public double OffsetX
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    }
-
-    /// <summary>Vertical pan offset of the map canvas in screen pixels.</summary>
-    public double OffsetY
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    }
-
-    /// <summary>Current zoom multiplier applied to the canvas transform.</summary>
-    public double ZoomLevel
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    } = 1.0;
-
     /// <summary>Fog overlay style as set by the DM. Defaults to flat black until the DM broadcasts an update.</summary>
     public FogType FogType
     {
