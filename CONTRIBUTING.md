@@ -65,13 +65,7 @@ sphinx-autobuild docs/source docs/build/html
 
 Then visit `http://127.0.0.1:8000`. Keep the command running while editing the wiki.
 
-On Windows, activate the virtual environment with `docs\.venv\Scripts\activate` and run the same server command:
-
-```powershell
-sphinx-autobuild docs/source docs/build/html
-```
-
-Use `make -C docs html` only when you want a one-off static build, which is what CI runs before publishing the wiki.
+On Windows, activate the virtual environment with `docs\.venv\Scripts\activate` and run the same server command.
 
 ## Changelog updates
 

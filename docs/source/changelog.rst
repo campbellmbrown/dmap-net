@@ -11,6 +11,7 @@ Unreleased
 * Updated the “Reset View” action: renamed to “Refit View”, updated icon, and now fits the map to the window.
 * Linux release builds are now single-file executables.
 * Allow cancelling shape drawing with the Escape key.
+* Improved constrained square and circle sizing so shallow drags use a 45 degree sizing rule instead of collapsing to the smaller axis delta.
 
 :release-link:`v1.0.0`
 ----------------------

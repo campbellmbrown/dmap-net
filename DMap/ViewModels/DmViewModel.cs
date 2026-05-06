@@ -573,7 +573,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         if (_fogService.Mask is null)
             return;
 
-        var (cx1, cy1, cx2, cy2) = ConstrainToSquare(SelectedShapeType, x1, y1, x2, y2);
+        var (cx1, cy1, cx2, cy2) = ShapeConstraintHelper.ConstrainBounds(SelectedShapeType, x1, y1, x2, y2);
 
         if (cx1 == cx2 && cy1 == cy2)
             return;
@@ -611,19 +611,6 @@ public class DmViewModel : ViewModelBase, IDisposable
             return default;
 
         return new PixelRect(minX, minY, maxX - minX + 1, maxY - minY + 1);
-    }
-
-    /// <summary>
-    /// For square and circle shape types, constrains the drag so the resulting shape has equal
-    /// width and height (the smaller of the two extents is used). Other shape types are returned unchanged.
-    /// </summary>
-    static (int, int, int, int) ConstrainToSquare(ShapeType shapeType, int x1, int y1, int x2, int y2)
-    {
-        if (shapeType is not ShapeType.Square and not ShapeType.Circle)
-            return (x1, y1, x2, y2);
-
-        var side = Math.Min(Math.Abs(x2 - x1), Math.Abs(y2 - y1));
-        return (x1, y1, x1 + Math.Sign(x2 - x1) * side, y1 + Math.Sign(y2 - y1) * side);
     }
 
     /// <summary>

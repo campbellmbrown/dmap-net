@@ -613,16 +613,8 @@ public class MapCanvas : Control
         else if (ActiveTool == ToolType.Shape && _isDraggingShape)
         {
             var start = _shapeDragStart;
-            var end = _lastMousePosition;
             var shapeType = ShapeType;
-
-            if (shapeType is ShapeType.Square or ShapeType.Circle)
-            {
-                var side = Math.Min(Math.Abs(end.X - start.X), Math.Abs(end.Y - start.Y));
-                end = new Point(
-                    start.X + Math.Sign(end.X - start.X) * side,
-                    start.Y + Math.Sign(end.Y - start.Y) * side);
-            }
+            var end = ShapeConstraintHelper.ConstrainEndPoint(shapeType, start, _lastMousePosition);
 
             if (shapeType is ShapeType.Ellipse or ShapeType.Circle)
             {
