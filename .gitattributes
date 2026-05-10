@@ -1,11 +1,14 @@
-# Common settings that generally should always be used with your language specific settings
-
 # Auto detect text files and perform LF normalization
 *          text=auto
 
-#
-# The above will handle all files NOT found below
-#
+# C# files
+# Force C# sources to use LF line endings to match the required line endings from .editorconfig
+*.cs       text eol=lf diff=csharp
+*.cshtml   text eol=lf diff=html
+*.csx      text eol=lf diff=csharp
+*.sln      text eol=crlf
+*.slnx     text eol=crlf
+*.csproj   text eol=crlf
 
 # Documents
 *.bibtex   text diff=bibtex

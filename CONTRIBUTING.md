@@ -35,8 +35,45 @@ To test both DM and player behavior on one machine, load a map in the DM window 
 CI verifies formatting, so run this before opening a pull request:
 
 ```bash
-dotnet format DMap/DMap.csproj --verify-no-changes --no-restore
+dotnet format --verify-no-changes --no-restore
 ```
+
+Omit the `--verify-no-changes` flag to apply formatting fixes automatically.
+Omit `--no-restore` if you haven't restored dependencies yet.
+
+### Line endings
+
+If you see lots of these errors when checking formatting, your line endings are incorrect:
+
+```
+error WHITESPACE: Fix whitespace formatting.
+error ENDOFLINE: Fix end of line marker.
+```
+
+Formatting requires line endings to be set to LF (see end_of_line in `.editorconfig`).
+This setting *cannot* be set to CRLF, as that would break builds on Linux.
+Therefore, all source files should be in the work tree with LF line endings (even on Windows).
+This is controlled by the `.gitattributes` file.
+
+Creating a fresh clone of the repository will automatically set up the correct line endings.
+However, if you already have a clone with incorrect line endings, you can fix it by running:
+
+```bash
+git rm --cached -r .
+git reset --hard
+```
+
+***WARNING***: This will discard any uncommitted changes, so make sure to stash or commit them first.
+
+Check that the line endings are now correct by running:
+
+```bash
+git ls-files --eol | grep -E '\.cs$'
+```
+
+The expected output is `i/lf    w/lf    attr/text eol=lf` for all source files.
+
+Install the [EditorConfig extension](https://marketplace.visualstudio.com/items?itemName=EditorConfig.EditorConfig) in VS Code to automatically save files with the correct line endings.
 
 ## Run the wiki locally
 
