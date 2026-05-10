@@ -341,23 +341,6 @@ public sealed class DmHostService : IDmHostService
         return BroadcastAsync(MessageType.FogFull, ms.ToArray(), ct);
     }
 
-    /// <summary>Serializes session metadata plus a full fog mask for the initial player handshake.</summary>
-    static byte[] SerializeSessionInfo(MapSession session, FogMask mask)
-    {
-        using var ms = new MemoryStream();
-        using var writer = new BinaryWriter(ms);
-        writer.Write(session.SessionId.ToByteArray());
-        writer.Write(session.MapWidth);
-        writer.Write(session.MapHeight);
-
-        using (var deflate = new DeflateStream(ms, CompressionLevel.Fastest, leaveOpen: true))
-        {
-            deflate.Write(mask.Data, 0, mask.Data.Length);
-        }
-
-        return ms.ToArray();
-    }
-
     /// <summary>Applies an outgoing fog delta to the cached full mask used for late joiners.</summary>
     void ApplyDeltaToPendingMask(FogDelta delta)
     {

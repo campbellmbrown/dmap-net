@@ -185,23 +185,9 @@ public sealed class PlayerClientService : IPlayerClientService
     /// </summary>
     void HandleSessionInfo(byte[] payload)
     {
-        using var ms = new MemoryStream(payload);
-        using var reader = new BinaryReader(ms);
-
-        var guidBytes = reader.ReadBytes(16);
-        var sessionId = new Guid(guidBytes);
-        var width = reader.ReadInt32();
-        var height = reader.ReadInt32();
-
-        var data = new byte[width * height];
-        using var deflate = new DeflateStream(ms, CompressionMode.Decompress);
-        deflate.ReadExactly(data, 0, data.Length);
-
-        var session = new MapSession(sessionId, width, height);
-        SessionInfoReceived?.Invoke(this, session);
-
-        var mask = new FogMask(width, height, data);
-        FogFullReceived?.Invoke(this, mask);
+        var sessionInfo = SessionInfoPayload.Deserialize(payload);
+        SessionInfoReceived?.Invoke(this, sessionInfo.ToSession());
+        FogFullReceived?.Invoke(this, sessionInfo.ToFogMask());
     }
 
     /// <summary>
