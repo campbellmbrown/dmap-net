@@ -6,3 +6,4 @@ DMap Documentation
    :caption: Contents:
 
    changelog
+   protocol
