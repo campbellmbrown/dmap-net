@@ -11,6 +11,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 
 using DMap.Models;
+using DMap.Protocol;
 using DMap.Services.Fog;
 using DMap.Services.Networking;
 

@@ -3,6 +3,7 @@ using System.IO;
 using System.IO.Compression;
 
 using DMap.Models;
+using DMap.Protocol;
 
 namespace DMap.Services.Networking;
 

@@ -12,6 +12,7 @@ using Avalonia.Svg.Skia;
 
 using DMap.Commands;
 using DMap.Models;
+using DMap.Protocol;
 using DMap.Services.Networking;
 
 namespace DMap.Controls;

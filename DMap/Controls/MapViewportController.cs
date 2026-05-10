@@ -2,7 +2,7 @@ using System;
 
 using Avalonia;
 
-using DMap.Services.Networking;
+using DMap.Protocol;
 
 namespace DMap.Controls;
 
