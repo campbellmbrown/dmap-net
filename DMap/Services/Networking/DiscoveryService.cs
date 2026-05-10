@@ -10,6 +10,36 @@ using DMap.Models;
 namespace DMap.Services.Networking;
 
 /// <summary>
+/// UDP-based discovery service that allows DM hosts to announce their presence on the
+/// local network and player clients to listen for those announcements.
+/// </summary>
+public interface IDiscoveryService : IDisposable
+{
+    /// <summary>
+    /// Starts broadcasting session availability packets via UDP every two seconds.
+    /// Should only be called by the DM host side.
+    /// </summary>
+    /// <param name="session">Session metadata to embed in each broadcast packet.</param>
+    /// <param name="tcpPort">TCP port players should connect to.</param>
+    /// <param name="ct">Cancellation token that stops broadcasting when cancelled.</param>
+    Task StartBroadcastingAsync(MapSession session, int tcpPort, CancellationToken ct);
+
+    /// <summary>
+    /// Starts listening for DM broadcast packets on the discovery port.
+    /// Should only be called by the player client side.
+    /// </summary>
+    /// <param name="ct">Cancellation token that stops listening when cancelled.</param>
+    Task StartListeningAsync(CancellationToken ct);
+
+    /// <summary>
+    /// Raised each time a valid DM broadcast packet is received.
+    /// Consumers are responsible for de-duplicating by <see cref="DiscoveredDm.SessionId"/>
+    /// since the same DM broadcasts repeatedly.
+    /// </summary>
+    event EventHandler<DiscoveredDm>? DmDiscovered;
+}
+
+/// <summary>
 /// Default implementation of <see cref="IDiscoveryService"/> using UDP broadcast on a fixed port.
 /// Packet format: "DMAP" magic (4 bytes) | SessionId (16 bytes) | TCP port (4 bytes) |
 /// name byte length (4 bytes) | UTF-8 machine name.
