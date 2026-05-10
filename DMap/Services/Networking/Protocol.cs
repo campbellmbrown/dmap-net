@@ -58,46 +58,6 @@ public sealed class FogAppearancePayload
 }
 
 /// <summary>
-/// Camera state broadcast from the DM so players follow the DM viewport even when their
-/// window size differs. The payload is expressed in map-space center coordinates plus zoom.
-/// </summary>
-public sealed class ViewportPayload
-{
-    /// <summary>Map-space X coordinate that should be centered in the viewport.</summary>
-    public double CenterMapX { get; init; }
-
-    /// <summary>Map-space Y coordinate that should be centered in the viewport.</summary>
-    public double CenterMapY { get; init; }
-
-    /// <summary>Zoom multiplier to apply around the centered map coordinate.</summary>
-    public double ZoomLevel { get; init; }
-
-    /// <summary>
-    /// Serializes this payload to a fixed 24-byte buffer.
-    /// Format: CenterMapX (8 bytes) | CenterMapY (8 bytes) | ZoomLevel (8 bytes).
-    /// </summary>
-    public byte[] Serialize()
-    {
-        var bytes = new byte[24];
-        BitConverter.TryWriteBytes(bytes.AsSpan(0, 8), CenterMapX);
-        BitConverter.TryWriteBytes(bytes.AsSpan(8, 8), CenterMapY);
-        BitConverter.TryWriteBytes(bytes.AsSpan(16, 8), ZoomLevel);
-        return bytes;
-    }
-
-    /// <summary>Reconstructs a <see cref="ViewportPayload"/> from the buffer produced by <see cref="Serialize"/>.</summary>
-    public static ViewportPayload Deserialize(byte[] bytes)
-    {
-        return new ViewportPayload
-        {
-            CenterMapX = BitConverter.ToDouble(bytes, 0),
-            CenterMapY = BitConverter.ToDouble(bytes, 8),
-            ZoomLevel = BitConverter.ToDouble(bytes, 16),
-        };
-    }
-}
-
-/// <summary>
 /// A rectangular region of fog mask data that can be serialized for network transmission.
 /// Used for incremental fog updates so only the changed area is sent over the wire.
 /// The payload contains authoritative mask bytes for the addressed region, not a reveal-only diff.
