@@ -7,57 +7,6 @@ using DMap.Models;
 namespace DMap.Services.Networking;
 
 /// <summary>
-/// Fog overlay appearance settings broadcast from DM to players.
-/// Carries the selected <see cref="FogType"/>, the flat fog colour (used when type is
-/// <see cref="FogType.Color"/>), and a texture seed so all clients generate identical noise.
-/// </summary>
-public sealed class FogAppearancePayload
-{
-    /// <summary>Selected fog type (flat colour or one of the textured variants).</summary>
-    public FogType FogType { get; init; }
-
-    /// <summary>Red channel of the flat fog colour.</summary>
-    public byte R { get; init; }
-
-    /// <summary>Green channel of the flat fog colour.</summary>
-    public byte G { get; init; }
-
-    /// <summary>Blue channel of the flat fog colour.</summary>
-    public byte B { get; init; }
-
-    /// <summary>Texture seed (typically the session ID) so DM and players share the same noise.</summary>
-    public Guid Seed { get; init; }
-
-    /// <summary>
-    /// Serializes this payload to a fixed 20-byte buffer.
-    /// Format: 1 byte type | 1 byte R | 1 byte G | 1 byte B | 16 byte Guid.
-    /// </summary>
-    public byte[] Serialize()
-    {
-        var bytes = new byte[20];
-        bytes[0] = (byte)FogType;
-        bytes[1] = R;
-        bytes[2] = G;
-        bytes[3] = B;
-        Seed.TryWriteBytes(bytes.AsSpan(4, 16));
-        return bytes;
-    }
-
-    /// <summary>Reconstructs a <see cref="FogAppearancePayload"/> from the buffer produced by <see cref="Serialize"/>.</summary>
-    public static FogAppearancePayload Deserialize(byte[] bytes)
-    {
-        return new FogAppearancePayload
-        {
-            FogType = (FogType)bytes[0],
-            R = bytes[1],
-            G = bytes[2],
-            B = bytes[3],
-            Seed = new Guid(bytes.AsSpan(4, 16)),
-        };
-    }
-}
-
-/// <summary>
 /// A rectangular region of fog mask data that can be serialized for network transmission.
 /// Used for incremental fog updates so only the changed area is sent over the wire.
 /// The payload contains authoritative mask bytes for the addressed region, not a reveal-only diff.
