@@ -192,7 +192,7 @@ public sealed class DmHostService : IDmHostService
             lock (_clientsLock)
             {
                 pendingSessionInfo = _pendingSession is not null && _pendingFogMask is not null
-                    ? SerializeSessionInfo(_pendingSession, _pendingFogMask)
+                    ? SessionInfoPayload.FromSession(_pendingSession, _pendingFogMask).Serialize()
                     : _pendingSessionInfo;
                 pendingMapImage = _pendingMapImage;
                 pendingFogAppearance = _pendingFogAppearance;
@@ -258,7 +258,7 @@ public sealed class DmHostService : IDmHostService
     public Task SendSessionInfoAsync(MapSession session, FogMask mask, CancellationToken ct)
     {
         var cachedMask = mask.Clone();
-        var payload = SerializeSessionInfo(session, cachedMask);
+        var payload = SessionInfoPayload.FromSession(session, cachedMask).Serialize();
         lock (_clientsLock)
         {
             _pendingSession = session;
@@ -324,7 +324,7 @@ public sealed class DmHostService : IDmHostService
             if (_pendingSession is not null)
             {
                 _pendingFogMask = mask.Clone();
-                _pendingSessionInfo = SerializeSessionInfo(_pendingSession, _pendingFogMask);
+                _pendingSessionInfo = SessionInfoPayload.FromSession(_pendingSession, _pendingFogMask).Serialize();
             }
         }
 
