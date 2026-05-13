@@ -446,7 +446,7 @@
                                     <DataTemplate x:CompileBindings="False">
                                         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                                             <Image Width="16" Height="16" Source="{Binding Converter={StaticResource CursorTypeIconConverter}}" />
-                                            <TextBlock Text="{Binding}" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Converter={StaticResource CursorTypeDisplayNameConverter}}" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
