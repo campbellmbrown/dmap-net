@@ -37,6 +37,7 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     const double DefaultShapeSoftness = 0.0;
     const double DefaultShapeOpacity = 1.0;
+    const int DefaultShapeCornerRadius = 0;
 
     const double DefaultFogOpacity = 0.5;
 
@@ -109,6 +110,13 @@ public class DmViewModel : ViewModelBase, IDisposable
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
     } = DefaultShapeOpacity;
+
+    /// <summary>Fixed corner radius in map pixels for rectangle and square shape variants.</summary>
+    public int ShapeCornerRadius
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = DefaultShapeCornerRadius;
 
     /// <summary>Opacity of the fog overlay rendered on the canvas, in the range [0, 1].</summary>
     public double FogOpacity
@@ -183,11 +191,18 @@ public class DmViewModel : ViewModelBase, IDisposable
     public ShapeType SelectedShapeType
     {
         get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
+        set
+        {
+            this.RaiseAndSetIfChanged(ref field, value);
+            this.RaisePropertyChanged(nameof(IsShapeCornerRadiusVisible));
+        }
     }
 
     /// <summary>All available shape types, used to populate the shape type selector.</summary>
     public IReadOnlyList<ShapeType> ShapeTypes { get; } = Enum.GetValues<ShapeType>();
+
+    /// <summary><see langword="true"/> when the selected shape supports a configurable corner radius.</summary>
+    public bool IsShapeCornerRadiusVisible => ShapeTypeMetadata.SupportsCornerRadius(SelectedShapeType);
 
     /// <summary>
     /// The fog overlay style. Changing this raises change notification for
@@ -588,7 +603,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         if (_fogService.Mask is null)
             return;
 
-        var (cx1, cy1, cx2, cy2) = ShapeConstraintHelper.ConstrainBounds(SelectedShapeType, x1, y1, x2, y2);
+        var (cx1, cy1, cx2, cy2) = ShapeConstraintHelper.NormalizeBounds(SelectedShapeType, x1, y1, x2, y2);
 
         if (cx1 == cx2 && cy1 == cy2)
             return;
@@ -599,9 +614,9 @@ public class DmViewModel : ViewModelBase, IDisposable
 
         var before = FogDeltaCommand.CaptureFromMask(_fogService.Mask, shapeRect);
 
-        var dirtyRect = (SelectedShapeType is ShapeType.Ellipse or ShapeType.Circle)
+        var dirtyRect = ShapeTypeMetadata.IsEllipse(SelectedShapeType)
             ? _fogService.ApplyEllipse(cx1, cy1, cx2, cy2, (float)ShapeSoftness, (float)ShapeOpacity, isErasing)
-            : _fogService.ApplyRectangle(cx1, cy1, cx2, cy2, (float)ShapeSoftness, (float)ShapeOpacity, isErasing);
+            : _fogService.ApplyRectangle(cx1, cy1, cx2, cy2, (float)ShapeSoftness, (float)ShapeOpacity, ShapeCornerRadius, isErasing);
 
         if (IsEmpty(dirtyRect))
             return;

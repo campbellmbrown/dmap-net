@@ -63,9 +63,10 @@ public interface IFogMaskService
     /// <param name="y2">Opposite corner Y in map pixels.</param>
     /// <param name="softness">Edge feathering in [0, 1]; 0 = hard edge.</param>
     /// <param name="opacity">Maximum alpha to apply in [0, 1].</param>
+    /// <param name="cornerRadius">Fixed corner radius in map pixels. Values less than or equal to zero keep sharp corners.</param>
     /// <param name="erase">When <see langword="true"/>, removes fog instead of adding it.</param>
     /// <returns>Bounding rectangle of pixels that were modified.</returns>
-    PixelRect ApplyRectangle(int x1, int y1, int x2, int y2, float softness, float opacity, bool erase = false);
+    PixelRect ApplyRectangle(int x1, int y1, int x2, int y2, float softness, float opacity, float cornerRadius = 0, bool erase = false);
 
     /// <summary>
     /// Fills (or erases) an elliptical region of the mask with optional edge feathering.

@@ -84,7 +84,7 @@ public sealed class FogMaskService : IFogMaskService
     }
 
     /// <inheritdoc/>
-    public PixelRect ApplyRectangle(int x1, int y1, int x2, int y2, float softness, float opacity, bool erase = false)
+    public PixelRect ApplyRectangle(int x1, int y1, int x2, int y2, float softness, float opacity, float cornerRadius = 0, bool erase = false)
     {
         if (Mask is null)
             throw new InvalidOperationException(MaskNotInitialized);
@@ -101,13 +101,26 @@ public sealed class FogMaskService : IFogMaskService
         if (minX > maxX || minY > maxY)
             return default;
 
+        var width = shapeMaxX - shapeMinX + 1.0;
+        var height = shapeMaxY - shapeMinY + 1.0;
+        var effectiveCornerRadius = ShapeTypeMetadata.GetEffectiveCornerRadius(cornerRadius, width, height);
         var feather = softness * Math.Min(shapeMaxX - shapeMinX, shapeMaxY - shapeMinY) / 2.0f;
+        var centerX = (shapeMinX + shapeMaxX) / 2.0;
+        var centerY = (shapeMinY + shapeMaxY) / 2.0;
+        var halfWidth = width / 2.0;
+        var halfHeight = height / 2.0;
 
         for (var y = minY; y <= maxY; y++)
         {
             for (var x = minX; x <= maxX; x++)
             {
-                var coverage = RectCoverage(x, y, shapeMinX, shapeMinY, shapeMaxX, shapeMaxY, feather);
+                var coverage = effectiveCornerRadius > 0
+                    ? RoundedRectCoverage(x, y, centerX, centerY, halfWidth, halfHeight, effectiveCornerRadius, feather)
+                    : RectCoverage(x, y, shapeMinX, shapeMinY, shapeMaxX, shapeMaxY, feather);
+
+                if (coverage <= 0)
+                    continue;
+
                 var snapshotValue = Mask[x, y];
                 BrushHelper.ApplyPixel(Mask, x, y, coverage, erase, snapshotValue, opacity);
             }
@@ -241,5 +254,28 @@ public sealed class FogMaskService : IFogMaskService
             Math.Min(x - minX, maxX - x),
             Math.Min(y - minY, maxY - y));
         return Math.Min(1.0f, minDist / feather);
+    }
+
+    /// <summary>Returns the coverage value in [0, 1] for a rounded rectangle with optional feathering.</summary>
+    static double RoundedRectCoverage(int x, int y, double centerX, double centerY, double halfWidth, double halfHeight, double cornerRadius, float feather)
+    {
+        var distance = RoundedRectSignedDistance(x, y, centerX, centerY, halfWidth, halfHeight, cornerRadius);
+        if (distance > 0)
+            return 0;
+
+        if (feather <= 0 || distance <= -feather)
+            return 1.0;
+
+        return Math.Min(1.0, -distance / feather);
+    }
+
+    /// <summary>Returns the signed distance to the boundary of a rounded rectangle centered at the origin.</summary>
+    static double RoundedRectSignedDistance(double x, double y, double centerX, double centerY, double halfWidth, double halfHeight, double cornerRadius)
+    {
+        var qx = Math.Abs(x - centerX) - (halfWidth - cornerRadius);
+        var qy = Math.Abs(y - centerY) - (halfHeight - cornerRadius);
+        var ax = Math.Max(qx, 0.0);
+        var ay = Math.Max(qy, 0.0);
+        return Math.Sqrt(ax * ax + ay * ay) + Math.Min(Math.Max(qx, qy), 0.0) - cornerRadius;
     }
 }

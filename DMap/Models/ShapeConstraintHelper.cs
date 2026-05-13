@@ -5,44 +5,52 @@ using Avalonia;
 namespace DMap.Models;
 
 /// <summary>
-/// Shared drag-constraint logic for square and circle shape tools.
+/// Shared drag normalization logic for centered and aspect-constrained shape tools.
 /// </summary>
 internal static class ShapeConstraintHelper
 {
     /// <summary>
-    /// Constrains a screen-space shape drag endpoint so square and circle tools size against a
-    /// 45 degree support line instead of the smaller axis delta.
+    /// Normalizes a screen-space shape drag into two opposing bounding-box corners.
     /// </summary>
-    internal static Point ConstrainEndPoint(ShapeType shapeType, Point start, Point end)
+    internal static (Point Start, Point End) NormalizeBounds(ShapeType shapeType, Point start, Point end)
     {
-        if (shapeType is not ShapeType.Square and not ShapeType.Circle)
-            return end;
-
         var dx = end.X - start.X;
         var dy = end.Y - start.Y;
-        var side = (Math.Abs(dx) + Math.Abs(dy)) / 2.0;
-        return new Point(
-            start.X + GetConstrainedDelta(dx, dy, side),
-            start.Y + GetConstrainedDelta(dy, dx, side));
+
+        if (ShapeTypeMetadata.UsesEqualAspectConstraint(shapeType))
+        {
+            var side = (Math.Abs(dx) + Math.Abs(dy)) / 2.0;
+            var originalDx = dx;
+            var originalDy = dy;
+            dx = GetConstrainedDelta(originalDx, originalDy, side);
+            dy = GetConstrainedDelta(originalDy, originalDx, side);
+        }
+
+        return ShapeTypeMetadata.IsCentered(shapeType)
+            ? (new Point(start.X - dx, start.Y - dy), new Point(start.X + dx, start.Y + dy))
+            : (start, new Point(start.X + dx, start.Y + dy));
     }
 
     /// <summary>
-    /// Constrains a map-space shape drag so square and circle tools size against a 45 degree
-    /// support line instead of the smaller axis delta.
+    /// Normalizes a map-space shape drag into two opposing bounding-box corners.
     /// </summary>
-    internal static (int X1, int Y1, int X2, int Y2) ConstrainBounds(ShapeType shapeType, int x1, int y1, int x2, int y2)
+    internal static (int X1, int Y1, int X2, int Y2) NormalizeBounds(ShapeType shapeType, int x1, int y1, int x2, int y2)
     {
-        if (shapeType is not ShapeType.Square and not ShapeType.Circle)
-            return (x1, y1, x2, y2);
-
         var dx = x2 - x1;
         var dy = y2 - y1;
-        var side = (Math.Abs(dx) + Math.Abs(dy)) / 2;
-        return (
-            x1,
-            y1,
-            x1 + GetConstrainedDelta(dx, dy, side),
-            y1 + GetConstrainedDelta(dy, dx, side));
+
+        if (ShapeTypeMetadata.UsesEqualAspectConstraint(shapeType))
+        {
+            var side = (Math.Abs(dx) + Math.Abs(dy)) / 2;
+            var originalDx = dx;
+            var originalDy = dy;
+            dx = GetConstrainedDelta(originalDx, originalDy, side);
+            dy = GetConstrainedDelta(originalDy, originalDx, side);
+        }
+
+        return ShapeTypeMetadata.IsCentered(shapeType)
+            ? (x1 - dx, y1 - dy, x1 + dx, y1 + dy)
+            : (x1, y1, x1 + dx, y1 + dy);
     }
 
     static double GetConstrainedDelta(double primaryDelta, double secondaryDelta, double side)

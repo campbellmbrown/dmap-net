@@ -13,6 +13,7 @@
     <UserControl.Resources>
         <converters:BrushShapeIconConverter x:Key="BrushShapeIconConverter" />
         <converters:ShapeTypeIconConverter x:Key="ShapeTypeIconConverter" />
+        <converters:ShapeTypeDisplayNameConverter x:Key="ShapeTypeDisplayNameConverter" />
         <converters:FogTypeIconConverter x:Key="FogTypeIconConverter" />
         <converters:CursorTypeIconConverter x:Key="CursorTypeIconConverter" />
         <converters:CursorTypeDisplayNameConverter x:Key="CursorTypeDisplayNameConverter" />
@@ -268,6 +269,7 @@
                             ActiveTool="{Binding SelectedTool}"
                             BrushShape="{Binding SelectedBrushShape}"
                             ShapeType="{Binding SelectedShapeType}"
+                            ShapeCornerRadius="{Binding ShapeCornerRadius}"
                             CursorType="{Binding SelectedCursorType}"
                             CursorSize="{Binding CursorSize}"
                             ShowCursorOnlyWhilePressed="{Binding ShowCursorOnlyWhilePressed}">
@@ -398,7 +400,7 @@
                                     <DataTemplate x:CompileBindings="False">
                                         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                                             <Image Width="16" Height="16" Source="{Binding Converter={StaticResource ShapeTypeIconConverter}}" />
-                                            <TextBlock Text="{Binding}" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Converter={StaticResource ShapeTypeDisplayNameConverter}}" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
@@ -407,6 +409,13 @@
                             <Slider Minimum="0" Maximum="1" Value="{Binding ShapeSoftness}"
                                     TickFrequency="0.01" IsSnapToTickEnabled="True"
                                     HorizontalAlignment="Stretch" />
+                            <TextBlock Text="{Binding ShapeCornerRadius, StringFormat='Corner Radius: {0}'}"
+                                       FontWeight="SemiBold"
+                                       IsEnabled="{Binding IsShapeCornerRadiusVisible}" />
+                            <Slider Minimum="0" Maximum="128" Value="{Binding ShapeCornerRadius}"
+                                    TickFrequency="1" IsSnapToTickEnabled="True"
+                                    HorizontalAlignment="Stretch"
+                                    IsEnabled="{Binding IsShapeCornerRadiusVisible}" />
                             <TextBlock Text="{Binding ShapeOpacity, StringFormat='Opacity: {0:F2}'}" FontWeight="SemiBold" />
                             <Slider Minimum="0" Maximum="1" Value="{Binding ShapeOpacity}"
                                     TickFrequency="0.01" IsSnapToTickEnabled="True"

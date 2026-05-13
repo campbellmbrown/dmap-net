@@ -12,6 +12,7 @@ Unreleased
 * Linux release builds are now single-file executables.
 * Allow cancelling shape drawing with the Escape key.
 * Improved constrained square and circle sizing so shallow drags use a 45 degree sizing rule instead of collapsing to the smaller axis delta.
+* Added centered shape variants and a fixed corner-radius setting for rectangle and square shape tools.
 * Toggle the tool overlay with F8, the "View > Show Tools" menu item, or the "Show/Hide Tools" button.
 * Add an overlay and icon when player updates are paused.
 

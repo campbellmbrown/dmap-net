@@ -123,6 +123,10 @@ public class MapCanvas : Control
     public static readonly StyledProperty<ShapeType> ShapeTypeProperty =
         AvaloniaProperty.Register<MapCanvas, ShapeType>(nameof(ShapeType), ShapeType.Rectangle);
 
+    /// <summary>Styled property for the fixed corner radius used by rectangular shape previews.</summary>
+    public static readonly StyledProperty<int> ShapeCornerRadiusProperty =
+        AvaloniaProperty.Register<MapCanvas, int>(nameof(ShapeCornerRadius));
+
     /// <summary>Styled property for the player-visible cursor icon type.</summary>
     public static readonly StyledProperty<CursorType> CursorTypeProperty =
         AvaloniaProperty.Register<MapCanvas, CursorType>(nameof(CursorType), CursorType.Crosshair);
@@ -286,6 +290,13 @@ public class MapCanvas : Control
         set => SetValue(ShapeTypeProperty, value);
     }
 
+    /// <summary>Fixed corner radius in map pixels used for rectangular shape previews.</summary>
+    public int ShapeCornerRadius
+    {
+        get => GetValue(ShapeCornerRadiusProperty);
+        set => SetValue(ShapeCornerRadiusProperty, value);
+    }
+
     /// <summary>Player-visible cursor icon type.</summary>
     public CursorType CursorType
     {
@@ -396,7 +407,7 @@ public class MapCanvas : Control
         AffectsRender<MapCanvas>(
             MapImageProperty, FogMaskProperty, FogOpacityProperty,
             BrushDiameterProperty, ActiveToolProperty, BrushShapeProperty,
-            ShapeTypeProperty, CursorTypeProperty, CursorSizeProperty, CursorMapXProperty,
+            ShapeTypeProperty, ShapeCornerRadiusProperty, CursorTypeProperty, CursorSizeProperty, CursorMapXProperty,
             CursorMapYProperty, IsCursorVisibleProperty, ShowMapProperty,
             FogTypeProperty, FogColorProperty, FogSeedProperty);
     }
@@ -612,23 +623,34 @@ public class MapCanvas : Control
         }
         else if (ActiveTool == ToolType.Shape && _isDraggingShape)
         {
-            var start = _shapeDragStart;
             var shapeType = ShapeType;
-            var end = ShapeConstraintHelper.ConstrainEndPoint(shapeType, start, _lastMousePosition);
+            var (start, end) = ShapeConstraintHelper.NormalizeBounds(shapeType, _shapeDragStart, _lastMousePosition);
+            var fill = new SolidColorBrush(Color.FromArgb(50, 255, 255, 255));
 
-            if (shapeType is ShapeType.Ellipse or ShapeType.Circle)
+            if (ShapeTypeMetadata.IsEllipse(shapeType))
             {
                 var cx = (start.X + end.X) / 2;
                 var cy = (start.Y + end.Y) / 2;
                 var rx = Math.Abs(end.X - start.X) / 2;
                 var ry = Math.Abs(end.Y - start.Y) / 2;
-                context.DrawEllipse(new SolidColorBrush(Color.FromArgb(50, 255, 255, 255)), pen, new Point(cx, cy), rx, ry);
+                context.DrawEllipse(fill, pen, new Point(cx, cy), rx, ry);
             }
             else
             {
                 var rect = MakeRect(start, end);
-                context.FillRectangle(new SolidColorBrush(Color.FromArgb(50, 255, 255, 255)), rect);
-                context.DrawRectangle(null, pen, rect);
+                var radius = ShapeTypeMetadata.SupportsCornerRadius(shapeType)
+                    ? ShapeTypeMetadata.GetEffectiveCornerRadius(ShapeCornerRadius, rect.Width, rect.Height)
+                    : 0;
+
+                if (radius > 0)
+                {
+                    context.DrawRectangle(fill, pen, new RoundedRect(rect, new CornerRadius(radius)));
+                }
+                else
+                {
+                    context.FillRectangle(fill, rect);
+                    context.DrawRectangle(null, pen, rect);
+                }
             }
         }
     }
