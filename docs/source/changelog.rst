@@ -13,6 +13,7 @@ Unreleased
 * Allow cancelling shape drawing with the Escape key.
 * Improved constrained square and circle sizing so shallow drags use a 45 degree sizing rule instead of collapsing to the smaller axis delta.
 * Toggle the tool overlay with F8, the "View > Show Tools" menu item, or the "Show/Hide Tools" button.
+* Add an overlay and icon when player updates are paused.
 
 :release-link:`v1.0.0`
 ----------------------
