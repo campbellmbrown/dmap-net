@@ -273,6 +273,34 @@
                             ShowCursorOnlyWhilePressed="{Binding ShowCursorOnlyWhilePressed}">
             </controls:MapCanvas>
 
+            <Panel IsVisible="{Binding IsOverlayVisible}">
+                <Border Margin="14"
+                        BorderBrush="White"
+                        BorderThickness="3"
+                        CornerRadius="18"
+                        Background="Transparent"
+                        IsHitTestVisible="False"
+                        IsVisible="{Binding IsUpdatesPaused}" />
+
+                <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+                        CornerRadius="8"
+                        Margin="0,0,28,28"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Bottom"
+                        BoxShadow="0 2 8 0 #40000000"
+                        IsVisible="{Binding IsUpdatesPaused}">
+                    <Button Background="Transparent"
+                            BorderThickness="0"
+                            Padding="10"
+                            Command="{Binding TogglePauseUpdatesCommand}"
+                            ToolTip.Tip="Resume Player Updates">
+                        <Image Width="20"
+                               Height="20"
+                               Source="{SvgImage /Assets/Icons/radio-off.svg}" />
+                    </Button>
+                </Border>
+            </Panel>
+
             <!-- Floating side toolbar -->
             <StackPanel Orientation="Horizontal"
                         Spacing="10" Margin="8,8,0,0"
