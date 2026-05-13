@@ -15,6 +15,7 @@ Unreleased
 * Added centered shape variants and a fixed corner-radius setting for rectangle and square shape tools.
 * Toggle the tool overlay with F8, the "View > Show Tools" menu item, or the "Show/Hide Tools" button.
 * Add an overlay and icon when player updates are paused.
+* Fix the entire map briefly revealed to the player when swapping maps.
 
 :release-link:`v1.0.0`
 ----------------------

@@ -852,11 +852,13 @@ public class DmViewModel : ViewModelBase, IDisposable
 
         await _hostService.StartAsync(default);
 
-        if (_mapImageBytes != null)
-            await _hostService.SendMapImageAsync(_mapImageBytes, default);
-
         if (_fogService.Mask != null)
             await _hostService.SendSessionInfoAsync(_session, _fogService.Mask, default);
+
+        // Existing players must receive the replacement session/fog state before the new
+        // map image, otherwise the bitmap can swap under the old mask for a visible frame.
+        if (_mapImageBytes != null)
+            await _hostService.SendMapImageAsync(_mapImageBytes, default);
 
         if (_latestViewport is not null)
             await _hostService.SendViewportAsync(_latestViewport, default);
