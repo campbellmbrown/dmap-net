@@ -328,6 +328,19 @@ public class DmViewModel : ViewModelBase, IDisposable
         private set => this.RaiseAndSetIfChanged(ref field, value);
     } = true;
 
+    /// <summary>Toggles whether the floating tool/settings overlay is shown over the map.</summary>
+    public ReactiveCommand<Unit, Unit> ToggleOverlayVisibilityCommand { get; }
+
+    /// <summary>
+    /// <see langword="true"/> when the floating tool palette and contextual settings panel are visible
+    /// over the DM map view.
+    /// </summary>
+    public bool IsOverlayVisible
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    } = true;
+
     /// <summary>Toggles whether fog and viewport updates are held locally or sent to connected players immediately.</summary>
     public ReactiveCommand<Unit, Unit> TogglePauseUpdatesCommand { get; }
 
@@ -422,6 +435,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         OpenPlayerWindowCommand = ReactiveCommand.CreateFromTask(OpenPlayerWindowAsync);
         ShowAboutCommand = ReactiveCommand.CreateFromTask(async () => await ShowAboutDialog.Handle(Unit.Default));
         ToggleMapVisibilityCommand = ReactiveCommand.Create(() => { IsMapVisible = !IsMapVisible; });
+        ToggleOverlayVisibilityCommand = ReactiveCommand.Create(() => { IsOverlayVisible = !IsOverlayVisible; });
         TogglePauseUpdatesCommand = ReactiveCommand.Create(() =>
         {
             IsUpdatesPaused = !IsUpdatesPaused;

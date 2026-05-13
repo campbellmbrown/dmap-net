@@ -24,13 +24,43 @@
             <Setter Property="Height" Value="16" />
             <Setter Property="Margin" Value="0" />
         </Style>
-        <Style Selector="Button.toolbar">
+        <Style Selector="Button.toolbar, ToggleButton.toolbar">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Width" Value="30" />
             <Setter Property="Height" Value="30" />
+            <Setter Property="Padding" Value="0" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
-        <Style Selector="Button.toolbar Image">
+        <Style Selector="ToggleButton.toolbar">
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="4">
+                        <ContentPresenter HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          Padding="{TemplateBinding Padding}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="ToggleButton.toolbar:pointerover">
+            <Setter Property="Background" Value="#14000000" />
+        </Style>
+        <Style Selector="ToggleButton.toolbar:pressed">
+            <Setter Property="Background" Value="#22000000" />
+        </Style>
+        <Style Selector="ToggleButton.toolbar:checked">
+            <Setter Property="Background" Value="#330078D4" />
+        </Style>
+        <Style Selector="ToggleButton.toolbar:checked:pointerover">
+            <Setter Property="Background" Value="#440078D4" />
+        </Style>
+        <Style Selector="Button.toolbar Image, ToggleButton.toolbar Image">
             <Setter Property="Width" Value="20" />
             <Setter Property="Height" Value="20" />
         </Style>
@@ -61,6 +91,7 @@
         <KeyBinding Gesture="Ctrl+Shift+E" Command="{Binding RevealAllCommand}" />
         <KeyBinding Gesture="Ctrl+Shift+F" Command="{Binding RefogAllCommand}" />
         <KeyBinding Gesture="Ctrl+M" Command="{Binding ToggleMapVisibilityCommand}" />
+        <KeyBinding Gesture="F8" Command="{Binding ToggleOverlayVisibilityCommand}" />
         <KeyBinding Gesture="Ctrl+P" Command="{Binding TogglePauseUpdatesCommand}" />
     </UserControl.KeyBindings>
 
@@ -101,6 +132,12 @@
                           ToggleType="CheckBox" IsChecked="{Binding IsMapVisible, Mode=OneWay}">
                     <MenuItem.Icon>
                         <Image Source="{SvgImage /Assets/Icons/image.svg}" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Show Tools" Command="{Binding ToggleOverlayVisibilityCommand}" InputGesture="F8"
+                          ToggleType="CheckBox" IsChecked="{Binding IsOverlayVisible, Mode=OneWay}">
+                    <MenuItem.Icon>
+                        <Image Source="{SvgImage /Assets/Icons/toolbox.svg}" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator />
@@ -161,19 +198,26 @@
                 <Image Source="{SvgImage /Assets/Icons/redo-2.svg}" />
             </Button>
             <Separator Classes="toolbar" />
-            <Button Classes="toolbar" Command="{Binding ToggleMapVisibilityCommand}" ToolTip.Tip="Toggle Map">
-                <Panel>
-                    <Image Source="{SvgImage /Assets/Icons/image.svg}" IsVisible="{Binding IsMapVisible}" />
-                    <Image Source="{SvgImage /Assets/Icons/image-off.svg}" IsVisible="{Binding !IsMapVisible}" />
-                </Panel>
-            </Button>
+            <ToggleButton Classes="toolbar"
+                          Command="{Binding ToggleMapVisibilityCommand}"
+                          IsChecked="{Binding IsMapVisible, Mode=OneWay}"
+                          ToolTip.Tip="Toggle Map">
+                <Image Source="{SvgImage /Assets/Icons/image.svg}" />
+            </ToggleButton>
             <Separator Classes="toolbar" />
-            <Button Classes="toolbar" Command="{Binding TogglePauseUpdatesCommand}" ToolTip.Tip="Pause/Resume Player Updates">
-                <Panel>
-                    <Image Source="{SvgImage /Assets/Icons/radio.svg}" IsVisible="{Binding !IsUpdatesPaused}" />
-                    <Image Source="{SvgImage /Assets/Icons/radio-off.svg}" IsVisible="{Binding IsUpdatesPaused}" />
-                </Panel>
-            </Button>
+            <ToggleButton Classes="toolbar"
+                          Command="{Binding ToggleOverlayVisibilityCommand}"
+                          IsChecked="{Binding IsOverlayVisible, Mode=OneWay}"
+                          ToolTip.Tip="Show/Hide Tools (F8)">
+                <Image Source="{SvgImage /Assets/Icons/toolbox.svg}" />
+            </ToggleButton>
+            <Separator Classes="toolbar" />
+            <ToggleButton Classes="toolbar"
+                          Command="{Binding TogglePauseUpdatesCommand}"
+                          IsChecked="{Binding !IsUpdatesPaused, Mode=OneWay}"
+                          ToolTip.Tip="Pause/Resume Player Updates">
+                <Image Source="{SvgImage /Assets/Icons/radio.svg}" />
+            </ToggleButton>
             <Separator Classes="toolbar" />
             <Button Classes="toolbar" Command="{Binding #MapCanvas.ZoomOutCommand}" ToolTip.Tip="Zoom Out">
                 <Image Source="{SvgImage /Assets/Icons/zoom-out.svg}" />
@@ -233,7 +277,8 @@
             <StackPanel Orientation="Horizontal"
                         Spacing="10" Margin="8,8,0,0"
                         HorizontalAlignment="Left"
-                        VerticalAlignment="Top">
+                        VerticalAlignment="Top"
+                        IsVisible="{Binding IsOverlayVisible}">
                 <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
                         CornerRadius="8"
                         VerticalAlignment="Top"
