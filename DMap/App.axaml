@@ -2,8 +2,37 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="DMap.App"
              RequestedThemeVariant="Light">
+
+    <Application.Resources>
+        <!-- Palette -->
+        <Color x:Key="DMapBackground">#0B0B2C</Color> <!-- "#0B0B2C" -->
+        <Color x:Key="DMapHover">#20205c</Color> <!-- "#20205c" -->
+        <Color x:Key="DMapHighlight">#444499</Color> <!-- "#444499" -->
+        <Color x:Key="DMapSelected">#343475</Color> <!-- "#343475" -->
+        <Color x:Key="DMapForeground">#A1A1E8</Color> <!-- "#A1A1E8" -->
+
+        <!-- https://github.com/AvaloniaUI/Avalonia/blob/master/src/Avalonia.Themes.Fluent/Controls/Menu.xaml -->
+        <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="{StaticResource DMapBackground}" />
+        <SolidColorBrush x:Key="MenuFlyoutPresenterBorderBrush" Color="{StaticResource DMapHighlight}" />
+        <SolidColorBrush x:Key="MenuFlyoutItemForeground" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="MenuFlyoutItemBackground" Color="{StaticResource DMapBackground}" />
+        <SolidColorBrush x:Key="MenuFlyoutItemForegroundPointerOver" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPointerOver" Color="{StaticResource DMapHover}" />
+        <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPressed" Color="{StaticResource DMapSelected}" />
+        <SolidColorBrush x:Key="MenuFlyoutItemForegroundPressed" Color="{StaticResource DMapForeground}" />
+        <Thickness x:Key="MenuFlyoutPresenterBorderThemeThickness">2</Thickness>
+        <x:Double x:Key="MenuFlyoutSeparatorThemeHeight">2</x:Double>
+    </Application.Resources>
+
     <Application.Styles>
         <FluentTheme />
         <StyleInclude Source="avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml" />
+
+        <Style Selector="Separator">
+            <Setter Property="Background" Value="{StaticResource DMapHighlight}" />
+        </Style>
+        <Style Selector="Menu">
+            <Setter Property="Background" Value="{StaticResource DMapBackground}" />
+        </Style>
     </Application.Styles>
 </Application>

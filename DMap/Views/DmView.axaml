@@ -20,61 +20,74 @@
     </UserControl.Resources>
 
     <UserControl.Styles>
+        <Style Selector="TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{StaticResource DMapForeground}" />
+        </Style>
+        <Style Selector="Border.overlay">
+            <Setter Property="Background" Value="{StaticResource DMapBackground}" />
+            <Setter Property="BorderBrush" Value="{StaticResource DMapHighlight}" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="BoxShadow" Value="0 2 8 0 #40000000" />
+        </Style>
         <Style Selector="Separator.toolbar">
-            <Setter Property="Width" Value="1" />
+            <Setter Property="Width" Value="2" />
             <Setter Property="Height" Value="16" />
             <Setter Property="Margin" Value="0" />
         </Style>
+
+        <!-- Toolbar button styles -->
         <Style Selector="Button.toolbar, ToggleButton.toolbar">
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Width" Value="30" />
-            <Setter Property="Height" Value="30" />
-            <Setter Property="Padding" Value="0" />
+            <Setter Property="Padding" Value="4" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
-        <Style Selector="ToggleButton.toolbar">
-            <Setter Property="Template">
-                <ControlTemplate>
-                    <Border Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="4">
-                        <ContentPresenter HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
-                                          Content="{TemplateBinding Content}"
-                                          ContentTemplate="{TemplateBinding ContentTemplate}"
-                                          Padding="{TemplateBinding Padding}" />
-                    </Border>
-                </ControlTemplate>
-            </Setter>
+        <Style Selector="Button.toolbar:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource DMapHover}" />
         </Style>
-        <Style Selector="ToggleButton.toolbar:pointerover">
-            <Setter Property="Background" Value="#14000000" />
+        <Style Selector="Button.toolbar:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource DMapSelected}" />
         </Style>
-        <Style Selector="ToggleButton.toolbar:pressed">
-            <Setter Property="Background" Value="#22000000" />
+        <Style Selector="ToggleButton.toolbar:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource DMapHover}" />
         </Style>
-        <Style Selector="ToggleButton.toolbar:checked">
-            <Setter Property="Background" Value="#330078D4" />
+        <Style Selector="ToggleButton.toolbar:checked /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource DMapSelected}" />
         </Style>
-        <Style Selector="ToggleButton.toolbar:checked:pointerover">
-            <Setter Property="Background" Value="#440078D4" />
+        <Style Selector="ToggleButton.toolbar:checked:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource DMapHover}" />
+        </Style>
+        <Style Selector="ToggleButton.toolbar:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource DMapSelected}" />
         </Style>
         <Style Selector="Button.toolbar Image, ToggleButton.toolbar Image">
             <Setter Property="Width" Value="20" />
             <Setter Property="Height" Value="20" />
         </Style>
-        <Style Selector="Button.icon">
+
+        <!-- Toolbox button styles -->
+        <Style Selector="Button.toolbox">
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Width" Value="44" />
-            <Setter Property="Height" Value="44" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="8" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
         </Style>
-        <Style Selector="Button.icon Image">
+        <Style Selector="Button.toolbox.toolSelected">
+            <Setter Property="Background" Value="{StaticResource DMapSelected}" />
+        </Style>
+        <Style Selector="Button.toolbox:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource DMapHover}" />
+        </Style>
+        <Style Selector="Button.toolbox.toolSelected:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource DMapHover}" />
+        </Style>
+        <Style Selector="Button.toolbox Image">
             <Setter Property="Width" Value="20" />
             <Setter Property="Height" Value="20" />
         </Style>
+
         <Style Selector="MenuItem Image">
             <Setter Property="Width" Value="16" />
             <Setter Property="Height" Value="16" />
@@ -188,60 +201,66 @@
             </MenuItem>
         </Menu>
 
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4"
-                    Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                    Margin="4,0,0,0" Height="40">
+        <!-- Toolbar -->
+        <Border DockPanel.Dock="Top" Background="{StaticResource DMapBackground}" BorderBrush="{StaticResource DMapHighlight}" BorderThickness="0,2,0,2">
+            <StackPanel Orientation="Horizontal"
+                        Spacing="4"
+                        Margin="4">
 
-            <Button Classes="toolbar" Command="{Binding UndoCommand}" ToolTip.Tip="Undo">
-                <Image Source="{SvgImage /Assets/Icons/undo-2.svg}" />
-            </Button>
-            <Button Classes="toolbar" Command="{Binding RedoCommand}" ToolTip.Tip="Redo">
-                <Image Source="{SvgImage /Assets/Icons/redo-2.svg}" />
-            </Button>
-            <Separator Classes="toolbar" />
-            <ToggleButton Classes="toolbar"
-                          Command="{Binding ToggleMapVisibilityCommand}"
-                          IsChecked="{Binding IsMapVisible, Mode=OneWay}"
-                          ToolTip.Tip="Toggle Map">
-                <Image Source="{SvgImage /Assets/Icons/image.svg}" />
-            </ToggleButton>
-            <Separator Classes="toolbar" />
-            <ToggleButton Classes="toolbar"
-                          Command="{Binding ToggleOverlayVisibilityCommand}"
-                          IsChecked="{Binding IsOverlayVisible, Mode=OneWay}"
-                          ToolTip.Tip="Show/Hide Tools (F8)">
-                <Image Source="{SvgImage /Assets/Icons/toolbox.svg}" />
-            </ToggleButton>
-            <Separator Classes="toolbar" />
-            <ToggleButton Classes="toolbar"
-                          Command="{Binding TogglePauseUpdatesCommand}"
-                          IsChecked="{Binding !IsUpdatesPaused, Mode=OneWay}"
-                          ToolTip.Tip="Pause/Resume Player Updates">
-                <Image Source="{SvgImage /Assets/Icons/radio.svg}" />
-            </ToggleButton>
-            <Separator Classes="toolbar" />
-            <Button Classes="toolbar" Command="{Binding #MapCanvas.ZoomOutCommand}" ToolTip.Tip="Zoom Out">
-                <Image Source="{SvgImage /Assets/Icons/zoom-out.svg}" />
-            </Button>
-            <NumericUpDown Value="{Binding #MapCanvas.ZoomPercent, Mode=TwoWay}"
-                           Minimum="10" Maximum="1000" Increment="10"
-                           FormatString="0'%'"
-                           ShowButtonSpinner="False"
-                           Width="64" Height="20" FontSize="11"
-                           ToolTip.Tip="Zoom level relative to fitted map height" />
-            <Button Classes="toolbar" Command="{Binding #MapCanvas.ZoomInCommand}" ToolTip.Tip="Zoom In">
-                <Image Source="{SvgImage /Assets/Icons/zoom-in.svg}" />
-            </Button>
-            <Separator Classes="toolbar" />
-            <Button Classes="toolbar" Command="{Binding #MapCanvas.RefitViewCommand}" ToolTip.Tip="Refit View">
-                <Image Source="{SvgImage /Assets/Icons/scan-eye.svg}" />
-            </Button>
+                <Button Classes="toolbar" Command="{Binding UndoCommand}" ToolTip.Tip="Undo">
+                    <Image Source="{SvgImage /Assets/Icons/undo-2.svg}" />
+                </Button>
+                <Button Classes="toolbar" Command="{Binding RedoCommand}" ToolTip.Tip="Redo">
+                    <Image Source="{SvgImage /Assets/Icons/redo-2.svg}" />
+                </Button>
+                <Separator Classes="toolbar" />
+                <ToggleButton Classes="toolbar"
+                              Command="{Binding ToggleMapVisibilityCommand}"
+                              IsChecked="{Binding IsMapVisible, Mode=OneWay}"
+                              ToolTip.Tip="Toggle Map">
+                    <Image Source="{SvgImage /Assets/Icons/image.svg}" />
+                </ToggleButton>
+                <Separator Classes="toolbar" />
+                <ToggleButton Classes="toolbar"
+                              Command="{Binding ToggleOverlayVisibilityCommand}"
+                              IsChecked="{Binding IsOverlayVisible, Mode=OneWay}"
+                              ToolTip.Tip="Show/Hide Tools (F8)">
+                    <Image Source="{SvgImage /Assets/Icons/toolbox.svg}" />
+                </ToggleButton>
+                <Separator Classes="toolbar" />
+                <ToggleButton Classes="toolbar"
+                              Command="{Binding TogglePauseUpdatesCommand}"
+                              IsChecked="{Binding !IsUpdatesPaused, Mode=OneWay}"
+                              ToolTip.Tip="Pause/Resume Player Updates">
+                    <Image Source="{SvgImage /Assets/Icons/radio.svg}" />
+                </ToggleButton>
+                <Separator Classes="toolbar" />
+                <Button Classes="toolbar" Command="{Binding #MapCanvas.ZoomOutCommand}" ToolTip.Tip="Zoom Out">
+                    <Image Source="{SvgImage /Assets/Icons/zoom-out.svg}" />
+                </Button>
+                <NumericUpDown Value="{Binding #MapCanvas.ZoomPercent, Mode=TwoWay}"
+                               Minimum="10" Maximum="1000" Increment="10"
+                               FormatString="0'%'"
+                               ShowButtonSpinner="False"
+                               Width="64" Height="20" FontSize="11"
+                               ToolTip.Tip="Zoom level relative to fitted map height" />
+                <Button Classes="toolbar" Command="{Binding #MapCanvas.ZoomInCommand}" ToolTip.Tip="Zoom In">
+                    <Image Source="{SvgImage /Assets/Icons/zoom-in.svg}" />
+                </Button>
+                <Separator Classes="toolbar" />
+                <Button Classes="toolbar" Command="{Binding #MapCanvas.RefitViewCommand}" ToolTip.Tip="Refit View">
+                    <Image Source="{SvgImage /Assets/Icons/scan-eye.svg}" />
+                </Button>
 
-        </StackPanel>
+            </StackPanel>
+        </Border>
 
         <!-- Status bar -->
-        <Border DockPanel.Dock="Bottom" Height="24"
-                Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+        <Border DockPanel.Dock="Bottom"
+                Height="24"
+                Background="{StaticResource DMapBackground}"
+                BorderBrush="{StaticResource DMapHighlight}"
+                BorderThickness="0,2,0,0">
             <DockPanel Margin="8,0" LastChildFill="False">
                 <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
                     <TextBlock Text="{Binding ConnectedPlayers, StringFormat='Players: {0}'}"
@@ -309,58 +328,56 @@
                         HorizontalAlignment="Left"
                         VerticalAlignment="Top"
                         IsVisible="{Binding IsOverlayVisible}">
-                <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                        CornerRadius="8"
+                <Border Classes="overlay"
+                        Padding="4"
                         VerticalAlignment="Top"
-                        BoxShadow="0 2 8 0 #40000000"
                         IsHitTestVisible="True">
-                    <StackPanel Spacing="4" Margin="4">
+                    <StackPanel Spacing="4">
 
                         <!-- Brush tool -->
-                        <Panel>
-                            <Border Background="#330078D4" CornerRadius="4" IsVisible="{Binding IsBrushSelected}" />
-                            <Button Classes="icon" Command="{Binding SelectBrushCommand}" ToolTip.Tip="Brush">
-                                <Image Source="{SvgImage /Assets/Icons/brush.svg}" />
-                            </Button>
-                        </Panel>
+                        <Button Classes="toolbox"
+                                Classes.toolSelected="{Binding IsBrushSelected}"
+                                Command="{Binding SelectBrushCommand}"
+                                ToolTip.Tip="Brush">
+                            <Image Source="{SvgImage /Assets/Icons/brush.svg}" />
+                        </Button>
 
                         <!-- Shape tools group -->
-                        <Panel>
-                            <Border Background="#330078D4" CornerRadius="4" IsVisible="{Binding IsShapeSelected}" />
-                            <Button Classes="icon" Command="{Binding SelectShapeCommand}" ToolTip.Tip="Shape">
-                                <Image Source="{SvgImage /Assets/Icons/shapes.svg}" />
-                            </Button>
-                        </Panel>
+                        <Button Classes="toolbox"
+                                Classes.toolSelected="{Binding IsShapeSelected}"
+                                Command="{Binding SelectShapeCommand}"
+                                ToolTip.Tip="Shape">
+                            <Image Source="{SvgImage /Assets/Icons/shapes.svg}" />
+                        </Button>
 
                         <!-- Fog tool -->
-                        <Panel>
-                            <Border Background="#330078D4" CornerRadius="4" IsVisible="{Binding IsFogSelected}" />
-                            <Button Classes="icon" Command="{Binding SelectFogCommand}" ToolTip.Tip="Fog">
-                                <Image Source="{SvgImage /Assets/Icons/cloud-fog.svg}" />
-                            </Button>
-                        </Panel>
+                        <Button Classes="toolbox"
+                                Classes.toolSelected="{Binding IsFogSelected}"
+                                Command="{Binding SelectFogCommand}"
+                                ToolTip.Tip="Fog">
+                            <Image Source="{SvgImage /Assets/Icons/cloud-fog.svg}" />
+                        </Button>
 
                         <!-- Cursor tool -->
-                        <Panel>
-                            <Border Background="#330078D4" CornerRadius="4" IsVisible="{Binding IsCursorSelected}" />
-                            <Button Classes="icon" Command="{Binding SelectCursorCommand}" ToolTip.Tip="Cursor">
-                                <Image Source="{SvgImage /Assets/Icons/crosshair.svg}" />
-                            </Button>
-                        </Panel>
+                        <Button Classes="toolbox"
+                                Classes.toolSelected="{Binding IsCursorSelected}"
+                                Command="{Binding SelectCursorCommand}"
+                                ToolTip.Tip="Cursor">
+                            <Image Source="{SvgImage /Assets/Icons/crosshair.svg}" />
+                        </Button>
 
                         <!-- Pan tool -->
-                        <Panel>
-                            <Border Background="#330078D4" CornerRadius="4" IsVisible="{Binding IsPanSelected}" />
-                            <Button Classes="icon" Command="{Binding SelectPanCommand}" ToolTip.Tip="Pan">
-                                <Image Source="{SvgImage /Assets/Icons/hand.svg}" />
-                            </Button>
-                        </Panel>
+                        <Button Classes="toolbox"
+                                Classes.toolSelected="{Binding IsPanSelected}"
+                                Command="{Binding SelectPanCommand}"
+                                ToolTip.Tip="Pan">
+                            <Image Source="{SvgImage /Assets/Icons/hand.svg}" />
+                        </Button>
                     </StackPanel>
                 </Border>
 
-                <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
-                        CornerRadius="8" Padding="8"
-                        BoxShadow="0 2 8 0 #40000000"
+                <Border Classes="overlay"
+                        Padding="8"
                         VerticalAlignment="Top"
                         IsHitTestVisible="True">
                     <Panel>

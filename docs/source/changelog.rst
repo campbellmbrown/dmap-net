@@ -1,6 +1,11 @@
 Changelog
 =========
 
+Unreleased
+----------
+
+* Overhaul app design.
+
 :release-link:`v1.1.0`
 ----------------------
 
