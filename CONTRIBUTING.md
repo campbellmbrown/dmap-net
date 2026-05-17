@@ -129,7 +129,7 @@ Tag the release from the updated `main` branch:
 ```bash
 git checkout main
 git pull
-git tag -a v1.0.1
+git tag v1.0.1
 git push origin v1.0.1
 ```
 
