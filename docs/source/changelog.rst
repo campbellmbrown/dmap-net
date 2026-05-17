@@ -1,10 +1,8 @@
 Changelog
 =========
 
-Unreleased
-----------
-
-.. No unreleased changes.
+:release-link:`v1.1.0`
+----------------------
 
 * Added a player-visible Cursor tool.
 * Added icon to the "About DMap" menu item in the Help menu.
