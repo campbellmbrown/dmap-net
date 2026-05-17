@@ -108,9 +108,9 @@ On Windows, activate the virtual environment with `docs\.venv\Scripts\activate` 
 
 Update `docs/source/changelog.rst` in the same pull request as the code change.
 Add user-facing changes under the `Unreleased` heading while the code is still in progress.
+If there is no `Unreleased` section, create one at the top of the changelog and add the new changes there.
 
 Use short bullet points that describe the behavior change, not the implementation detail.
-If `Unreleased` says `No unreleased changes.`, replace that line with the new bullets.
 Keep purely internal refactors out of the changelog unless they affect contributors or releases.
 
 ## Release procedure
@@ -121,7 +121,7 @@ Before tagging:
 
 1. Make sure CI and documentation builds are passing on `main`.
 2. Update `Directory.Build.props` to the release version.
-3. Move the `Unreleased` changelog bullets into a new version section, such as `v1.0.1`, and reset `Unreleased` to `No unreleased changes.`.
+3. Move the `Unreleased` changelog bullets into a new version section, such as `v1.0.1`.
 4. Commit and merge the release prep changes.
 
 Tag the release from the updated `main` branch:
