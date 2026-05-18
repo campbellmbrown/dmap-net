@@ -7,9 +7,10 @@
         <!-- Palette -->
         <Color x:Key="DMapBackground">#0B0B2C</Color> <!-- "#0B0B2C" -->
         <Color x:Key="DMapHover">#20205c</Color> <!-- "#20205c" -->
-        <Color x:Key="DMapHighlight">#444499</Color> <!-- "#444499" -->
         <Color x:Key="DMapSelected">#343475</Color> <!-- "#343475" -->
-        <Color x:Key="DMapForeground">#A1A1E8</Color> <!-- "#A1A1E8" -->
+        <Color x:Key="DMapHighlight">#444499</Color> <!-- "#444499" -->
+        <!-- <Color x:Key="DMapForeground">#A1A1E8</Color> "#A1A1E8" -->
+        <Color x:Key="DMapForeground">#FFFFFF</Color> <!-- "#FFFFFF" -->
 
         <!-- https://github.com/AvaloniaUI/Avalonia/blob/master/src/Avalonia.Themes.Fluent/Controls/Menu.xaml -->
         <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="{StaticResource DMapBackground}" />
@@ -20,6 +21,8 @@
         <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPointerOver" Color="{StaticResource DMapHover}" />
         <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPressed" Color="{StaticResource DMapSelected}" />
         <SolidColorBrush x:Key="MenuFlyoutItemForegroundPressed" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="MenuFlyoutItemBackgroundDisabled" Color="{StaticResource DMapBackground}" />
+        <SolidColorBrush x:Key="MenuFlyoutItemForegroundDisabled" Color="{StaticResource DMapForeground}" Opacity="0.6" />
         <Thickness x:Key="MenuFlyoutPresenterBorderThemeThickness">2</Thickness>
         <x:Double x:Key="MenuFlyoutSeparatorThemeHeight">2</x:Double>
     </Application.Resources>
@@ -74,7 +77,7 @@
         <!-- Focus: selected background -->
         <Style Selector="NumericUpDown /template/ TextBox:focus /template/ Border#PART_BorderElement">
             <Setter Property="Background" Value="{StaticResource DMapSelected}" />
-            <Setter Property="BorderBrush" Value="White" />
+            <Setter Property="BorderBrush" Value="{StaticResource DMapHighlight}" />
         </Style>
     </Application.Styles>
 </Application>
