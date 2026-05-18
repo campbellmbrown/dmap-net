@@ -76,8 +76,8 @@ public class MapCanvas : Control
         AvaloniaProperty.Register<MapCanvas, FogMask?>(nameof(FogMask));
 
     /// <summary>Direct property for fit-relative zoom shown in the DM toolbar.</summary>
-    public static readonly DirectProperty<MapCanvas, double> ZoomPercentProperty =
-        AvaloniaProperty.RegisterDirect<MapCanvas, double>(
+    public static readonly DirectProperty<MapCanvas, decimal?> ZoomPercentProperty =
+        AvaloniaProperty.RegisterDirect<MapCanvas, decimal?>(
             nameof(ZoomPercent),
             canvas => canvas.ZoomPercent,
             (canvas, value) => canvas.ZoomPercent = value,
@@ -181,13 +181,16 @@ public class MapCanvas : Control
     }
 
     /// <summary>Zoom level expressed as a percentage of the height-fit zoom, where 100% fits map height to canvas height.</summary>
-    public double ZoomPercent
+    public decimal? ZoomPercent
     {
         get => _zoomPercent;
         set
         {
-            _viewport.SetZoomPercent(value, Bounds.Size, MapImage?.Size);
-            OnViewportStateChanged();
+            if (value.HasValue)
+            {
+                _viewport.SetZoomPercent((double)value.Value, Bounds.Size, MapImage?.Size);
+                OnViewportStateChanged();
+            }
         }
     }
 
@@ -398,7 +401,7 @@ public class MapCanvas : Control
     bool _isCursorPressed;
     Point _shapeDragStart;
     Point _lastMousePosition;
-    double _zoomPercent = 100.0;
+    decimal? _zoomPercent;
     static readonly Uri _iconBaseUri = new("avares://DMap/Assets/Icons/");
     static readonly IReadOnlyDictionary<CursorType, IImage> _cursorIcons = CreateCursorIcons();
 
@@ -517,7 +520,7 @@ public class MapCanvas : Control
     /// <summary>Updates <see cref="ZoomPercent"/> after actual zoom or the height-fit baseline changes.</summary>
     void UpdateZoomPercent()
     {
-        var percent = _viewport.GetZoomPercent(Bounds.Size, MapImage?.Size);
+        decimal percent = (decimal)_viewport.GetZoomPercent(Bounds.Size, MapImage?.Size);
         SetAndRaise(ZoomPercentProperty, ref _zoomPercent, percent);
     }
 
