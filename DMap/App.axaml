@@ -34,5 +34,47 @@
         <Style Selector="Menu">
             <Setter Property="Background" Value="{StaticResource DMapBackground}" />
         </Style>
+
+        <Style Selector="NumericUpDown">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource DMapForeground}" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+
+        <!-- The NumericUpDown template renders its border and background through a TextBox's internal
+             PART_BorderElement. The TextBox ControlTheme overrides that element's background and border
+             on :pointerover and :focus, so styles must target PART_BorderElement directly to take effect.
+             https://github.com/AvaloniaUI/Avalonia/blob/12.0.1/src/Avalonia.Themes.Fluent/Controls/TextBox.xaml -->
+
+        <!-- Hover: keep foreground colour, prevent TextBox ControlTheme from overriding it -->
+        <Style Selector="NumericUpDown /template/ TextBox:pointerover">
+            <Setter Property="Foreground" Value="{StaticResource DMapForeground}" />
+        </Style>
+        <!-- Focus: keep foreground colour -->
+        <Style Selector="NumericUpDown /template/ TextBox:focus">
+            <Setter Property="Foreground" Value="{StaticResource DMapForeground}" />
+        </Style>
+        <!-- The NumericUpDown template gives its inner TextBox Margin="-1" to overlap the ButtonSpinner border.
+             We set BorderThickness="0" on the NumericUpDown so there is no border to overlap.
+             https://github.com/AvaloniaUI/Avalonia/blob/12.0.1/src/Avalonia.Themes.Fluent/Controls/NumericUpDown.xaml -->
+        <Style Selector="NumericUpDown /template/ TextBox:not(:disabled)">
+            <Setter Property="Margin" Value="0" />
+        </Style>
+        <!-- Default border (pseudo-class required to beat TemplateBinding priority) -->
+        <Style Selector="NumericUpDown /template/ TextBox:not(:pointerover):not(:focus) /template/ Border#PART_BorderElement">
+            <Setter Property="BorderBrush" Value="{StaticResource DMapHighlight}" />
+            <Setter Property="BorderThickness" Value="2" />
+        </Style>
+        <!-- Hover: highlight background -->
+        <Style Selector="NumericUpDown /template/ TextBox:pointerover /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="{StaticResource DMapHover}" />
+            <Setter Property="BorderBrush" Value="{StaticResource DMapHighlight}" />
+            <Setter Property="BorderThickness" Value="2" />
+        </Style>
+        <!-- Focus: selected background -->
+        <Style Selector="NumericUpDown /template/ TextBox:focus /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="{StaticResource DMapSelected}" />
+            <Setter Property="BorderBrush" Value="White" />
+        </Style>
     </Application.Styles>
 </Application>
