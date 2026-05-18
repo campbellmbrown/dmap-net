@@ -454,11 +454,17 @@
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
                             <TextBlock Text="Fog Colour" FontWeight="SemiBold" />
-                            <ColorPicker Color="{Binding FogColor}"
-                                         IsEnabled="{Binding IsFogColorSelected}"
-                                         IsAlphaVisible="False"
-                                         IsAlphaEnabled="False"
-                                         IsColorPreviewVisible="False" />
+                            <Border BorderThickness="2"
+                                    BorderBrush="{StaticResource DMapHighlight}"
+                                    CornerRadius="4"
+                                    Padding="0"
+                                    HorizontalAlignment="Center">
+                                <ColorPicker Color="{Binding FogColor}"
+                                             IsEnabled="{Binding IsFogColorSelected}"
+                                             IsAlphaVisible="False"
+                                             IsAlphaEnabled="False"
+                                             IsColorPreviewVisible="False" />
+                            </Border>
                             <TextBlock Text="{Binding FogOpacity, StringFormat='Fog Opacity: {0:F2}'}" FontWeight="SemiBold" />
                             <Slider Minimum="0" Maximum="1" Value="{Binding FogOpacity}"
                                     TickFrequency="0.01" IsSnapToTickEnabled="True"
@@ -482,8 +488,8 @@
                             <Slider Minimum="16" Maximum="256" Value="{Binding CursorSize}"
                                     TickFrequency="1" IsSnapToTickEnabled="True"
                                     HorizontalAlignment="Stretch" />
-                            <ToggleSwitch IsChecked="{Binding ShowCursorOnlyWhilePressed}"
-                                          Content="Only show while holding left click" />
+                            <TextBlock Text="Show Cursor Only While Pressed" FontWeight="SemiBold" />
+                            <ToggleSwitch IsChecked="{Binding ShowCursorOnlyWhilePressed}" />
                         </StackPanel>
                     </Panel>
                 </Border>

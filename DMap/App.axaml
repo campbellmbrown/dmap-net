@@ -17,12 +17,16 @@
         <SolidColorBrush x:Key="MenuFlyoutPresenterBorderBrush" Color="{StaticResource DMapHighlight}" />
         <SolidColorBrush x:Key="MenuFlyoutItemForeground" Color="{StaticResource DMapForeground}" />
         <SolidColorBrush x:Key="MenuFlyoutItemBackground" Color="{StaticResource DMapBackground}" />
+        <SolidColorBrush x:Key="MenuFlyoutItemKeyboardAcceleratorTextForeground" Color="{StaticResource DMapForeground}" />
         <SolidColorBrush x:Key="MenuFlyoutItemForegroundPointerOver" Color="{StaticResource DMapForeground}" />
         <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPointerOver" Color="{StaticResource DMapHover}" />
+        <SolidColorBrush x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundPointerOver" Color="{StaticResource DMapForeground}" />
         <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPressed" Color="{StaticResource DMapSelected}" />
         <SolidColorBrush x:Key="MenuFlyoutItemForegroundPressed" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundPressed" Color="{StaticResource DMapForeground}" />
         <SolidColorBrush x:Key="MenuFlyoutItemBackgroundDisabled" Color="{StaticResource DMapBackground}" />
         <SolidColorBrush x:Key="MenuFlyoutItemForegroundDisabled" Color="{StaticResource DMapForeground}" Opacity="0.6" />
+        <SolidColorBrush x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundDisabled" Color="{StaticResource DMapForeground}" Opacity="0.6" />
         <Thickness x:Key="MenuFlyoutPresenterBorderThemeThickness">2</Thickness>
         <x:Double x:Key="MenuFlyoutSeparatorThemeHeight">2</x:Double>
     </Application.Resources>
