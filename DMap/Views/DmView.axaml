@@ -379,7 +379,7 @@
                                 Classes.toolSelected="{Binding IsGridSelected}"
                                 Command="{Binding SelectGridCommand}"
                                 ToolTip.Tip="Grid">
-                            <Image Source="{SvgImage /Assets/Icons/brick-wall.svg}" />
+                            <Image Source="{SvgImage /Assets/Icons/grid-2x2.svg}" />
                         </Button>
 
                         <!-- Pan tool -->
@@ -507,7 +507,8 @@
                             <ToggleSwitch IsChecked="{Binding ShowCursorOnlyWhilePressed}" />
                         </StackPanel>
                         <StackPanel Spacing="8" MinWidth="200" IsVisible="{Binding IsGridSelected}">
-                            <ToggleSwitch IsChecked="{Binding IsGridVisible}" Content="Grid Visible" />
+                            <TextBlock Text="Grid Visibility" FontWeight="SemiBold" />
+                            <ToggleSwitch IsChecked="{Binding IsGridVisible}" />
                             <TextBlock Text="{Binding GridSquareSize, StringFormat='Square Size: {0:F0}'}" FontWeight="SemiBold" />
                             <Slider Minimum="8" Maximum="512" Value="{Binding GridSquareSize}" />
                             <TextBlock Text="{Binding GridLineWidth, StringFormat='Line Width: {0:F2}'}" FontWeight="SemiBold" />
@@ -517,7 +518,13 @@
                             <TextBlock Text="{Binding GridOpacity, StringFormat='Opacity: {0:F2}'}" FontWeight="SemiBold" />
                             <Slider Minimum="0" Maximum="1" Value="{Binding GridOpacity}" />
                             <TextBlock Text="Grid Color" FontWeight="SemiBold" />
-                            <ColorPicker Color="{Binding GridColor}" IsAlphaVisible="False" IsAlphaEnabled="False" IsColorPreviewVisible="False" />
+                            <Border BorderThickness="2"
+                                    BorderBrush="{StaticResource DMapHighlight}"
+                                    CornerRadius="4"
+                                    Padding="0"
+                                    HorizontalAlignment="Center">
+                                <ColorPicker Color="{Binding GridColor}" IsAlphaVisible="False" IsAlphaEnabled="False" IsColorPreviewVisible="False" />
+                            </Border>
                             <TextBlock Text="{Binding GridOffsetX, StringFormat='Offset X: {0:F2}'}" FontWeight="SemiBold" />
                             <Slider Minimum="0" Maximum="1" Value="{Binding GridOffsetX}" />
                             <TextBlock Text="{Binding GridOffsetY, StringFormat='Offset Y: {0:F2}'}" FontWeight="SemiBold" />

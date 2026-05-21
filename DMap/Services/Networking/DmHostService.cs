@@ -327,6 +327,18 @@ public sealed class DmHostService : IDmHostService
     }
 
     /// <inheritdoc/>
+    public Task SendGridSettingsAsync(GridSettingsPayload settings, CancellationToken ct)
+    {
+        var payload = settings.Serialize();
+        lock (_clientsLock)
+        {
+            _pendingGridSettings = payload;
+        }
+
+        return BroadcastAsync(MessageType.GridSettings, payload, ct);
+    }
+
+    /// <inheritdoc/>
     public Task SendFogFullAsync(FogMask mask, CancellationToken ct)
     {
         lock (_clientsLock)
