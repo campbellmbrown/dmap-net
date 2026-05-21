@@ -29,6 +29,91 @@
         <SolidColorBrush x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundDisabled" Color="{StaticResource DMapForeground}" Opacity="0.6" />
         <Thickness x:Key="MenuFlyoutPresenterBorderThemeThickness">2</Thickness>
         <x:Double x:Key="MenuFlyoutSeparatorThemeHeight">2</x:Double>
+
+        <!-- https://github.com/AvaloniaUI/Avalonia/blob/12.0.1/src/Avalonia.Themes.Fluent/Controls/ComboBox.xaml
+             https://github.com/AvaloniaUI/Avalonia/blob/12.0.1/src/Avalonia.Themes.Fluent/Controls/ComboBoxItem.xaml -->
+        <SolidColorBrush x:Key="ComboBoxBackground" Color="{StaticResource DMapBackground}" />
+        <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="{StaticResource DMapHover}" />
+        <SolidColorBrush x:Key="ComboBoxBackgroundPressed" Color="{StaticResource DMapSelected}" />
+        <SolidColorBrush x:Key="ComboBoxBackgroundDisabled" Color="{StaticResource DMapBackground}" Opacity="0.6" />
+        <SolidColorBrush x:Key="ComboBoxBackgroundUnfocused" Color="{StaticResource DMapSelected}" />
+        <SolidColorBrush x:Key="ComboBoxBackgroundBorderBrushFocused" Color="{StaticResource DMapHighlight}" />
+        <SolidColorBrush x:Key="ComboBoxBackgroundBorderBrushUnfocused" Color="{StaticResource DMapHighlight}" />
+        <SolidColorBrush x:Key="ComboBoxForeground" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="ComboBoxForegroundDisabled" Color="{StaticResource DMapForeground}" Opacity="0.6" />
+        <SolidColorBrush x:Key="ComboBoxForegroundFocused" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="ComboBoxForegroundFocusedPressed" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="ComboBoxPlaceHolderForeground" Color="{StaticResource DMapForeground}" Opacity="0.7" />
+        <SolidColorBrush x:Key="ComboBoxPlaceHolderForegroundFocusedPressed" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="{StaticResource DMapHighlight}" />
+        <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="{StaticResource DMapHighlight}" />
+        <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="{StaticResource DMapHighlight}" />
+        <SolidColorBrush x:Key="ComboBoxBorderBrushDisabled" Color="{StaticResource DMapHighlight}" Opacity="0.6" />
+        <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="{StaticResource DMapBackground}" />
+        <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="{StaticResource DMapHighlight}" />
+        <SolidColorBrush x:Key="ComboBoxDropDownBackgroundPointerOver" Color="{StaticResource DMapHover}" />
+        <SolidColorBrush x:Key="ComboBoxDropDownBackgroundPointerPressed" Color="{StaticResource DMapSelected}" />
+        <SolidColorBrush x:Key="ComboBoxFocusedDropDownBackgroundPointerOver" Color="{StaticResource DMapHover}" />
+        <SolidColorBrush x:Key="ComboBoxFocusedDropDownBackgroundPointerPressed" Color="{StaticResource DMapSelected}" />
+        <SolidColorBrush x:Key="ComboBoxDropDownGlyphForeground" Color="{StaticResource DMapForeground}" />
+        <Thickness x:Key="ComboBoxDropdownBorderThickness">2</Thickness>
+
+        <SolidColorBrush x:Key="ComboBoxItemForeground" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="ComboBoxItemForegroundPressed" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="ComboBoxItemForegroundPointerOver" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="ComboBoxItemForegroundDisabled" Color="{StaticResource DMapForeground}" Opacity="0.6" />
+        <SolidColorBrush x:Key="ComboBoxItemForegroundSelected" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="ComboBoxItemForegroundSelectedUnfocused" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="ComboBoxItemForegroundSelectedPressed" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="ComboBoxItemForegroundSelectedPointerOver" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="ComboBoxItemForegroundSelectedDisabled" Color="{StaticResource DMapForeground}" Opacity="0.6" />
+        <SolidColorBrush x:Key="ComboBoxItemBackground" Color="{StaticResource DMapBackground}" />
+        <SolidColorBrush x:Key="ComboBoxItemBackgroundPressed" Color="{StaticResource DMapSelected}" />
+        <SolidColorBrush x:Key="ComboBoxItemBackgroundPointerOver" Color="{StaticResource DMapHover}" />
+        <SolidColorBrush x:Key="ComboBoxItemBackgroundDisabled" Color="{StaticResource DMapBackground}" Opacity="0.6" />
+        <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected" Color="{StaticResource DMapSelected}" />
+        <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedUnfocused" Color="{StaticResource DMapSelected}" />
+        <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPressed" Color="{StaticResource DMapHighlight}" />
+        <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPointerOver" Color="{StaticResource DMapHighlight}" />
+        <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedDisabled" Color="{StaticResource DMapBackground}" Opacity="0.6" />
+        <SolidColorBrush x:Key="ComboBoxItemBorderBrush" Color="Transparent" />
+        <SolidColorBrush x:Key="ComboBoxItemBorderBrushPressed" Color="Transparent" />
+        <SolidColorBrush x:Key="ComboBoxItemBorderBrushPointerOver" Color="Transparent" />
+        <SolidColorBrush x:Key="ComboBoxItemBorderBrushDisabled" Color="Transparent" />
+        <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelected" Color="Transparent" />
+        <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelectedUnfocused" Color="Transparent" />
+        <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelectedPressed" Color="Transparent" />
+        <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelectedPointerOver" Color="Transparent" />
+        <SolidColorBrush x:Key="ComboBoxItemBorderBrushSelectedDisabled" Color="Transparent" />
+
+        <!-- https://github.com/AvaloniaUI/Avalonia/blob/12.0.1/src/Avalonia.Themes.Fluent/Controls/Slider.xaml -->
+        <SolidColorBrush x:Key="SliderTrackFill" Color="{StaticResource DMapHover}" />
+        <SolidColorBrush x:Key="SliderTrackFillPointerOver" Color="{StaticResource DMapSelected}" />
+        <SolidColorBrush x:Key="SliderTrackFillPressed" Color="{StaticResource DMapSelected}" />
+        <SolidColorBrush x:Key="SliderTrackFillDisabled" Color="{StaticResource DMapHover}" Opacity="0.4" />
+        <SolidColorBrush x:Key="SliderTrackValueFill" Color="{StaticResource DMapSelected}" />
+        <SolidColorBrush x:Key="SliderTrackValueFillPointerOver" Color="{StaticResource DMapHighlight}" />
+        <SolidColorBrush x:Key="SliderTrackValueFillPressed" Color="{StaticResource DMapHighlight}" />
+        <SolidColorBrush x:Key="SliderTrackValueFillDisabled" Color="{StaticResource DMapSelected}" Opacity="0.6" />
+        <SolidColorBrush x:Key="SliderThumbBackground" Color="{StaticResource DMapSelected}" />
+        <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver" Color="{StaticResource DMapHighlight}" />
+        <SolidColorBrush x:Key="SliderThumbBackgroundPressed" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="SliderThumbBackgroundDisabled" Color="{StaticResource DMapSelected}" Opacity="0.6" />
+        <SolidColorBrush x:Key="SliderTickBarFill" Color="{StaticResource DMapForeground}" Opacity="0.8" />
+        <SolidColorBrush x:Key="SliderTickBarFillDisabled" Color="{StaticResource DMapForeground}" Opacity="0.4" />
+        <SolidColorBrush x:Key="SliderContainerBackground" Color="Transparent" />
+        <SolidColorBrush x:Key="SliderContainerBackgroundPointerOver" Color="Transparent" />
+        <SolidColorBrush x:Key="SliderContainerBackgroundPressed" Color="Transparent" />
+        <SolidColorBrush x:Key="SliderContainerBackgroundDisabled" Color="Transparent" />
+        <Thickness x:Key="SliderBorderThemeThickness">0</Thickness>
+
+        <!-- https://github.com/AvaloniaUI/Avalonia/blob/12.0.1/src/Avalonia.Themes.Fluent/Controls/ToolTip.xaml -->
+        <SolidColorBrush x:Key="ToolTipBackground" Color="{StaticResource DMapBackground}" />
+        <SolidColorBrush x:Key="ToolTipForeground" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="ToolTipBorderBrush" Color="{StaticResource DMapHighlight}" />
+        <Thickness x:Key="ToolTipBorderThemeThickness">2</Thickness>
+        <Thickness x:Key="ToolTipBorderThemePadding">8,4</Thickness>
+        <x:Double x:Key="ToolTipContentThemeFontSize">11</x:Double>
     </Application.Resources>
 
     <Application.Styles>
@@ -46,6 +131,13 @@
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{StaticResource DMapForeground}" />
             <Setter Property="BorderThickness" Value="0" />
+        </Style>
+
+        <Style Selector="ComboBox">
+            <Setter Property="Background" Value="{StaticResource ComboBoxBackground}" />
+            <Setter Property="Foreground" Value="{StaticResource ComboBoxForeground}" />
+            <Setter Property="BorderBrush" Value="{StaticResource ComboBoxBorderBrush}" />
+            <Setter Property="BorderThickness" Value="2" />
         </Style>
 
         <!-- The NumericUpDown template renders its border and background through a TextBox's internal
