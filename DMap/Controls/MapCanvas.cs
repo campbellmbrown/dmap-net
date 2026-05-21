@@ -617,11 +617,14 @@ public class MapCanvas : Control
         var ox = GridOffsetX * square;
         var oy = GridOffsetY * square;
 
-        for (double x = ox; x <= imageRect.Width; x += square)
-            context.DrawLine(pen, new Point(x, 0), new Point(x, imageRect.Height));
+        using (context.PushClip(imageRect))
+        {
+            for (double x = ox; x <= imageRect.Width; x += square)
+                context.DrawLine(pen, new Point(x, 0), new Point(x, imageRect.Height));
 
-        for (double y = oy; y <= imageRect.Height; y += square)
-            context.DrawLine(pen, new Point(0, y), new Point(imageRect.Width, y));
+            for (double y = oy; y <= imageRect.Height; y += square)
+                context.DrawLine(pen, new Point(0, y), new Point(imageRect.Width, y));
+        }
     }
 
     /// <summary>
