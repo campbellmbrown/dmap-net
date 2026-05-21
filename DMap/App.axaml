@@ -47,7 +47,7 @@
         <SolidColorBrush x:Key="ComboBoxPlaceHolderForegroundFocusedPressed" Color="{StaticResource DMapForeground}" />
         <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="{StaticResource DMapHighlight}" />
         <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="{StaticResource DMapHighlight}" />
-        <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="{StaticResource DMapHighlight}" />
+        <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="{StaticResource DMapForeground}" />
         <SolidColorBrush x:Key="ComboBoxBorderBrushDisabled" Color="{StaticResource DMapHighlight}" Opacity="0.6" />
         <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="{StaticResource DMapBackground}" />
         <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="{StaticResource DMapHighlight}" />
@@ -140,6 +140,34 @@
             <Setter Property="BorderThickness" Value="2" />
         </Style>
 
+        <Style Selector="Button.text">
+            <Setter Property="Background" Value="{StaticResource DMapBackground}" />
+            <Setter Property="Foreground" Value="{StaticResource DMapForeground}" />
+            <Setter Property="BorderBrush" Value="{StaticResource DMapHighlight}" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="Padding" Value="14,8" />
+        </Style>
+        <Style Selector="Button.text:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource DMapHover}" />
+            <Setter Property="BorderBrush" Value="{StaticResource DMapHighlight}" />
+            <Setter Property="Foreground" Value="{StaticResource DMapForeground}" />
+        </Style>
+        <Style Selector="Button.text:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource DMapHover}" />
+            <Setter Property="BorderBrush" Value="{StaticResource DMapForeground}" />
+            <Setter Property="Foreground" Value="{StaticResource DMapForeground}" />
+        </Style>
+        <Style Selector="Button.text:disabled /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource DMapBackground}" />
+            <Setter Property="BorderBrush" Value="{StaticResource DMapHighlight}" />
+            <Setter Property="Foreground" Value="{StaticResource DMapForeground}" />
+            <Setter Property="Opacity" Value="0.6" />
+        </Style>
+        <Style Selector="Button.text:disabled">
+            <Setter Property="Foreground" Value="{StaticResource DMapForeground}" />
+            <Setter Property="Opacity" Value="0.75" />
+        </Style>
+
         <!-- The NumericUpDown template renders its border and background through a TextBox's internal
              PART_BorderElement. The TextBox ControlTheme overrides that element's background and border
              on :pointerover and :focus, so styles must target PART_BorderElement directly to take effect.
@@ -173,7 +201,7 @@
         <!-- Focus: selected background -->
         <Style Selector="NumericUpDown /template/ TextBox:focus /template/ Border#PART_BorderElement">
             <Setter Property="Background" Value="{StaticResource DMapSelected}" />
-            <Setter Property="BorderBrush" Value="{StaticResource DMapHighlight}" />
+            <Setter Property="BorderBrush" Value="{StaticResource DMapForeground}" />
         </Style>
     </Application.Styles>
 </Application>

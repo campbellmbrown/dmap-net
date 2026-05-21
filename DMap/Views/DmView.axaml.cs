@@ -129,35 +129,14 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
     void HandleShowPlayerWindow(IInteractionContext<PlayerViewModel, Unit> context)
     {
         var playerVm = context.Input;
-        // TODO: Move to view instead of programmatically creating the window here
-        var window = new Window
+        var window = new PlayerWindow
         {
-            Title = "DMap - Player",
-            Content = new PlayerView { DataContext = playerVm },
-            Width = 800,
-            Height = 600,
-            ShowInTaskbar = true,
+            DataContext = playerVm,
         };
-        var windowDisposables = new CompositeDisposable();
-
-        windowDisposables.Add(
-            playerVm.WhenAnyValue(x => x.WindowState)
-                .Subscribe(state => window.WindowState = state));
-
-        windowDisposables.Add(
-            window.GetObservable(Window.WindowStateProperty)
-                .Subscribe(state => playerVm.WindowState = state));
-
-        window.KeyBindings.Add(new KeyBinding
-        {
-            Gesture = new KeyGesture(Key.F11),
-            Command = playerVm.ToggleFullScreenCommand,
-        });
 
         window.Show();
         window.Closed += (_, _) =>
         {
-            windowDisposables.Dispose();
             playerVm.Dispose();
         };
         context.SetOutput(Unit.Default);

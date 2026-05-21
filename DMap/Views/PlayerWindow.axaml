@@ -1,0 +1,25 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DMap.ViewModels"
+        xmlns:views="using:DMap.Views"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        d:DesignWidth="800"
+        d:DesignHeight="600"
+        x:Class="DMap.Views.PlayerWindow"
+        x:DataType="vm:PlayerViewModel"
+        Title="DMap - Player"
+        Width="800"
+        Height="600"
+        ShowInTaskbar="True"
+        Background="Transparent"
+        Icon="/Assets/avalonia-logo.ico"
+        WindowState="{Binding WindowState, Mode=TwoWay}">
+
+    <Window.KeyBindings>
+        <KeyBinding Gesture="F11" Command="{Binding ToggleFullScreenCommand}" />
+    </Window.KeyBindings>
+
+    <views:PlayerView />
+</Window>

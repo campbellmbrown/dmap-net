@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="DMap.Views.AboutWindow"
+        Classes="aboutWindow"
         Title="About DMap"
         Width="420"
         SizeToContent="Height"
@@ -8,31 +9,52 @@
         ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner"
         Icon="/Assets/avalonia-logo.ico"
-        Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
+        Background="{StaticResource DMapBackground}">
+
+    <Window.Styles>
+        <Style Selector="Window.aboutWindow">
+            <Setter Property="TransparencyLevelHint" Value="None" />
+        </Style>
+        <Style Selector="Window.aboutWindow TextBlock, Window.aboutWindow SelectableTextBlock">
+            <Setter Property="Foreground" Value="{StaticResource DMapForeground}" />
+        </Style>
+        <Style Selector="Window.aboutWindow HyperlinkButton">
+            <Setter Property="Foreground" Value="{StaticResource DMapForeground}" />
+        </Style>
+        <Style Selector="Window.aboutWindow HyperlinkButton:pointerover">
+            <Setter Property="Foreground" Value="{StaticResource DMapHighlight}" />
+        </Style>
+    </Window.Styles>
 
     <Border Padding="24"
-            Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
-        <StackPanel Spacing="8">
+            Background="{StaticResource DMapBackground}"
+            BorderBrush="{StaticResource DMapHighlight}"
+            BorderThickness="2">
+        <StackPanel Spacing="12">
+            <TextBlock Text="DMap"
+                       FontSize="22"
+                       FontWeight="Bold" />
             <SelectableTextBlock x:Name="InformationalVersionText"
                                  TextWrapping="Wrap"
-                                 FontFamily="Consolas, Courier New, monospace"
-                                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+                                 FontFamily="Consolas, Courier New, monospace" />
             <TextBlock Text="Source"
                        FontWeight="Bold"
-                       Margin="0,16,0,0" />
+                       Margin="0,8,0,0" />
             <HyperlinkButton Content="https://github.com/campbellmbrown/dmap-net"
                              NavigateUri="https://github.com/campbellmbrown/dmap-net"
                              HorizontalAlignment="Left"
                              Padding="0" />
             <TextBlock Text="Documentation"
                        FontWeight="Bold"
-                       Margin="0,16,0,0" />
+                       Margin="0,8,0,0" />
             <HyperlinkButton Content="https://campbellmbrown.github.io/dmap-net"
                              NavigateUri="https://campbellmbrown.github.io/dmap-net"
                              HorizontalAlignment="Left"
                              Padding="0" />
-            <Button Content="OK"
+            <Button Classes="text"
+                    Content="OK"
                     HorizontalAlignment="Right"
+                    Margin="0,8,0,0"
                     IsDefault="True"
                     IsCancel="True"
                     Click="CloseButton_Click" />
