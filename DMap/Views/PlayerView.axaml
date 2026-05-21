@@ -141,7 +141,15 @@
                                 CursorMapX="{Binding CursorMapX}"
                                 CursorMapY="{Binding CursorMapY}"
                                 IsCursorVisible="{Binding IsCursorVisible}"
-                                IsFogGenerating="{Binding IsFogGenerating, Mode=OneWayToSource}" />
+                                IsFogGenerating="{Binding IsFogGenerating, Mode=OneWayToSource}"
+                                IsGridVisible="{Binding IsGridVisible}"
+                                GridSquareSize="{Binding GridSquareSize}"
+                                GridLineWidth="{Binding GridLineWidth}"
+                                GridLineSoftness="{Binding GridLineSoftness}"
+                                GridOpacity="{Binding GridOpacity}"
+                                GridColor="{Binding GridColor}"
+                                GridOffsetX="{Binding GridOffsetX}"
+                                GridOffsetY="{Binding GridOffsetY}" />
         </DockPanel>
     </Grid>
 

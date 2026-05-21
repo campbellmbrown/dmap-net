@@ -154,6 +154,15 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    public bool IsGridVisible { get; private set => this.RaiseAndSetIfChanged(ref field, value); }
+    public double GridSquareSize { get; private set => this.RaiseAndSetIfChanged(ref field, value); } = 70;
+    public double GridLineWidth { get; private set => this.RaiseAndSetIfChanged(ref field, value); } = 1;
+    public double GridLineSoftness { get; private set => this.RaiseAndSetIfChanged(ref field, value); }
+    public double GridOpacity { get; private set => this.RaiseAndSetIfChanged(ref field, value); } = 0.65;
+    public Color GridColor { get; private set => this.RaiseAndSetIfChanged(ref field, value); } = Colors.White;
+    public double GridOffsetX { get; private set => this.RaiseAndSetIfChanged(ref field, value); }
+    public double GridOffsetY { get; private set => this.RaiseAndSetIfChanged(ref field, value); }
+
     /// <summary>Current state of the player window shell.</summary>
     public WindowState WindowState
     {
@@ -199,6 +208,7 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         _clientService.FogAppearanceReceived += OnFogAppearanceReceived;
         _clientService.ViewportReceived += OnViewportReceived;
         _clientService.CursorReceived += OnCursorReceived;
+        _clientService.GridSettingsReceived += OnGridSettingsReceived;
         _clientService.Disconnected += OnDisconnected;
 
         var canConnect = this.WhenAnyValue(
@@ -364,6 +374,21 @@ public class PlayerViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>Updates connection state and status text when the DM disconnects.</summary>
+    void OnGridSettingsReceived(object? sender, GridSettingsPayload settings)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            IsGridVisible = settings.IsVisible;
+            GridSquareSize = settings.SquareSize;
+            GridLineWidth = settings.LineWidth;
+            GridLineSoftness = settings.LineSoftness;
+            GridOpacity = settings.Opacity;
+            GridColor = settings.Color;
+            GridOffsetX = settings.OffsetX;
+            GridOffsetY = settings.OffsetY;
+        });
+    }
+
     void OnDisconnected(object? sender, EventArgs e)
     {
         Dispatcher.UIThread.Post(() =>

@@ -241,3 +241,8 @@ This payload controls the cursor shown to players.
    * - Visible
      - 1
      - 1 if the cursor should be visible to players, 0 otherwise.
+
+
+GridSettings payload
+--------------------
+A new ``GridSettings`` message carries grid visibility and styling fields: square size, line width, softness, opacity, RGB color, and X/Y offsets (0-1 squares).

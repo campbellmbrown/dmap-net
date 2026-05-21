@@ -19,4 +19,7 @@ public enum ToolType
 
     /// <summary>Player-visible map cursor used as a pointer or marker. Does not modify the fog mask.</summary>
     Cursor,
+
+    /// <summary>Grid overlay settings (visibility, size, style, and offset). Does not modify the fog mask.</summary>
+    Grid,
 }
