@@ -13,7 +13,6 @@ public sealed class GridSettingsPayload : IPayload
     public bool IsVisible { get; init; }
     public double SquareSize { get; init; }
     public double LineWidth { get; init; }
-    public double LineSoftness { get; init; }
     public double Opacity { get; init; }
     public byte R { get; init; }
     public byte G { get; init; }
@@ -30,7 +29,6 @@ public sealed class GridSettingsPayload : IPayload
         writer.Write(IsVisible);
         writer.Write(SquareSize);
         writer.Write(LineWidth);
-        writer.Write(LineSoftness);
         writer.Write(Opacity);
         writer.Write(R);
         writer.Write(G);
@@ -49,7 +47,6 @@ public sealed class GridSettingsPayload : IPayload
             IsVisible = reader.ReadBoolean(),
             SquareSize = reader.ReadDouble(),
             LineWidth = reader.ReadDouble(),
-            LineSoftness = reader.ReadDouble(),
             Opacity = reader.ReadDouble(),
             R = reader.ReadByte(),
             G = reader.ReadByte(),

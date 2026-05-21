@@ -145,7 +145,6 @@
                                 IsGridVisible="{Binding IsGridVisible}"
                                 GridSquareSize="{Binding GridSquareSize}"
                                 GridLineWidth="{Binding GridLineWidth}"
-                                GridLineSoftness="{Binding GridLineSoftness}"
                                 GridOpacity="{Binding GridOpacity}"
                                 GridColor="{Binding GridColor}"
                                 GridOffsetX="{Binding GridOffsetX}"

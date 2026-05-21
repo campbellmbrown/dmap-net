@@ -44,6 +44,7 @@ messages are sent in this order:
 3. Map image
 4. Viewport
 5. Cursor
+6. Grid settings
 
 Message type IDs
 ----------------
@@ -75,6 +76,9 @@ Message type IDs
    * - 7
      - Cursor
      - Cursor position, appearance, and visibility.
+   * - 8
+     - Grid settings
+     - Grid visibility, dimensions, colour, opacity, and offsets.
 
 Session info payload
 --------------------
@@ -245,4 +249,39 @@ This payload controls the cursor shown to players.
 
 GridSettings payload
 --------------------
-A new ``GridSettings`` message carries grid visibility and styling fields: square size, line width, softness, opacity, RGB color, and X/Y offsets (0-1 squares).
+
+This payload controls the grid overlay shown to players.
+
+.. list-table:: Grid settings payload fields
+   :header-rows: 1
+
+   * - Field
+     - Size (bytes)
+     - Notes
+   * - Visible
+     - 1
+     - 1 if the grid should be shown, 0 otherwise.
+   * - Square size
+     - 8 (float64)
+     - The size of one grid square in map pixels.
+   * - Line width
+     - 8 (float64)
+     - The rendered grid line width in map pixels.
+   * - Opacity
+     - 8 (float64)
+     - The line opacity in the range 0-1.
+   * - Red channel
+     - 1
+     - The red channel of the grid colour.
+   * - Green channel
+     - 1
+     - The green channel of the grid colour.
+   * - Blue channel
+     - 1
+     - The blue channel of the grid colour.
+   * - Offset X
+     - 8 (float64)
+     - Horizontal offset in grid-square units, typically in the range 0-1.
+   * - Offset Y
+     - 8 (float64)
+     - Vertical offset in grid-square units, typically in the range 0-1.

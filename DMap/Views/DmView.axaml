@@ -298,7 +298,6 @@
                             IsGridVisible="{Binding IsGridVisible}"
                             GridSquareSize="{Binding GridSquareSize}"
                             GridLineWidth="{Binding GridLineWidth}"
-                            GridLineSoftness="{Binding GridLineSoftness}"
                             GridOpacity="{Binding GridOpacity}"
                             GridColor="{Binding GridColor}"
                             GridOffsetX="{Binding GridOffsetX}"
@@ -513,8 +512,6 @@
                             <Slider Minimum="8" Maximum="512" Value="{Binding GridSquareSize}" />
                             <TextBlock Text="{Binding GridLineWidth, StringFormat='Line Width: {0:F2}'}" FontWeight="SemiBold" />
                             <Slider Minimum="0.25" Maximum="10" Value="{Binding GridLineWidth}" />
-                            <TextBlock Text="{Binding GridLineSoftness, StringFormat='Softness: {0:F2}'}" FontWeight="SemiBold" />
-                            <Slider Minimum="0" Maximum="1" Value="{Binding GridLineSoftness}" />
                             <TextBlock Text="{Binding GridOpacity, StringFormat='Opacity: {0:F2}'}" FontWeight="SemiBold" />
                             <Slider Minimum="0" Maximum="1" Value="{Binding GridOpacity}" />
                             <TextBlock Text="Grid Color" FontWeight="SemiBold" />

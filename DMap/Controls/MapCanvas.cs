@@ -158,7 +158,6 @@ public class MapCanvas : Control
     public static readonly StyledProperty<bool> IsGridVisibleProperty = AvaloniaProperty.Register<MapCanvas, bool>(nameof(IsGridVisible));
     public static readonly StyledProperty<double> GridSquareSizeProperty = AvaloniaProperty.Register<MapCanvas, double>(nameof(GridSquareSize), 70);
     public static readonly StyledProperty<double> GridLineWidthProperty = AvaloniaProperty.Register<MapCanvas, double>(nameof(GridLineWidth), 1);
-    public static readonly StyledProperty<double> GridLineSoftnessProperty = AvaloniaProperty.Register<MapCanvas, double>(nameof(GridLineSoftness));
     public static readonly StyledProperty<double> GridOpacityProperty = AvaloniaProperty.Register<MapCanvas, double>(nameof(GridOpacity), 0.65);
     public static readonly StyledProperty<Color> GridColorProperty = AvaloniaProperty.Register<MapCanvas, Color>(nameof(GridColor), Colors.White);
     public static readonly StyledProperty<double> GridOffsetXProperty = AvaloniaProperty.Register<MapCanvas, double>(nameof(GridOffsetX));
@@ -364,7 +363,6 @@ public class MapCanvas : Control
     public bool IsGridVisible { get => GetValue(IsGridVisibleProperty); set => SetValue(IsGridVisibleProperty, value); }
     public double GridSquareSize { get => GetValue(GridSquareSizeProperty); set => SetValue(GridSquareSizeProperty, value); }
     public double GridLineWidth { get => GetValue(GridLineWidthProperty); set => SetValue(GridLineWidthProperty, value); }
-    public double GridLineSoftness { get => GetValue(GridLineSoftnessProperty); set => SetValue(GridLineSoftnessProperty, value); }
     public double GridOpacity { get => GetValue(GridOpacityProperty); set => SetValue(GridOpacityProperty, value); }
     public Color GridColor { get => GetValue(GridColorProperty); set => SetValue(GridColorProperty, value); }
     public double GridOffsetX { get => GetValue(GridOffsetXProperty); set => SetValue(GridOffsetXProperty, value); }
@@ -430,7 +428,7 @@ public class MapCanvas : Control
             BrushDiameterProperty, ActiveToolProperty, BrushShapeProperty,
             ShapeTypeProperty, ShapeCornerRadiusProperty, CursorTypeProperty, CursorSizeProperty, CursorMapXProperty,
             CursorMapYProperty, IsCursorVisibleProperty, ShowMapProperty,
-            IsGridVisibleProperty, GridSquareSizeProperty, GridLineWidthProperty, GridLineSoftnessProperty, GridOpacityProperty, GridColorProperty, GridOffsetXProperty, GridOffsetYProperty,
+            IsGridVisibleProperty, GridSquareSizeProperty, GridLineWidthProperty, GridOpacityProperty, GridColorProperty, GridOffsetXProperty, GridOffsetYProperty,
             FogTypeProperty, FogColorProperty, FogSeedProperty);
     }
 
@@ -614,7 +612,6 @@ public class MapCanvas : Control
             return;
 
         var lineBrush = new SolidColorBrush(GridColor, Math.Clamp(GridOpacity, 0, 1));
-        var soft = Math.Clamp(GridLineSoftness, 0, 1);
         var pen = new Pen(lineBrush, Math.Max(0.1, GridLineWidth));
         var square = GridSquareSize;
         var ox = GridOffsetX * square;
@@ -625,15 +622,6 @@ public class MapCanvas : Control
 
         for (double y = oy; y <= imageRect.Height; y += square)
             context.DrawLine(pen, new Point(0, y), new Point(imageRect.Width, y));
-
-        if (soft > 0)
-        {
-            var blurPen = new Pen(new SolidColorBrush(GridColor, GridOpacity * soft * 0.35), Math.Max(0.1, GridLineWidth * (1 + soft * 2)));
-            for (double x = ox; x <= imageRect.Width; x += square)
-                context.DrawLine(blurPen, new Point(x, 0), new Point(x, imageRect.Height));
-            for (double y = oy; y <= imageRect.Height; y += square)
-                context.DrawLine(blurPen, new Point(0, y), new Point(imageRect.Width, y));
-        }
     }
 
     /// <summary>

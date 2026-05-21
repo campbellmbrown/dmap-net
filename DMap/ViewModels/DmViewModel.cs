@@ -282,7 +282,6 @@ public class DmViewModel : ViewModelBase, IDisposable
     public bool IsGridVisible { get; set { this.RaiseAndSetIfChanged(ref field, value); BroadcastGridSettings(); } }
     public double GridSquareSize { get; set { this.RaiseAndSetIfChanged(ref field, value); BroadcastGridSettings(); } } = 70;
     public double GridLineWidth { get; set { this.RaiseAndSetIfChanged(ref field, value); BroadcastGridSettings(); } } = 1;
-    public double GridLineSoftness { get; set { this.RaiseAndSetIfChanged(ref field, value); BroadcastGridSettings(); } }
     public double GridOpacity { get; set { this.RaiseAndSetIfChanged(ref field, value); BroadcastGridSettings(); } } = 0.65;
     public Color GridColor { get; set { this.RaiseAndSetIfChanged(ref field, value); BroadcastGridSettings(); } } = Colors.White;
     public double GridOffsetX { get; set { this.RaiseAndSetIfChanged(ref field, value); BroadcastGridSettings(); } }
@@ -753,7 +752,6 @@ public class DmViewModel : ViewModelBase, IDisposable
             IsVisible = IsGridVisible,
             SquareSize = GridSquareSize,
             LineWidth = GridLineWidth,
-            LineSoftness = GridLineSoftness,
             Opacity = GridOpacity,
             R = GridColor.R,
             G = GridColor.G,
