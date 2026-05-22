@@ -93,6 +93,9 @@ public interface IDmHostService : IDisposable
     /// <param name="cursor">Cursor state.</param>
     /// <param name="ct">Cancellation token.</param>
     Task SendCursorAsync(CursorPayload cursor, CancellationToken ct);
+
+    /// <summary>Broadcasts the current grid overlay settings to players and caches them for late joiners.</summary>
+    Task SendGridSettingsAsync(GridSettingsPayload settings, CancellationToken ct);
 }
 
 /// <summary>
@@ -128,6 +131,7 @@ public sealed class DmHostService : IDmHostService
 
     /// <summary>Cached cursor payload sent to new clients on connect, or <see langword="null"/> if never set.</summary>
     byte[]? _pendingCursor;
+    byte[]? _pendingGridSettings;
 
     /// <inheritdoc/>
     public int Port { get; set; }
@@ -190,6 +194,7 @@ public sealed class DmHostService : IDmHostService
             byte[]? pendingFogAppearance;
             byte[]? pendingViewport;
             byte[]? pendingCursor;
+            byte[]? pendingGridSettings;
             lock (_clientsLock)
             {
                 pendingSessionInfo = _pendingSession is not null && _pendingFogMask is not null
@@ -199,6 +204,7 @@ public sealed class DmHostService : IDmHostService
                 pendingFogAppearance = _pendingFogAppearance;
                 pendingViewport = _pendingViewport;
                 pendingCursor = _pendingCursor;
+                pendingGridSettings = _pendingGridSettings;
             }
 
             if (pendingSessionInfo is not null)
@@ -215,6 +221,9 @@ public sealed class DmHostService : IDmHostService
 
             if (pendingCursor is not null)
                 await ProtocolFraming.WriteFrameAsync(stream, MessageType.Cursor, pendingCursor, default);
+
+            if (pendingGridSettings is not null)
+                await ProtocolFraming.WriteFrameAsync(stream, MessageType.GridSettings, pendingGridSettings, default);
 
             // Keep connection alive until cancelled or disconnected
             var buffer = new byte[1];
@@ -315,6 +324,18 @@ public sealed class DmHostService : IDmHostService
         }
 
         return BroadcastAsync(MessageType.Cursor, payload, ct);
+    }
+
+    /// <inheritdoc/>
+    public Task SendGridSettingsAsync(GridSettingsPayload settings, CancellationToken ct)
+    {
+        var payload = settings.Serialize();
+        lock (_clientsLock)
+        {
+            _pendingGridSettings = payload;
+        }
+
+        return BroadcastAsync(MessageType.GridSettings, payload, ct);
     }
 
     /// <inheritdoc/>

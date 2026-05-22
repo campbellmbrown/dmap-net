@@ -156,6 +156,7 @@ public class DmViewModel : ViewModelBase, IDisposable
             this.RaisePropertyChanged(nameof(IsPanSelected));
             this.RaisePropertyChanged(nameof(IsFogSelected));
             this.RaisePropertyChanged(nameof(IsCursorSelected));
+            this.RaisePropertyChanged(nameof(IsGridSelected));
         }
     }
 
@@ -173,6 +174,7 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     /// <summary><see langword="true"/> when the Cursor tool is active.</summary>
     public bool IsCursorSelected => SelectedTool == ToolType.Cursor;
+    public bool IsGridSelected => SelectedTool == ToolType.Grid;
 
     /// <summary>The brush shape (circle, square, or diamond) used when the Brush tool is active.</summary>
     public BrushShape SelectedBrushShape
@@ -277,6 +279,14 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// <summary>All available cursor icon types, used to populate the cursor selector.</summary>
     public IReadOnlyList<CursorType> CursorTypes { get; } = Enum.GetValues<CursorType>();
 
+    public bool IsGridVisible { get; set { this.RaiseAndSetIfChanged(ref field, value); BroadcastGridSettings(); } }
+    public double GridSquareSize { get; set { this.RaiseAndSetIfChanged(ref field, value); BroadcastGridSettings(); } } = 70;
+    public double GridLineWidth { get; set { this.RaiseAndSetIfChanged(ref field, value); BroadcastGridSettings(); } } = 1;
+    public double GridOpacity { get; set { this.RaiseAndSetIfChanged(ref field, value); BroadcastGridSettings(); } } = 0.65;
+    public Color GridColor { get; set { this.RaiseAndSetIfChanged(ref field, value); BroadcastGridSettings(); } } = Colors.White;
+    public double GridOffsetX { get; set { this.RaiseAndSetIfChanged(ref field, value); BroadcastGridSettings(); } }
+    public double GridOffsetY { get; set { this.RaiseAndSetIfChanged(ref field, value); BroadcastGridSettings(); } }
+
     /// <summary><see langword="true"/> when at least one operation is available to undo.</summary>
     public bool CanUndo
     {
@@ -308,6 +318,7 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     /// <summary>Activates the Cursor tool.</summary>
     public ReactiveCommand<Unit, Unit> SelectCursorCommand { get; }
+    public ReactiveCommand<Unit, Unit> SelectGridCommand { get; }
 
     /// <summary>Sets all fog mask pixels to 255 (fully revealed) and pushes an undo entry.</summary>
     public ReactiveCommand<Unit, Unit> RevealAllCommand { get; }
@@ -433,6 +444,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         SelectPanCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Pan; });
         SelectFogCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Fog; });
         SelectCursorCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Cursor; });
+        SelectGridCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Grid; });
 
         var mapLoaded = this.WhenAnyValue(x => x.IsMapLoaded);
         RevealAllCommand = ReactiveCommand.Create(ExecuteRevealAll, mapLoaded);
@@ -565,6 +577,7 @@ public class DmViewModel : ViewModelBase, IDisposable
 
         await StartHostingAsync();
         BroadcastFogAppearance();
+        BroadcastGridSettings();
         QueueViewportBroadcast();
     }
 
@@ -728,6 +741,28 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// to all connected players. Called whenever <see cref="SelectedFogType"/> or <see cref="FogColor"/>
     /// changes, and once per map load. Skipped before the host starts (no session yet).
     /// </summary>
+
+    void BroadcastGridSettings()
+    {
+        if (IsUpdatesPaused)
+            return;
+
+        var payload = new GridSettingsPayload
+        {
+            IsVisible = IsGridVisible,
+            SquareSize = GridSquareSize,
+            LineWidth = GridLineWidth,
+            Opacity = GridOpacity,
+            R = GridColor.R,
+            G = GridColor.G,
+            B = GridColor.B,
+            OffsetX = GridOffsetX,
+            OffsetY = GridOffsetY,
+        };
+
+        _ = _hostService.SendGridSettingsAsync(payload, default);
+    }
+
     void BroadcastFogAppearance()
     {
         if (_session is null)

@@ -39,4 +39,9 @@ public enum MessageType
     /// Player-visible cursor state broadcast from the DM to players.
     /// </summary>
     Cursor = 7,
+
+    /// <summary>
+    /// Grid overlay settings broadcast from the DM to players.
+    /// </summary>
+    GridSettings = 8,
 }

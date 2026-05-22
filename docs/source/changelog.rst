@@ -35,3 +35,5 @@ Unreleased
 * Choose from multiple fog themes, including colour and textured styles.
 * Open a synced player view that follows DM panning, zooming, and fog edits in real time.
 * Discover DM sessions over LAN and host reliable player connections over TCP.
+
+* Added DM-configurable map grid overlay (visibility, size, line style, opacity, color, and offsets) synchronized to players.

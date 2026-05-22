@@ -60,6 +60,9 @@ public interface IPlayerClientService : IDisposable
     /// </summary>
     event EventHandler<CursorPayload>? CursorReceived;
 
+    /// <summary>Raised when a <see cref="MessageType.GridSettings"/> frame is received.</summary>
+    event EventHandler<GridSettingsPayload>? GridSettingsReceived;
+
     /// <summary>
     /// Raised when the connection to the DM is closed, either because the DM disconnected,
     /// the network failed, or <see cref="DisconnectAsync"/> was called.
@@ -110,6 +113,9 @@ public sealed class PlayerClientService : IPlayerClientService
 
     /// <inheritdoc/>
     public event EventHandler<CursorPayload>? CursorReceived;
+
+    /// <inheritdoc/>
+    public event EventHandler<GridSettingsPayload>? GridSettingsReceived;
 
     /// <inheritdoc/>
     public event EventHandler? Disconnected;
@@ -163,6 +169,9 @@ public sealed class PlayerClientService : IPlayerClientService
                         break;
                     case MessageType.Cursor:
                         CursorReceived?.Invoke(this, CursorPayload.Deserialize(payload));
+                        break;
+                    case MessageType.GridSettings:
+                        GridSettingsReceived?.Invoke(this, GridSettingsPayload.Deserialize(payload));
                         break;
                 }
             }
