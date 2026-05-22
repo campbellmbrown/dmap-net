@@ -107,6 +107,39 @@
         <SolidColorBrush x:Key="SliderContainerBackgroundDisabled" Color="Transparent" />
         <Thickness x:Key="SliderBorderThemeThickness">0</Thickness>
 
+        <!-- https://github.com/AvaloniaUI/Avalonia/blob/12.0.1/src/Avalonia.Themes.Fluent/Controls/ToggleSwitch.xaml -->
+        <SolidColorBrush x:Key="ToggleSwitchContentForeground" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="ToggleSwitchHeaderForegroundDisabled" Color="{StaticResource DMapForeground}" Opacity="0.6" />
+        <SolidColorBrush x:Key="ToggleSwitchContainerBackground" Color="Transparent" />
+        <SolidColorBrush x:Key="ToggleSwitchContainerBackgroundPointerOver" Color="Transparent" />
+        <SolidColorBrush x:Key="ToggleSwitchContainerBackgroundPressed" Color="Transparent" />
+        <SolidColorBrush x:Key="ToggleSwitchFillOff" Color="{StaticResource DMapBackground}" />
+        <SolidColorBrush x:Key="ToggleSwitchFillOffPointerOver" Color="{StaticResource DMapHover}" />
+        <SolidColorBrush x:Key="ToggleSwitchFillOffPressed" Color="{StaticResource DMapSelected}" />
+        <SolidColorBrush x:Key="ToggleSwitchFillOffDisabled" Color="{StaticResource DMapBackground}" Opacity="0.6" />
+        <SolidColorBrush x:Key="ToggleSwitchStrokeOff" Color="{StaticResource DMapHighlight}" />
+        <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="{StaticResource DMapHighlight}" />
+        <SolidColorBrush x:Key="ToggleSwitchStrokeOffPressed" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="ToggleSwitchStrokeOffDisabled" Color="{StaticResource DMapHighlight}" Opacity="0.6" />
+        <Thickness x:Key="ToggleSwitchOuterBorderStrokeThickness">2</Thickness>
+        <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="{StaticResource DMapSelected}" />
+        <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="{StaticResource DMapHighlight}" />
+        <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="{StaticResource DMapHighlight}" />
+        <SolidColorBrush x:Key="ToggleSwitchFillOnDisabled" Color="{StaticResource DMapSelected}" Opacity="0.6" />
+        <SolidColorBrush x:Key="ToggleSwitchStrokeOn" Color="{StaticResource DMapHighlight}" />
+        <SolidColorBrush x:Key="ToggleSwitchStrokeOnPointerOver" Color="{StaticResource DMapHighlight}" />
+        <SolidColorBrush x:Key="ToggleSwitchStrokeOnPressed" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="ToggleSwitchStrokeOnDisabled" Color="{StaticResource DMapHighlight}" Opacity="0.6" />
+        <Thickness x:Key="ToggleSwitchOnStrokeThickness">2</Thickness>
+        <SolidColorBrush x:Key="ToggleSwitchKnobFillOff" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPointerOver" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPressed" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="ToggleSwitchKnobFillOffDisabled" Color="{StaticResource DMapForeground}" Opacity="0.6" />
+        <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPressed" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="ToggleSwitchKnobFillOnDisabled" Color="{StaticResource DMapForeground}" Opacity="0.6" />
+
         <!-- https://github.com/AvaloniaUI/Avalonia/blob/12.0.1/src/Avalonia.Themes.Fluent/Controls/ToolTip.xaml -->
         <SolidColorBrush x:Key="ToolTipBackground" Color="{StaticResource DMapBackground}" />
         <SolidColorBrush x:Key="ToolTipForeground" Color="{StaticResource DMapForeground}" />
