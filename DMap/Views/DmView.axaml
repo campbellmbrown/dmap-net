@@ -104,7 +104,7 @@
         </Style>
 
         <Style Selector="NumericUpDown.toolSetting">
-            <Setter Property="Width" Value="80" />
+            <Setter Property="Width" Value="60" />
             <Setter Property="FontSize" Value="12" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
