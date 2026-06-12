@@ -4,6 +4,13 @@ Changelog
 .. Unreleased
 .. ----------
 
+:release-link:`v1.2.1`
+----------------------
+
+* Added headers on tool setting panels.
+* Added numerical inputs alongside slider settings.
+* Rearranged parts of the tool setting panels.
+
 :release-link:`v1.2.0`
 ----------------------
 
