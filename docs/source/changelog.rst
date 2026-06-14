@@ -1,8 +1,10 @@
 Changelog
 =========
 
-.. Unreleased
-.. ----------
+Unreleased
+----------
+
+* Hide the tool settings panel when the pan tool is active, because it has no settings.
 
 :release-link:`v1.2.1`
 ----------------------

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Reactive;
 using System.Reactive.Linq;
@@ -7,7 +8,6 @@ using System.Threading.Tasks;
 
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 
@@ -17,6 +17,7 @@ using DMap.Services.Brushes;
 using DMap.Services.Fog;
 using DMap.Services.History;
 using DMap.Services.Networking;
+using DMap.ViewModels.ToolSettings;
 
 using ReactiveUI;
 
@@ -31,18 +32,6 @@ namespace DMap.ViewModels;
 /// </summary>
 public class DmViewModel : ViewModelBase, IDisposable
 {
-    const int DefaultBrushDiameter = 50;
-    const double DefaultBrushSoftness = 0.3;
-    const double DefaultBrushOpacity = 1.0;
-
-    const double DefaultShapeSoftness = 0.0;
-    const double DefaultShapeOpacity = 1.0;
-    const int DefaultShapeCornerRadius = 0;
-
-    const double DefaultFogOpacity = 0.5;
-
-    const int DefaultCursorSize = 64;
-
     readonly IFogMaskService _fogService;
     readonly IUndoRedoService _undoRedo;
     readonly IBrush _circleBrush;
@@ -76,54 +65,20 @@ public class DmViewModel : ViewModelBase, IDisposable
         private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    /// <summary>Diameter of the brush in map pixels. Bound to the toolbar slider.</summary>
-    public int BrushDiameter
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    } = DefaultBrushDiameter;
+    /// <summary>Settings for the Brush tool.</summary>
+    public BrushToolSettingsViewModel BrushSettings { get; }
 
-    /// <summary>Brush edge softness in [0, 1]; 0 = hard edge, 1 = full gradient.</summary>
-    public double BrushSoftness
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    } = DefaultBrushSoftness;
+    /// <summary>Settings for the Shape tool.</summary>
+    public ShapeToolSettingsViewModel ShapeSettings { get; }
 
-    /// <summary>Maximum brush opacity applied per stroke in [0, 1].</summary>
-    public double BrushOpacity
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    } = DefaultBrushOpacity;
+    /// <summary>Settings for the Fog tool.</summary>
+    public FogToolSettingsViewModel FogSettings { get; }
 
-    /// <summary>Shape edge softness in [0, 1]; 0 = hard edge.</summary>
-    public double ShapeSoftness
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    } = DefaultShapeSoftness;
+    /// <summary>Settings for the Cursor tool.</summary>
+    public CursorToolSettingsViewModel CursorSettings { get; }
 
-    /// <summary>Maximum shape fill opacity in [0, 1].</summary>
-    public double ShapeOpacity
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    } = DefaultShapeOpacity;
-
-    /// <summary>Fixed corner radius in map pixels for rectangle and square shape variants.</summary>
-    public int ShapeCornerRadius
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    } = DefaultShapeCornerRadius;
-
-    /// <summary>Opacity of the fog overlay rendered on the canvas, in the range [0, 1].</summary>
-    public double FogOpacity
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    } = DefaultFogOpacity;
+    /// <summary>Settings for the Grid tool.</summary>
+    public GridToolSettingsViewModel GridSettings { get; }
 
     /// <summary>Number of player TCP connections currently open on the host service.</summary>
     public int ConnectedPlayers
@@ -150,6 +105,11 @@ public class DmViewModel : ViewModelBase, IDisposable
         get;
         set
         {
+            if (field == value)
+            {
+                return;
+            }
+
             this.RaiseAndSetIfChanged(ref field, value);
             this.RaisePropertyChanged(nameof(IsBrushSelected));
             this.RaisePropertyChanged(nameof(IsShapeSelected));
@@ -157,6 +117,8 @@ public class DmViewModel : ViewModelBase, IDisposable
             this.RaisePropertyChanged(nameof(IsFogSelected));
             this.RaisePropertyChanged(nameof(IsCursorSelected));
             this.RaisePropertyChanged(nameof(IsGridSelected));
+            CurrentToolSettings = GetCurrentToolSettings(value);
+            this.RaisePropertyChanged(nameof(HasCurrentToolSettings));
         }
     }
 
@@ -174,66 +136,22 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     /// <summary><see langword="true"/> when the Cursor tool is active.</summary>
     public bool IsCursorSelected => SelectedTool == ToolType.Cursor;
-    public bool IsGridSelected => SelectedTool == ToolType.Grid;
 
-    /// <summary>The brush shape (circle, square, or diamond) used when the Brush tool is active.</summary>
-    public BrushShape SelectedBrushShape
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    }
+    /// <summary><see langword="true"/> when the Grid tool is active.</summary>
+    public bool IsGridSelected => SelectedTool == ToolType.Grid;
 
     /// <summary>All available tool types, used to populate the toolbar's tool selector.</summary>
     public IReadOnlyList<ToolType> ToolTypes { get; } = Enum.GetValues<ToolType>();
 
-    /// <summary>All available brush shapes, used to populate the brush shape selector.</summary>
-    public IReadOnlyList<BrushShape> BrushShapes { get; } = Enum.GetValues<BrushShape>();
-
-    /// <summary>The geometric shape drawn when the Shape tool is active.</summary>
-    public ShapeType SelectedShapeType
+    /// <summary>The child settings view model for the currently selected tool, or <see langword="null"/> for Pan.</summary>
+    public ToolSettingsViewModelBase? CurrentToolSettings
     {
         get;
-        set
-        {
-            this.RaiseAndSetIfChanged(ref field, value);
-            this.RaisePropertyChanged(nameof(IsShapeCornerRadiusVisible));
-        }
+        private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    /// <summary>All available shape types, used to populate the shape type selector.</summary>
-    public IReadOnlyList<ShapeType> ShapeTypes { get; } = Enum.GetValues<ShapeType>();
-
-    /// <summary><see langword="true"/> when the selected shape supports a configurable corner radius.</summary>
-    public bool IsShapeCornerRadiusVisible => ShapeTypeMetadata.SupportsCornerRadius(SelectedShapeType);
-
-    /// <summary>
-    /// The fog overlay style. Changing this raises change notification for
-    /// <see cref="IsFogColorSelected"/> and broadcasts the new appearance to connected players.
-    /// </summary>
-    public FogType SelectedFogType
-    {
-        get;
-        set
-        {
-            this.RaiseAndSetIfChanged(ref field, value);
-            this.RaisePropertyChanged(nameof(IsFogColorSelected));
-            BroadcastFogAppearance();
-        }
-    } = FogType.Color;
-
-    /// <summary>
-    /// The flat fog colour used when <see cref="SelectedFogType"/> is <see cref="FogType.Color"/>.
-    /// Changing this broadcasts the new appearance to connected players.
-    /// </summary>
-    public Color FogColor
-    {
-        get;
-        set
-        {
-            this.RaiseAndSetIfChanged(ref field, value);
-            BroadcastFogAppearance();
-        }
-    } = Colors.Black;
+    /// <summary><see langword="true"/> when the selected tool has a settings panel to display.</summary>
+    public bool HasCurrentToolSettings => CurrentToolSettings is not null;
 
     /// <summary>Texture seed shared with players so all clients render identical fog noise.</summary>
     public Guid FogSeed
@@ -248,44 +166,6 @@ public class DmViewModel : ViewModelBase, IDisposable
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
     }
-
-    /// <summary><see langword="true"/> when the colour picker should be visible (i.e. flat-colour mode).</summary>
-    public bool IsFogColorSelected => SelectedFogType == FogType.Color;
-
-    /// <summary>All available fog types, used to populate the fog type selector.</summary>
-    public IReadOnlyList<FogType> FogTypes { get; } = Enum.GetValues<FogType>();
-
-    /// <summary>Cursor icon rendered locally and broadcast to connected players.</summary>
-    public CursorType SelectedCursorType
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    } = CursorType.Crosshair;
-
-    /// <summary>Cursor icon size in screen pixels.</summary>
-    public int CursorSize
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    } = DefaultCursorSize;
-
-    /// <summary><see langword="true"/> when the cursor should only appear while left click is held.</summary>
-    public bool ShowCursorOnlyWhilePressed
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    }
-
-    /// <summary>All available cursor icon types, used to populate the cursor selector.</summary>
-    public IReadOnlyList<CursorType> CursorTypes { get; } = Enum.GetValues<CursorType>();
-
-    public bool IsGridVisible { get; set { this.RaiseAndSetIfChanged(ref field, value); BroadcastGridSettings(); } }
-    public double GridSquareSize { get; set { this.RaiseAndSetIfChanged(ref field, value); BroadcastGridSettings(); } } = 70;
-    public double GridLineWidth { get; set { this.RaiseAndSetIfChanged(ref field, value); BroadcastGridSettings(); } } = 1;
-    public double GridOpacity { get; set { this.RaiseAndSetIfChanged(ref field, value); BroadcastGridSettings(); } } = 0.65;
-    public Color GridColor { get; set { this.RaiseAndSetIfChanged(ref field, value); BroadcastGridSettings(); } } = Colors.White;
-    public double GridOffsetX { get; set { this.RaiseAndSetIfChanged(ref field, value); BroadcastGridSettings(); } }
-    public double GridOffsetY { get; set { this.RaiseAndSetIfChanged(ref field, value); BroadcastGridSettings(); } }
 
     /// <summary><see langword="true"/> when at least one operation is available to undo.</summary>
     public bool CanUndo
@@ -318,6 +198,8 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     /// <summary>Activates the Cursor tool.</summary>
     public ReactiveCommand<Unit, Unit> SelectCursorCommand { get; }
+
+    /// <summary>Activates the Grid tool.</summary>
     public ReactiveCommand<Unit, Unit> SelectGridCommand { get; }
 
     /// <summary>Sets all fog mask pixels to 255 (fully revealed) and pushes an undo entry.</summary>
@@ -414,6 +296,7 @@ public class DmViewModel : ViewModelBase, IDisposable
     CursorPayload? _latestCursor;
     bool _isViewportBroadcastQueued;
     bool _isCursorBroadcastQueued;
+
     /// <summary>Fires every 2 seconds on the UI thread to refresh <see cref="MemoryUsage"/>.</summary>
     readonly DispatcherTimer _memoryTimer;
 
@@ -430,6 +313,16 @@ public class DmViewModel : ViewModelBase, IDisposable
         _hostService = hostService;
         _discoveryService = discoveryService;
         _createPlayer = createPlayer;
+
+        BrushSettings = new BrushToolSettingsViewModel();
+        ShapeSettings = new ShapeToolSettingsViewModel();
+        FogSettings = new FogToolSettingsViewModel();
+        CursorSettings = new CursorToolSettingsViewModel();
+        GridSettings = new GridToolSettingsViewModel();
+        CurrentToolSettings = BrushSettings;
+
+        FogSettings.PropertyChanged += OnFogSettingsPropertyChanged;
+        GridSettings.PropertyChanged += OnGridSettingsPropertyChanged;
 
         _hostService.PlayerCountChanged += (_, count) => ConnectedPlayers = count;
         _undoRedo.StateChanged += (_, _) => { CanUndo = _undoRedo.CanUndo; CanRedo = _undoRedo.CanRedo; };
@@ -616,7 +509,8 @@ public class DmViewModel : ViewModelBase, IDisposable
         if (_fogService.Mask is null)
             return;
 
-        var (cx1, cy1, cx2, cy2) = ShapeConstraintHelper.NormalizeBounds(SelectedShapeType, x1, y1, x2, y2);
+        var shapeType = ShapeSettings.SelectedShapeType;
+        var (cx1, cy1, cx2, cy2) = ShapeConstraintHelper.NormalizeBounds(shapeType, x1, y1, x2, y2);
 
         if (cx1 == cx2 && cy1 == cy2)
             return;
@@ -627,9 +521,9 @@ public class DmViewModel : ViewModelBase, IDisposable
 
         var before = FogDeltaCommand.CaptureFromMask(_fogService.Mask, shapeRect);
 
-        var dirtyRect = ShapeTypeMetadata.IsEllipse(SelectedShapeType)
-            ? _fogService.ApplyEllipse(cx1, cy1, cx2, cy2, (float)ShapeSoftness, (float)ShapeOpacity, isErasing)
-            : _fogService.ApplyRectangle(cx1, cy1, cx2, cy2, (float)ShapeSoftness, (float)ShapeOpacity, ShapeCornerRadius, isErasing);
+        var dirtyRect = ShapeTypeMetadata.IsEllipse(shapeType)
+            ? _fogService.ApplyEllipse(cx1, cy1, cx2, cy2, (float)ShapeSettings.Softness, (float)ShapeSettings.Opacity, isErasing)
+            : _fogService.ApplyRectangle(cx1, cy1, cx2, cy2, (float)ShapeSettings.Softness, (float)ShapeSettings.Opacity, ShapeSettings.CornerRadius, isErasing);
 
         if (IsEmpty(dirtyRect))
             return;
@@ -670,14 +564,15 @@ public class DmViewModel : ViewModelBase, IDisposable
         if (_fogService.Mask is null)
             return;
 
-        var brush = SelectedBrushShape switch
+        var brush = BrushSettings.SelectedBrushShape switch
         {
             BrushShape.Circle => _circleBrush,
             BrushShape.Square => _squareBrush,
             BrushShape.Diamond => _diamondBrush,
-            _ => throw new InvalidOperationException($"Unsupported brush shape: {SelectedBrushShape}")
+            _ => throw new InvalidOperationException($"Unsupported brush shape: {BrushSettings.SelectedBrushShape}")
         };
-        var settings = new BrushSettings(BrushDiameter, (float)BrushSoftness, (float)BrushOpacity, Erase: isErasing);
+
+        var settings = new BrushSettings(BrushSettings.Diameter, (float)BrushSettings.Softness, (float)BrushSettings.Opacity, Erase: isErasing);
         var dirtyRect = _fogService.ApplyBrush(brush, x1, y1, x2, y2, settings);
         if (IsEmpty(dirtyRect))
             return;
@@ -736,12 +631,6 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     static bool IsEmpty(PixelRect rect) => rect.Width <= 0 || rect.Height <= 0;
 
-    /// <summary>
-    /// Fires-and-forgets a broadcast of the current fog appearance (type + colour + seed)
-    /// to all connected players. Called whenever <see cref="SelectedFogType"/> or <see cref="FogColor"/>
-    /// changes, and once per map load. Skipped before the host starts (no session yet).
-    /// </summary>
-
     void BroadcastGridSettings()
     {
         if (IsUpdatesPaused)
@@ -749,20 +638,25 @@ public class DmViewModel : ViewModelBase, IDisposable
 
         var payload = new GridSettingsPayload
         {
-            IsVisible = IsGridVisible,
-            SquareSize = GridSquareSize,
-            LineWidth = GridLineWidth,
-            Opacity = GridOpacity,
-            R = GridColor.R,
-            G = GridColor.G,
-            B = GridColor.B,
-            OffsetX = GridOffsetX,
-            OffsetY = GridOffsetY,
+            IsVisible = GridSettings.IsVisible,
+            SquareSize = GridSettings.SquareSize,
+            LineWidth = GridSettings.LineWidth,
+            Opacity = GridSettings.Opacity,
+            R = GridSettings.Color.R,
+            G = GridSettings.Color.G,
+            B = GridSettings.Color.B,
+            OffsetX = GridSettings.OffsetX,
+            OffsetY = GridSettings.OffsetY,
         };
 
         _ = _hostService.SendGridSettingsAsync(payload, default);
     }
 
+    /// <summary>
+    /// Fires-and-forgets a broadcast of the current fog appearance (type + colour + seed)
+    /// to all connected players. Called whenever the fog settings change, and once per map load.
+    /// Skipped before the host starts (no session yet).
+    /// </summary>
     void BroadcastFogAppearance()
     {
         if (_session is null)
@@ -770,14 +664,47 @@ public class DmViewModel : ViewModelBase, IDisposable
 
         var payload = new FogAppearancePayload
         {
-            FogType = SelectedFogType,
-            R = FogColor.R,
-            G = FogColor.G,
-            B = FogColor.B,
+            FogType = FogSettings.SelectedFogType,
+            R = FogSettings.Color.R,
+            G = FogSettings.Color.G,
+            B = FogSettings.Color.B,
             Seed = FogSeed,
         };
         _ = _hostService.SendFogAppearanceAsync(payload, default);
     }
+
+    void OnFogSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is null
+            || e.PropertyName == nameof(FogToolSettingsViewModel.SelectedFogType)
+            || e.PropertyName == nameof(FogToolSettingsViewModel.Color))
+            BroadcastFogAppearance();
+    }
+
+    void OnGridSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is null
+            || e.PropertyName == nameof(GridToolSettingsViewModel.IsVisible)
+            || e.PropertyName == nameof(GridToolSettingsViewModel.SquareSize)
+            || e.PropertyName == nameof(GridToolSettingsViewModel.LineWidth)
+            || e.PropertyName == nameof(GridToolSettingsViewModel.Opacity)
+            || e.PropertyName == nameof(GridToolSettingsViewModel.Color)
+            || e.PropertyName == nameof(GridToolSettingsViewModel.OffsetX)
+            || e.PropertyName == nameof(GridToolSettingsViewModel.OffsetY))
+            BroadcastGridSettings();
+    }
+
+    ToolSettingsViewModelBase? GetCurrentToolSettings(ToolType tool) =>
+        tool switch
+        {
+            ToolType.Brush => BrushSettings,
+            ToolType.Shape => ShapeSettings,
+            ToolType.Fog => FogSettings,
+            ToolType.Cursor => CursorSettings,
+            ToolType.Grid => GridSettings,
+            ToolType.Pan => null,
+            _ => null
+        };
 
     /// <summary>
     /// Queues a viewport broadcast for the next UI dispatch pass so multiple offset/zoom changes
@@ -916,6 +843,8 @@ public class DmViewModel : ViewModelBase, IDisposable
     {
         if (disposing)
         {
+            FogSettings.PropertyChanged -= OnFogSettingsPropertyChanged;
+            GridSettings.PropertyChanged -= OnGridSettingsPropertyChanged;
             _memoryTimer.Stop();
             (_hostService as IDisposable)?.Dispose();
             (_discoveryService as IDisposable)?.Dispose();

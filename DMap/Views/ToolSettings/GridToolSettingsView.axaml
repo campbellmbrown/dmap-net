@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DMap.ViewModels.ToolSettings"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="DMap.Views.ToolSettings.GridToolSettingsView"
+             x:DataType="vm:GridToolSettingsViewModel">
+
+    <StackPanel Spacing="8" MinWidth="200">
+        <TextBlock Classes="toolSettingHeader" Text="Grid Settings" />
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="toolSetting" Text="Grid Visibility" VerticalAlignment="Center" />
+            <ToggleSwitch Grid.Column="1" IsChecked="{Binding IsVisible}" OnContent="" OffContent="" />
+        </Grid>
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="toolSetting" Text="Square Size" VerticalAlignment="Center" />
+            <NumericUpDown Classes="toolSetting" Grid.Column="1" Value="{Binding SquareSize}"
+                           Minimum="8" Maximum="512" Increment="1" FormatString="0" />
+        </Grid>
+        <Slider Minimum="8" Maximum="512" Value="{Binding SquareSize}" />
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="toolSetting" Text="Line Width" VerticalAlignment="Center" />
+            <NumericUpDown Classes="toolSetting" Grid.Column="1" Value="{Binding LineWidth}"
+                           Minimum="0.25" Maximum="10" Increment="0.25" FormatString="0.00" />
+        </Grid>
+        <Slider Minimum="0.25" Maximum="10" Value="{Binding LineWidth}" />
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="toolSetting" Text="Opacity" VerticalAlignment="Center" />
+            <NumericUpDown Classes="toolSetting" Grid.Column="1" Value="{Binding Opacity}"
+                           Minimum="0" Maximum="1" Increment="0.01" FormatString="0.00" />
+        </Grid>
+        <Slider Minimum="0" Maximum="1" Value="{Binding Opacity}" />
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="toolSetting" Text="Grid Color" VerticalAlignment="Center" />
+            <Border Grid.Column="1"
+                    BorderThickness="2"
+                    BorderBrush="{StaticResource DMapHighlight}"
+                    CornerRadius="4"
+                    Padding="0">
+                <ColorPicker Color="{Binding Color}" IsAlphaVisible="False" IsAlphaEnabled="False" IsColorPreviewVisible="False" />
+            </Border>
+        </Grid>
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="toolSetting" Text="Offset X" VerticalAlignment="Center" />
+            <NumericUpDown Classes="toolSetting" Grid.Column="1" Value="{Binding OffsetX}"
+                           Minimum="0" Maximum="1" Increment="0.01" FormatString="0.00" />
+        </Grid>
+        <Slider Minimum="0" Maximum="1" Value="{Binding OffsetX}" />
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="toolSetting" Text="Offset Y" VerticalAlignment="Center" />
+            <NumericUpDown Classes="toolSetting" Grid.Column="1" Value="{Binding OffsetY}"
+                           Minimum="0" Maximum="1" Increment="0.01" FormatString="0.00" />
+        </Grid>
+        <Slider Minimum="0" Maximum="1" Value="{Binding OffsetY}" />
+    </StackPanel>
+</UserControl>

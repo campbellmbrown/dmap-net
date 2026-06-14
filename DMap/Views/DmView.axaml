@@ -1,23 +1,15 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:DMap.ViewModels"
+             xmlns:toolVm="using:DMap.ViewModels.ToolSettings"
+             xmlns:toolViews="using:DMap.Views.ToolSettings"
              xmlns:controls="using:DMap.Controls"
-             xmlns:converters="using:DMap.Converters"
              xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Svg.Controls.Skia.Avalonia"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="1024" d:DesignHeight="768"
              x:Class="DMap.Views.DmView"
              x:DataType="vm:DmViewModel">
-
-    <UserControl.Resources>
-        <converters:BrushShapeIconConverter x:Key="BrushShapeIconConverter" />
-        <converters:ShapeTypeIconConverter x:Key="ShapeTypeIconConverter" />
-        <converters:ShapeTypeDisplayNameConverter x:Key="ShapeTypeDisplayNameConverter" />
-        <converters:FogTypeIconConverter x:Key="FogTypeIconConverter" />
-        <converters:CursorTypeIconConverter x:Key="CursorTypeIconConverter" />
-        <converters:CursorTypeDisplayNameConverter x:Key="CursorTypeDisplayNameConverter" />
-    </UserControl.Resources>
 
     <UserControl.Styles>
         <Style Selector="TextBlock.toolSetting">
@@ -117,6 +109,24 @@
             <Setter Property="Height" Value="16" />
         </Style>
     </UserControl.Styles>
+
+    <UserControl.DataTemplates>
+        <DataTemplate DataType="toolVm:BrushToolSettingsViewModel">
+            <toolViews:BrushToolSettingsView />
+        </DataTemplate>
+        <DataTemplate DataType="toolVm:ShapeToolSettingsViewModel">
+            <toolViews:ShapeToolSettingsView />
+        </DataTemplate>
+        <DataTemplate DataType="toolVm:FogToolSettingsViewModel">
+            <toolViews:FogToolSettingsView />
+        </DataTemplate>
+        <DataTemplate DataType="toolVm:CursorToolSettingsViewModel">
+            <toolViews:CursorToolSettingsView />
+        </DataTemplate>
+        <DataTemplate DataType="toolVm:GridToolSettingsViewModel">
+            <toolViews:GridToolSettingsView />
+        </DataTemplate>
+    </UserControl.DataTemplates>
 
     <UserControl.KeyBindings>
         <KeyBinding Gesture="Ctrl+O" Command="{Binding LoadMapCommand}" />
@@ -301,27 +311,27 @@
                             MapImage="{Binding MapImage}"
                             FogMask="{Binding FogMask}"
                             IsDmMode="True"
-                            FogOpacity="{Binding FogOpacity}"
-                            FogType="{Binding SelectedFogType}"
-                            FogColor="{Binding FogColor}"
+                            FogOpacity="{Binding FogSettings.Opacity}"
+                            FogType="{Binding FogSettings.SelectedFogType}"
+                            FogColor="{Binding FogSettings.Color}"
                             FogSeed="{Binding FogSeed}"
                             IsFogGenerating="{Binding IsFogGenerating, Mode=OneWayToSource}"
                             ShowMap="{Binding IsMapVisible}"
-                            BrushDiameter="{Binding BrushDiameter}"
+                            BrushDiameter="{Binding BrushSettings.Diameter}"
                             ActiveTool="{Binding SelectedTool}"
-                            BrushShape="{Binding SelectedBrushShape}"
-                            ShapeType="{Binding SelectedShapeType}"
-                            ShapeCornerRadius="{Binding ShapeCornerRadius}"
-                            CursorType="{Binding SelectedCursorType}"
-                            CursorSize="{Binding CursorSize}"
-                            ShowCursorOnlyWhilePressed="{Binding ShowCursorOnlyWhilePressed}"
-                            IsGridVisible="{Binding IsGridVisible}"
-                            GridSquareSize="{Binding GridSquareSize}"
-                            GridLineWidth="{Binding GridLineWidth}"
-                            GridOpacity="{Binding GridOpacity}"
-                            GridColor="{Binding GridColor}"
-                            GridOffsetX="{Binding GridOffsetX}"
-                            GridOffsetY="{Binding GridOffsetY}">
+                            BrushShape="{Binding BrushSettings.SelectedBrushShape}"
+                            ShapeType="{Binding ShapeSettings.SelectedShapeType}"
+                            ShapeCornerRadius="{Binding ShapeSettings.CornerRadius}"
+                            CursorType="{Binding CursorSettings.SelectedCursorType}"
+                            CursorSize="{Binding CursorSettings.Size}"
+                            ShowCursorOnlyWhilePressed="{Binding CursorSettings.ShowOnlyWhilePressed}"
+                            IsGridVisible="{Binding GridSettings.IsVisible}"
+                            GridSquareSize="{Binding GridSettings.SquareSize}"
+                            GridLineWidth="{Binding GridSettings.LineWidth}"
+                            GridOpacity="{Binding GridSettings.Opacity}"
+                            GridColor="{Binding GridSettings.Color}"
+                            GridOffsetX="{Binding GridSettings.OffsetX}"
+                            GridOffsetY="{Binding GridSettings.OffsetY}">
             </controls:MapCanvas>
 
             <Panel IsVisible="{Binding IsOverlayVisible}">
@@ -414,212 +424,9 @@
                 <Border Classes="overlay"
                         Padding="8"
                         VerticalAlignment="Top"
-                        IsHitTestVisible="True">
-                    <Panel>
-                        <!-- Brush settings -->
-                        <StackPanel Spacing="8" MinWidth="200" IsVisible="{Binding IsBrushSelected}">
-                            <TextBlock Classes="toolSettingHeader" Text="Brush Settings" />
-                            <TextBlock Classes="toolSetting" Text="Brush Shape" />
-                            <ComboBox ItemsSource="{Binding BrushShapes}"
-                                    SelectedItem="{Binding SelectedBrushShape}"
-                                    HorizontalAlignment="Stretch">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate x:CompileBindings="False">
-                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                            <Image Width="16" Height="16" Source="{Binding Converter={StaticResource BrushShapeIconConverter}}" />
-                                            <TextBlock Text="{Binding}" VerticalAlignment="Center" />
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Classes="toolSetting" Text="Diameter" VerticalAlignment="Center" />
-                                <NumericUpDown Classes="toolSetting" Grid.Column="1" Value="{Binding BrushDiameter}"
-                                               Minimum="10" Maximum="300" Increment="1" FormatString="0" />
-                            </Grid>
-                            <Slider Minimum="10" Maximum="300" Value="{Binding BrushDiameter}"
-                                    TickFrequency="1" IsSnapToTickEnabled="True"
-                                    HorizontalAlignment="Stretch" />
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Classes="toolSetting" Text="Softness" VerticalAlignment="Center" />
-                                <NumericUpDown Classes="toolSetting" Grid.Column="1" Value="{Binding BrushSoftness}"
-                                               Minimum="0" Maximum="1" Increment="0.01" FormatString="0.00" />
-                            </Grid>
-                            <Slider Minimum="0" Maximum="1" Value="{Binding BrushSoftness}"
-                                    TickFrequency="0.01" IsSnapToTickEnabled="True"
-                                    HorizontalAlignment="Stretch" />
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Classes="toolSetting" Text="Opacity" VerticalAlignment="Center" />
-                                <NumericUpDown Classes="toolSetting" Grid.Column="1" Value="{Binding BrushOpacity}"
-                                               Minimum="0" Maximum="1" Increment="0.01" FormatString="0.00" />
-                            </Grid>
-                            <Slider Minimum="0" Maximum="1" Value="{Binding BrushOpacity}"
-                                    TickFrequency="0.01" IsSnapToTickEnabled="True"
-                                    HorizontalAlignment="Stretch" />
-                        </StackPanel>
-
-                        <!-- Shape settings -->
-                        <StackPanel Spacing="8" MinWidth="200" IsVisible="{Binding IsShapeSelected}">
-                            <TextBlock Classes="toolSettingHeader" Text="Shape Settings" />
-                            <TextBlock Classes="toolSetting" Text="Shape Type" />
-                            <ComboBox ItemsSource="{Binding ShapeTypes}"
-                                    SelectedItem="{Binding SelectedShapeType}"
-                                    HorizontalAlignment="Stretch">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate x:CompileBindings="False">
-                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                            <Image Width="16" Height="16" Source="{Binding Converter={StaticResource ShapeTypeIconConverter}}" />
-                                            <TextBlock Text="{Binding Converter={StaticResource ShapeTypeDisplayNameConverter}}" VerticalAlignment="Center" />
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Classes="toolSetting" Text="Softness" VerticalAlignment="Center" />
-                                <NumericUpDown Classes="toolSetting" Grid.Column="1" Value="{Binding ShapeSoftness}"
-                                               Minimum="0" Maximum="1" Increment="0.01" FormatString="0.00" />
-                            </Grid>
-                            <Slider Minimum="0" Maximum="1" Value="{Binding ShapeSoftness}"
-                                    TickFrequency="0.01" IsSnapToTickEnabled="True"
-                                    HorizontalAlignment="Stretch" />
-                            <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding IsShapeCornerRadiusVisible}">
-                                <TextBlock Classes="toolSetting" Text="Corner Radius" VerticalAlignment="Center" />
-                                <NumericUpDown Classes="toolSetting" Grid.Column="1" Value="{Binding ShapeCornerRadius}"
-                                               Minimum="0" Maximum="128" Increment="1" FormatString="0" />
-                            </Grid>
-                            <Slider Minimum="0" Maximum="128" Value="{Binding ShapeCornerRadius}"
-                                    TickFrequency="1" IsSnapToTickEnabled="True"
-                                    HorizontalAlignment="Stretch"
-                                    IsEnabled="{Binding IsShapeCornerRadiusVisible}" />
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Classes="toolSetting" Text="Opacity" VerticalAlignment="Center" />
-                                <NumericUpDown Classes="toolSetting" Grid.Column="1" Value="{Binding ShapeOpacity}"
-                                               Minimum="0" Maximum="1" Increment="0.01" FormatString="0.00" />
-                            </Grid>
-                            <Slider Minimum="0" Maximum="1" Value="{Binding ShapeOpacity}"
-                                    TickFrequency="0.01" IsSnapToTickEnabled="True"
-                                    HorizontalAlignment="Stretch" />
-                        </StackPanel>
-
-                        <!-- Fog settings -->
-                        <StackPanel Spacing="8" MinWidth="200" IsVisible="{Binding IsFogSelected}">
-                            <TextBlock Classes="toolSettingHeader" Text="Fog Settings" />
-                            <TextBlock Classes="toolSetting" Text="Fog Type" />
-                            <ComboBox ItemsSource="{Binding FogTypes}"
-                                    SelectedItem="{Binding SelectedFogType}"
-                                    HorizontalAlignment="Stretch">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate x:CompileBindings="False">
-                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                            <Image Width="16" Height="16" Source="{Binding Converter={StaticResource FogTypeIconConverter}}" />
-                                            <TextBlock Text="{Binding}" VerticalAlignment="Center" />
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Classes="toolSetting" Text="Fog Colour" VerticalAlignment="Center" />
-                                <Border Grid.Column="1"
-                                        BorderThickness="2"
-                                        BorderBrush="{StaticResource DMapHighlight}"
-                                        CornerRadius="4"
-                                        Padding="0">
-                                    <ColorPicker Color="{Binding FogColor}"
-                                                 IsEnabled="{Binding IsFogColorSelected}"
-                                                 IsAlphaVisible="False"
-                                                 IsAlphaEnabled="False"
-                                                 IsColorPreviewVisible="False" />
-                                </Border>
-                            </Grid>
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Classes="toolSetting" Text="Fog Opacity" VerticalAlignment="Center" />
-                                <NumericUpDown Classes="toolSetting" Grid.Column="1" Value="{Binding FogOpacity}"
-                                               Minimum="0" Maximum="1" Increment="0.01" FormatString="0.00" />
-                            </Grid>
-                            <Slider Minimum="0" Maximum="1" Value="{Binding FogOpacity}"
-                                    TickFrequency="0.01" IsSnapToTickEnabled="True"
-                                    HorizontalAlignment="Stretch" />
-                        </StackPanel>
-
-                        <!-- Cursor settings -->
-                        <StackPanel Spacing="8" MinWidth="200" IsVisible="{Binding IsCursorSelected}">
-                            <TextBlock Classes="toolSettingHeader" Text="Cursor Settings" />
-                            <TextBlock Classes="toolSetting" Text="Cursor Type" />
-                            <ComboBox ItemsSource="{Binding CursorTypes}"
-                                    SelectedItem="{Binding SelectedCursorType}"
-                                    HorizontalAlignment="Stretch">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate x:CompileBindings="False">
-                                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                            <Image Width="16" Height="16" Source="{Binding Converter={StaticResource CursorTypeIconConverter}}" />
-                                            <TextBlock Text="{Binding Converter={StaticResource CursorTypeDisplayNameConverter}}" VerticalAlignment="Center" />
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Classes="toolSetting" Text="Size" VerticalAlignment="Center" />
-                                <NumericUpDown Classes="toolSetting" Grid.Column="1" Value="{Binding CursorSize}"
-                                               Minimum="16" Maximum="256" Increment="1" FormatString="0" />
-                            </Grid>
-                            <Slider Minimum="16" Maximum="256" Value="{Binding CursorSize}"
-                                    TickFrequency="1" IsSnapToTickEnabled="True"
-                                    HorizontalAlignment="Stretch" />
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Classes="toolSetting" Text="Only While Pressed" VerticalAlignment="Center" />
-                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowCursorOnlyWhilePressed}" OnContent="" OffContent="" />
-                            </Grid>
-                        </StackPanel>
-
-                        <!-- Grid settings -->
-                        <StackPanel Spacing="8" MinWidth="200" IsVisible="{Binding IsGridSelected}">
-                            <TextBlock Classes="toolSettingHeader" Text="Grid Settings" />
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Classes="toolSetting" Text="Grid Visibility" VerticalAlignment="Center" />
-                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding IsGridVisible}" OnContent="" OffContent="" />
-                            </Grid>
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Classes="toolSetting" Text="Square Size" VerticalAlignment="Center" />
-                                <NumericUpDown Classes="toolSetting" Grid.Column="1" Value="{Binding GridSquareSize}"
-                                               Minimum="8" Maximum="512" Increment="1" FormatString="0" />
-                            </Grid>
-                            <Slider Minimum="8" Maximum="512" Value="{Binding GridSquareSize}" />
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Classes="toolSetting" Text="Line Width" VerticalAlignment="Center" />
-                                <NumericUpDown Classes="toolSetting" Grid.Column="1" Value="{Binding GridLineWidth}"
-                                               Minimum="0.25" Maximum="10" Increment="0.25" FormatString="0.00" />
-                            </Grid>
-                            <Slider Minimum="0.25" Maximum="10" Value="{Binding GridLineWidth}" />
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Classes="toolSetting" Text="Opacity" VerticalAlignment="Center" />
-                                <NumericUpDown Classes="toolSetting" Grid.Column="1" Value="{Binding GridOpacity}"
-                                               Minimum="0" Maximum="1" Increment="0.01" FormatString="0.00" />
-                            </Grid>
-                            <Slider Minimum="0" Maximum="1" Value="{Binding GridOpacity}" />
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Classes="toolSetting" Text="Grid Color" VerticalAlignment="Center" />
-                                <Border Grid.Column="1"
-                                        BorderThickness="2"
-                                        BorderBrush="{StaticResource DMapHighlight}"
-                                        CornerRadius="4"
-                                        Padding="0">
-                                    <ColorPicker Color="{Binding GridColor}" IsAlphaVisible="False" IsAlphaEnabled="False" IsColorPreviewVisible="False" />
-                                </Border>
-                            </Grid>
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Classes="toolSetting" Text="Offset X" VerticalAlignment="Center" />
-                                <NumericUpDown Classes="toolSetting" Grid.Column="1" Value="{Binding GridOffsetX}"
-                                               Minimum="0" Maximum="1" Increment="0.01" FormatString="0.00" />
-                            </Grid>
-                            <Slider Minimum="0" Maximum="1" Value="{Binding GridOffsetX}" />
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Classes="toolSetting" Text="Offset Y" VerticalAlignment="Center" />
-                                <NumericUpDown Classes="toolSetting" Grid.Column="1" Value="{Binding GridOffsetY}"
-                                               Minimum="0" Maximum="1" Increment="0.01" FormatString="0.00" />
-                            </Grid>
-                            <Slider Minimum="0" Maximum="1" Value="{Binding GridOffsetY}" />
-                        </StackPanel>
-                    </Panel>
+                        IsHitTestVisible="True"
+                        IsVisible="{Binding HasCurrentToolSettings}">
+                    <ContentControl Content="{Binding CurrentToolSettings}" />
                 </Border>
             </StackPanel>
         </Panel>

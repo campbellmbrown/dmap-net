@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DMap.ViewModels.ToolSettings"
+             xmlns:converters="using:DMap.Converters"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="DMap.Views.ToolSettings.ShapeToolSettingsView"
+             x:DataType="vm:ShapeToolSettingsViewModel">
+
+    <UserControl.Resources>
+        <converters:ShapeTypeIconConverter x:Key="ShapeTypeIconConverter" />
+        <converters:ShapeTypeDisplayNameConverter x:Key="ShapeTypeDisplayNameConverter" />
+    </UserControl.Resources>
+
+    <StackPanel Spacing="8" MinWidth="200">
+        <TextBlock Classes="toolSettingHeader" Text="Shape Settings" />
+        <TextBlock Classes="toolSetting" Text="Shape Type" />
+        <ComboBox ItemsSource="{Binding ShapeTypes}"
+                  SelectedItem="{Binding SelectedShapeType}"
+                  HorizontalAlignment="Stretch">
+            <ComboBox.ItemTemplate>
+                <DataTemplate x:CompileBindings="False">
+                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <Image Width="16" Height="16" Source="{Binding Converter={StaticResource ShapeTypeIconConverter}}" />
+                        <TextBlock Text="{Binding Converter={StaticResource ShapeTypeDisplayNameConverter}}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </DataTemplate>
+            </ComboBox.ItemTemplate>
+        </ComboBox>
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="toolSetting" Text="Softness" VerticalAlignment="Center" />
+            <NumericUpDown Classes="toolSetting" Grid.Column="1" Value="{Binding Softness}"
+                           Minimum="0" Maximum="1" Increment="0.01" FormatString="0.00" />
+        </Grid>
+        <Slider Minimum="0" Maximum="1" Value="{Binding Softness}"
+                TickFrequency="0.01" IsSnapToTickEnabled="True"
+                HorizontalAlignment="Stretch" />
+        <Grid ColumnDefinitions="*,Auto" IsEnabled="{Binding IsCornerRadiusVisible}">
+            <TextBlock Classes="toolSetting" Text="Corner Radius" VerticalAlignment="Center" />
+            <NumericUpDown Classes="toolSetting" Grid.Column="1" Value="{Binding CornerRadius}"
+                           Minimum="0" Maximum="128" Increment="1" FormatString="0" />
+        </Grid>
+        <Slider Minimum="0" Maximum="128" Value="{Binding CornerRadius}"
+                TickFrequency="1" IsSnapToTickEnabled="True"
+                HorizontalAlignment="Stretch"
+                IsEnabled="{Binding IsCornerRadiusVisible}" />
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="toolSetting" Text="Opacity" VerticalAlignment="Center" />
+            <NumericUpDown Classes="toolSetting" Grid.Column="1" Value="{Binding Opacity}"
+                           Minimum="0" Maximum="1" Increment="0.01" FormatString="0.00" />
+        </Grid>
+        <Slider Minimum="0" Maximum="1" Value="{Binding Opacity}"
+                TickFrequency="0.01" IsSnapToTickEnabled="True"
+                HorizontalAlignment="Stretch" />
+    </StackPanel>
+</UserControl>
