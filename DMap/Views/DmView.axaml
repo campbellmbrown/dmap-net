@@ -309,9 +309,11 @@
                 BorderThickness="0,2,0,0">
             <DockPanel Margin="8,0" LastChildFill="False">
                 <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding ConnectedPlayers, StringFormat='Players: {0}'}"
+                    <TextBlock Foreground="{StaticResource DMapForeground}"
+                               Text="{Binding ConnectedPlayers, StringFormat='Players: {0}'}"
                                VerticalAlignment="Center" FontSize="11" />
-                    <TextBlock Text="{Binding MemoryUsage}"
+                    <TextBlock Foreground="{StaticResource DMapForeground}"
+                               Text="{Binding MemoryUsage}"
                                VerticalAlignment="Center" FontSize="11"
                                ToolTip.Tip="Memory usage" />
                 </StackPanel>
@@ -349,7 +351,7 @@
 
             <Panel IsVisible="{Binding IsOverlayVisible}">
                 <Border Margin="14"
-                        BorderBrush="White"
+                        BorderBrush="{StaticResource DMapForeground}"
                         BorderThickness="3"
                         CornerRadius="18"
                         Background="Transparent"
