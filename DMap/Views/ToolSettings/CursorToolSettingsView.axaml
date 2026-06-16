@@ -14,7 +14,6 @@
     </UserControl.Resources>
 
     <StackPanel Spacing="8" MinWidth="200">
-        <TextBlock Classes="toolSettingHeader" Text="Cursor Settings" />
         <TextBlock Classes="toolSetting" Text="Cursor Type" />
         <ComboBox ItemsSource="{Binding CursorTypes}"
                   SelectedItem="{Binding SelectedCursorType}"

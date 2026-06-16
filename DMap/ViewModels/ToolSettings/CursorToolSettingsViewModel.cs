@@ -14,6 +14,9 @@ public sealed class CursorToolSettingsViewModel : ToolSettingsViewModelBase
 {
     const int DefaultSize = 64;
 
+    /// <inheritdoc />
+    public override string Name => "Cursor Settings";
+
     /// <summary>All available cursor icon types.</summary>
     public IReadOnlyList<CursorType> CursorTypes { get; } = Enum.GetValues<CursorType>();
 

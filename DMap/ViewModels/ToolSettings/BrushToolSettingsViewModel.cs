@@ -16,6 +16,9 @@ public sealed class BrushToolSettingsViewModel : ToolSettingsViewModelBase
     const double DefaultSoftness = 0.3;
     const double DefaultOpacity = 1.0;
 
+    /// <inheritdoc />
+    public override string Name => "Brush Settings";
+
     /// <summary>All available brush shapes.</summary>
     public IReadOnlyList<BrushShape> BrushShapes { get; } = Enum.GetValues<BrushShape>();
 

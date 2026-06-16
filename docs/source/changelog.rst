@@ -5,6 +5,7 @@ Unreleased
 ----------
 
 * Hide the tool settings panel when the pan tool is active, because it has no settings.
+* Allow collapsing the tool settings panel.
 
 :release-link:`v1.2.1`
 ----------------------

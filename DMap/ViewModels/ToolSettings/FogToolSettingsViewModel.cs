@@ -16,6 +16,9 @@ public sealed class FogToolSettingsViewModel : ToolSettingsViewModelBase
 {
     const double DefaultOpacity = 0.5;
 
+    /// <inheritdoc />
+    public override string Name => "Fog Settings";
+
     /// <summary>All available fog types.</summary>
     public IReadOnlyList<FogType> FogTypes { get; } = Enum.GetValues<FogType>();
 

@@ -80,6 +80,9 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// <summary>Settings for the Grid tool.</summary>
     public GridToolSettingsViewModel GridSettings { get; }
 
+    /// <summary>Settings placeholder for the Pan tool.</summary>
+    public PanToolSettingsViewModel PanSettings { get; }
+
     /// <summary>Number of player TCP connections currently open on the host service.</summary>
     public int ConnectedPlayers
     {
@@ -119,6 +122,7 @@ public class DmViewModel : ViewModelBase, IDisposable
             this.RaisePropertyChanged(nameof(IsGridSelected));
             CurrentToolSettings = GetCurrentToolSettings(value);
             this.RaisePropertyChanged(nameof(HasCurrentToolSettings));
+            this.RaisePropertyChanged(nameof(ShowToolSettingsRailToggle));
         }
     }
 
@@ -143,15 +147,21 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// <summary>All available tool types, used to populate the toolbar's tool selector.</summary>
     public IReadOnlyList<ToolType> ToolTypes { get; } = Enum.GetValues<ToolType>();
 
-    /// <summary>The child settings view model for the currently selected tool, or <see langword="null"/> for Pan.</summary>
-    public ToolSettingsViewModelBase? CurrentToolSettings
+    /// <summary>The child settings view model for the currently selected tool.</summary>
+    public ToolSettingsViewModelBase CurrentToolSettings
     {
         get;
         private set => this.RaiseAndSetIfChanged(ref field, value);
-    }
+    } = null!;
 
     /// <summary><see langword="true"/> when the selected tool has a settings panel to display.</summary>
-    public bool HasCurrentToolSettings => CurrentToolSettings is not null;
+    public bool HasCurrentToolSettings => CurrentToolSettings.HasPanelContent;
+
+    /// <summary>
+    /// <see langword="true"/> when the tool rail should show the collapsed-state affordance for
+    /// reopening the current tool settings panel.
+    /// </summary>
+    public bool ShowToolSettingsRailToggle => HasCurrentToolSettings && !IsToolSettingsPanelVisible;
 
     /// <summary>Texture seed shared with players so all clients render identical fog noise.</summary>
     public Guid FogSeed
@@ -249,6 +259,23 @@ public class DmViewModel : ViewModelBase, IDisposable
         private set => this.RaiseAndSetIfChanged(ref field, value);
     } = true;
 
+    /// <summary>
+    /// <see langword="true"/> when the contextual tool settings panel is visible beside the
+    /// tool rail. The state remains unchanged across tool switches.
+    /// </summary>
+    public bool IsToolSettingsPanelVisible
+    {
+        get;
+        private set
+        {
+            this.RaiseAndSetIfChanged(ref field, value);
+            this.RaisePropertyChanged(nameof(ShowToolSettingsRailToggle));
+        }
+    } = true;
+
+    /// <summary>Toggles whether the contextual tool settings panel is shown beside the tool rail.</summary>
+    public ReactiveCommand<Unit, Unit> ToggleToolSettingsPanelVisibilityCommand { get; }
+
     /// <summary>Toggles whether fog and viewport updates are held locally or sent to connected players immediately.</summary>
     public ReactiveCommand<Unit, Unit> TogglePauseUpdatesCommand { get; }
 
@@ -319,7 +346,8 @@ public class DmViewModel : ViewModelBase, IDisposable
         FogSettings = new FogToolSettingsViewModel();
         CursorSettings = new CursorToolSettingsViewModel();
         GridSettings = new GridToolSettingsViewModel();
-        CurrentToolSettings = BrushSettings;
+        PanSettings = new PanToolSettingsViewModel();
+        CurrentToolSettings = GetCurrentToolSettings(SelectedTool);
 
         FogSettings.PropertyChanged += OnFogSettingsPropertyChanged;
         GridSettings.PropertyChanged += OnGridSettingsPropertyChanged;
@@ -356,6 +384,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         ShowAboutCommand = ReactiveCommand.CreateFromTask(async () => await ShowAboutDialog.Handle(Unit.Default));
         ToggleMapVisibilityCommand = ReactiveCommand.Create(() => { IsMapVisible = !IsMapVisible; });
         ToggleOverlayVisibilityCommand = ReactiveCommand.Create(() => { IsOverlayVisible = !IsOverlayVisible; });
+        ToggleToolSettingsPanelVisibilityCommand = ReactiveCommand.Create(() => { IsToolSettingsPanelVisible = !IsToolSettingsPanelVisible; });
         TogglePauseUpdatesCommand = ReactiveCommand.Create(() =>
         {
             IsUpdatesPaused = !IsUpdatesPaused;
@@ -694,7 +723,7 @@ public class DmViewModel : ViewModelBase, IDisposable
             BroadcastGridSettings();
     }
 
-    ToolSettingsViewModelBase? GetCurrentToolSettings(ToolType tool) =>
+    ToolSettingsViewModelBase GetCurrentToolSettings(ToolType tool) =>
         tool switch
         {
             ToolType.Brush => BrushSettings,
@@ -702,8 +731,8 @@ public class DmViewModel : ViewModelBase, IDisposable
             ToolType.Fog => FogSettings,
             ToolType.Cursor => CursorSettings,
             ToolType.Grid => GridSettings,
-            ToolType.Pan => null,
-            _ => null
+            ToolType.Pan => PanSettings,
+            _ => PanSettings
         };
 
     /// <summary>

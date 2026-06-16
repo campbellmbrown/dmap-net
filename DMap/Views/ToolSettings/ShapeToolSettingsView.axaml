@@ -14,7 +14,6 @@
     </UserControl.Resources>
 
     <StackPanel Spacing="8" MinWidth="200">
-        <TextBlock Classes="toolSettingHeader" Text="Shape Settings" />
         <TextBlock Classes="toolSetting" Text="Shape Type" />
         <ComboBox ItemsSource="{Binding ShapeTypes}"
                   SelectedItem="{Binding SelectedShapeType}"

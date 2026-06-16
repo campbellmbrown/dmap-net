@@ -16,6 +16,9 @@ public sealed class ShapeToolSettingsViewModel : ToolSettingsViewModelBase
     const double DefaultOpacity = 1.0;
     const int DefaultCornerRadius = 0;
 
+    /// <inheritdoc />
+    public override string Name => "Shape Settings";
+
     /// <summary>All available shape types.</summary>
     public IReadOnlyList<ShapeType> ShapeTypes { get; } = Enum.GetValues<ShapeType>();
 

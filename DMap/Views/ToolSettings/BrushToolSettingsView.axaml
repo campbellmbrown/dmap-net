@@ -13,7 +13,6 @@
     </UserControl.Resources>
 
     <StackPanel Spacing="8" MinWidth="200">
-        <TextBlock Classes="toolSettingHeader" Text="Brush Settings" />
         <TextBlock Classes="toolSetting" Text="Brush Shape" />
         <ComboBox ItemsSource="{Binding BrushShapes}"
                   SelectedItem="{Binding SelectedBrushShape}"

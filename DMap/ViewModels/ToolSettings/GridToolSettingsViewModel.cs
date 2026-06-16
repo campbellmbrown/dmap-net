@@ -9,6 +9,9 @@ namespace DMap.ViewModels.ToolSettings;
 /// </summary>
 public sealed class GridToolSettingsViewModel : ToolSettingsViewModelBase
 {
+    /// <inheritdoc />
+    public override string Name => "Grid Settings";
+
     /// <summary><see langword="true"/> when the grid overlay is visible.</summary>
     public bool IsVisible
     {

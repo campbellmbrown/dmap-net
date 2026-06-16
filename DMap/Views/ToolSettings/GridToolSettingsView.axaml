@@ -8,7 +8,6 @@
              x:DataType="vm:GridToolSettingsViewModel">
 
     <StackPanel Spacing="8" MinWidth="200">
-        <TextBlock Classes="toolSettingHeader" Text="Grid Settings" />
         <Grid ColumnDefinitions="*,Auto">
             <TextBlock Classes="toolSetting" Text="Grid Visibility" VerticalAlignment="Center" />
             <ToggleSwitch Grid.Column="1" IsChecked="{Binding IsVisible}" OnContent="" OffContent="" />
