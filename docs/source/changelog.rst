@@ -6,6 +6,7 @@ Unreleased
 
 * Hide the tool settings panel when the pan tool is active, because it has no settings.
 * Allow collapsing the tool settings panel.
+* Add vertical scrolling to the toolbox and tool settings panel when they overflow.
 
 :release-link:`v1.2.1`
 ----------------------

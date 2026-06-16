@@ -374,83 +374,90 @@
             </Panel>
 
             <!-- Floating side toolbar -->
-            <StackPanel Orientation="Horizontal"
-                        Spacing="10" Margin="8,8,0,0"
-                        HorizontalAlignment="Left"
-                        VerticalAlignment="Top"
-                        IsVisible="{Binding IsOverlayVisible}">
+            <Grid ColumnDefinitions="Auto,Auto"
+                  ColumnSpacing="10"
+                  Margin="8,8,0,8"
+                  HorizontalAlignment="Left"
+                  VerticalAlignment="Stretch"
+                  IsVisible="{Binding IsOverlayVisible}">
                 <Border Classes="overlay"
                         Padding="4"
                         VerticalAlignment="Top"
                         IsHitTestVisible="True">
-                    <StackPanel Spacing="4">
+                    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto">
+                        <StackPanel Spacing="4">
 
-                        <!-- Brush tool -->
-                        <Button Classes="toolbox"
-                                Classes.toolSelected="{Binding IsBrushSelected}"
-                                Command="{Binding SelectBrushCommand}"
-                                ToolTip.Tip="Brush">
-                            <Image Source="{SvgImage /Assets/Icons/brush.svg}" />
-                        </Button>
-
-                        <!-- Shape tools group -->
-                        <Button Classes="toolbox"
-                                Classes.toolSelected="{Binding IsShapeSelected}"
-                                Command="{Binding SelectShapeCommand}"
-                                ToolTip.Tip="Shape">
-                            <Image Source="{SvgImage /Assets/Icons/shapes.svg}" />
-                        </Button>
-
-                        <!-- Fog tool -->
-                        <Button Classes="toolbox"
-                                Classes.toolSelected="{Binding IsFogSelected}"
-                                Command="{Binding SelectFogCommand}"
-                                ToolTip.Tip="Fog">
-                            <Image Source="{SvgImage /Assets/Icons/cloud-fog.svg}" />
-                        </Button>
-
-                        <!-- Cursor tool -->
-                        <Button Classes="toolbox"
-                                Classes.toolSelected="{Binding IsCursorSelected}"
-                                Command="{Binding SelectCursorCommand}"
-                                ToolTip.Tip="Cursor">
-                            <Image Source="{SvgImage /Assets/Icons/crosshair.svg}" />
-                        </Button>
-
-                        <Button Classes="toolbox"
-                                Classes.toolSelected="{Binding IsGridSelected}"
-                                Command="{Binding SelectGridCommand}"
-                                ToolTip.Tip="Grid">
-                            <Image Source="{SvgImage /Assets/Icons/grid-2x2.svg}" />
-                        </Button>
-
-                        <!-- Pan tool -->
-                        <Button Classes="toolbox"
-                                Classes.toolSelected="{Binding IsPanSelected}"
-                                Command="{Binding SelectPanCommand}"
-                                ToolTip.Tip="Pan">
-                            <Image Source="{SvgImage /Assets/Icons/hand.svg}" />
-                        </Button>
-
-                        <StackPanel IsVisible="{Binding ShowToolSettingsRailToggle}"
-                                    Spacing="4">
-                            <Separator Classes="toolbox" />
+                            <!-- Brush tool -->
                             <Button Classes="toolbox"
-                                    Command="{Binding ToggleToolSettingsPanelVisibilityCommand}"
-                                    ToolTip.Tip="Show Tool Settings">
-                                <Image Source="{SvgImage /Assets/Icons/plus.svg}" />
+                                    Classes.toolSelected="{Binding IsBrushSelected}"
+                                    Command="{Binding SelectBrushCommand}"
+                                    ToolTip.Tip="Brush">
+                                <Image Source="{SvgImage /Assets/Icons/brush.svg}" />
                             </Button>
+
+                            <!-- Shape tools group -->
+                            <Button Classes="toolbox"
+                                    Classes.toolSelected="{Binding IsShapeSelected}"
+                                    Command="{Binding SelectShapeCommand}"
+                                    ToolTip.Tip="Shape">
+                                <Image Source="{SvgImage /Assets/Icons/shapes.svg}" />
+                            </Button>
+
+                            <!-- Fog tool -->
+                            <Button Classes="toolbox"
+                                    Classes.toolSelected="{Binding IsFogSelected}"
+                                    Command="{Binding SelectFogCommand}"
+                                    ToolTip.Tip="Fog">
+                                <Image Source="{SvgImage /Assets/Icons/cloud-fog.svg}" />
+                            </Button>
+
+                            <!-- Cursor tool -->
+                            <Button Classes="toolbox"
+                                    Classes.toolSelected="{Binding IsCursorSelected}"
+                                    Command="{Binding SelectCursorCommand}"
+                                    ToolTip.Tip="Cursor">
+                                <Image Source="{SvgImage /Assets/Icons/crosshair.svg}" />
+                            </Button>
+
+                            <Button Classes="toolbox"
+                                    Classes.toolSelected="{Binding IsGridSelected}"
+                                    Command="{Binding SelectGridCommand}"
+                                    ToolTip.Tip="Grid">
+                                <Image Source="{SvgImage /Assets/Icons/grid-2x2.svg}" />
+                            </Button>
+
+                            <!-- Pan tool -->
+                            <Button Classes="toolbox"
+                                    Classes.toolSelected="{Binding IsPanSelected}"
+                                    Command="{Binding SelectPanCommand}"
+                                    ToolTip.Tip="Pan">
+                                <Image Source="{SvgImage /Assets/Icons/hand.svg}" />
+                            </Button>
+
+                            <StackPanel IsVisible="{Binding ShowToolSettingsRailToggle}"
+                                        Spacing="4">
+                                <Separator Classes="toolbox" />
+                                <Button Classes="toolbox"
+                                        Command="{Binding ToggleToolSettingsPanelVisibilityCommand}"
+                                        ToolTip.Tip="Show Tool Settings">
+                                    <Image Source="{SvgImage /Assets/Icons/plus.svg}" />
+                                </Button>
+                            </StackPanel>
                         </StackPanel>
-                    </StackPanel>
+                    </ScrollViewer>
                 </Border>
 
-                <Panel IsVisible="{Binding HasCurrentToolSettings}">
+                <Panel Grid.Column="1"
+                       VerticalAlignment="Top"
+                       IsVisible="{Binding HasCurrentToolSettings}">
                     <Border Classes="overlay"
                             Padding="8"
                             VerticalAlignment="Top"
                             IsHitTestVisible="True"
                             IsVisible="{Binding IsToolSettingsPanelVisible}">
-                        <StackPanel Spacing="8">
+                        <Grid RowDefinitions="Auto,*"
+                              RowSpacing="8">
                             <Grid ColumnDefinitions="*,Auto">
                                 <TextBlock Classes="toolSettingHeader"
                                            Text="{Binding CurrentToolSettings.Name}"
@@ -463,11 +470,15 @@
                                 </Button>
                             </Grid>
 
-                            <ContentControl Content="{Binding CurrentToolSettings}" />
-                        </StackPanel>
+                            <ScrollViewer Grid.Row="1"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          VerticalScrollBarVisibility="Auto">
+                                <ContentControl Content="{Binding CurrentToolSettings}" />
+                            </ScrollViewer>
+                        </Grid>
                     </Border>
                 </Panel>
-            </StackPanel>
+            </Grid>
         </Panel>
     </DockPanel>
 
