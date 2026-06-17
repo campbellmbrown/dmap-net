@@ -14,6 +14,8 @@ namespace DMap.ViewModels;
 /// </summary>
 public class MainWindowViewModel : ViewModelBase
 {
+    public string Title { get; } = $"DMap {AppVersion.Version}";
+
     /// <summary>
     /// The control currently displayed inside the main window.
     /// Setting this property triggers a UI update via <see cref="ReactiveUI.IReactiveObject"/>.

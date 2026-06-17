@@ -4,6 +4,9 @@ Changelog
 Unreleased
 ----------
 
+* Added file logging and a File menu action to open the log directory.
+* Added the app version to the title bar.
+* Split the semantic version and revision into separate lines in the About dialog.
 * Hide the tool settings panel when the pan tool is active, because it has no settings.
 * Allow collapsing the tool settings panel.
 * Add vertical scrolling to the toolbox and tool settings panel when they overflow.

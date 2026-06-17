@@ -7,7 +7,7 @@
         x:Class="DMap.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="DMap"
+        Title="{Binding Title}"
         WindowState="{Binding WindowState}">
 
     <Design.DataContext>

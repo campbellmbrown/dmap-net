@@ -10,6 +10,8 @@ using DMap.Services.Networking;
 using DMap.ViewModels;
 using DMap.Views;
 
+using Serilog;
+
 namespace DMap;
 
 /// <summary>
@@ -30,6 +32,8 @@ public partial class App : Application
     /// </summary>
     public override void OnFrameworkInitializationCompleted()
     {
+        AppDiagnostics.RegisterUiExceptionHandler();
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var container = BuildContainer();
@@ -41,6 +45,8 @@ public partial class App : Application
             {
                 DataContext = mainVm,
             };
+
+            desktop.Exit += (_, _) => Log.Information("Desktop application exit requested.");
         }
 
         base.OnFrameworkInitializationCompleted();

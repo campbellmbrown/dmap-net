@@ -157,6 +157,12 @@
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator />
+                <MenuItem Header="Open Log Directory" Command="{Binding OpenLogDirectoryCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{SvgImage /Assets/Icons/folder-open.svg}" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <Separator />
                 <MenuItem Header="Exit" Command="{Binding ExitCommand}">
                     <MenuItem.Icon>
                         <Image Source="{SvgImage /Assets/Icons/door-open.svg}" />

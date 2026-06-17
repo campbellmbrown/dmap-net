@@ -1,4 +1,6 @@
 using System;
+using System.Diagnostics;
+using System.IO;
 using System.Reactive;
 using System.Reactive.Disposables;
 using System.Threading.Tasks;
@@ -11,6 +13,8 @@ using DMap.ViewModels;
 
 using ReactiveUI;
 using ReactiveUI.Avalonia;
+
+using Serilog;
 
 namespace DMap.Views;
 
@@ -76,6 +80,9 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
 
             _activationDisposables.Add(
                 vm.ShowAboutDialog.RegisterHandler(HandleShowAboutDialog));
+
+            _activationDisposables.Add(
+                vm.OpenDirectory.RegisterHandler(HandleOpenDirectory));
 
             disposables(Disposable.Create(() =>
             {
@@ -181,5 +188,30 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
         });
 
         context.SetOutput(files.Count > 0 ? files[0].Path.LocalPath : null);
+    }
+
+    /// <summary>
+    /// Handles the <see cref="DmViewModel.OpenDirectory"/> interaction by opening the requested
+    /// local directory path in the operating system's file manager.
+    /// </summary>
+    Task HandleOpenDirectory(IInteractionContext<string, Unit> context)
+    {
+        try
+        {
+            var path = context.Input;
+            Directory.CreateDirectory(path);
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = path,
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to open log directory.");
+        }
+
+        context.SetOutput(Unit.Default);
+        return Task.CompletedTask;
     }
 }

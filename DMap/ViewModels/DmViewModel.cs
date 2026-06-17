@@ -21,6 +21,8 @@ using DMap.ViewModels.ToolSettings;
 
 using ReactiveUI;
 
+using Serilog;
+
 using IBrush = DMap.Services.Brushes.IBrush;
 
 namespace DMap.ViewModels;
@@ -221,6 +223,9 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// <summary>Shuts down the application.</summary>
     public ReactiveCommand<Unit, Unit> ExitCommand { get; }
 
+    /// <summary>Opens the application log directory in the platform file manager.</summary>
+    public ReactiveCommand<Unit, Unit> OpenLogDirectoryCommand { get; }
+
     /// <summary>Undoes the most recent fog operation.</summary>
     public ReactiveCommand<Unit, Unit> UndoCommand { get; }
 
@@ -308,6 +313,12 @@ public class DmViewModel : ViewModelBase, IDisposable
     public Interaction<Unit, Unit> ShowAboutDialog { get; } = new();
 
     /// <summary>
+    /// Interaction that requests the view to open a local directory path in the platform shell.
+    /// Handled in <see cref="Views.DmView"/>.
+    /// </summary>
+    public Interaction<string, Unit> OpenDirectory { get; } = new();
+
+    /// <summary>
     /// Raised after any fog modification (brush, shape, undo, redo, reveal-all, refog-all).
     /// The event argument is the bounding rectangle of the changed region. The view uses
     /// this to update only the affected portion of the fog bitmap rather than rebuilding it entirely.
@@ -375,6 +386,7 @@ public class DmViewModel : ViewModelBase, IDisposable
             if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
                 desktop.Shutdown();
         });
+        OpenLogDirectoryCommand = ReactiveCommand.CreateFromTask(OpenLogDirectoryAsync);
 
         var canUndo = this.WhenAnyValue(x => x.CanUndo);
         var canRedo = this.WhenAnyValue(x => x.CanRedo);
@@ -388,6 +400,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         TogglePauseUpdatesCommand = ReactiveCommand.Create(() =>
         {
             IsUpdatesPaused = !IsUpdatesPaused;
+            Log.Information("Player updates {State}.", IsUpdatesPaused ? "paused" : "resumed");
             if (!IsUpdatesPaused)
                 FlushPendingUpdates();
         });
@@ -399,9 +412,17 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// </summary>
     async Task OpenPlayerWindowAsync()
     {
+        Log.Information("Opening player window.");
         var playerVm = _createPlayer();
         await playerVm.StartDiscoveryAsync();
         await ShowPlayerWindow.Handle(playerVm);
+    }
+
+    /// <summary>Opens the shared application log directory using the view-layer shell interaction.</summary>
+    async Task OpenLogDirectoryAsync()
+    {
+        Log.Information("Opening log directory {LogDirectory}.", AppDiagnostics.LogDirectory);
+        await OpenDirectory.Handle(AppDiagnostics.LogDirectory);
     }
 
     /// <summary>
@@ -482,25 +503,41 @@ public class DmViewModel : ViewModelBase, IDisposable
         if (string.IsNullOrEmpty(path))
             return;
 
-        _mapImageBytes = await File.ReadAllBytesAsync(path);
-        using var stream = new MemoryStream(_mapImageBytes);
-        MapImage = new Bitmap(stream);
+        Log.Information("Loading map from {MapPath}.", path);
 
-        var pixelSize = MapImage.PixelSize;
-        _fogService.Initialize(pixelSize.Width, pixelSize.Height);
-        FogMask = _fogService.Mask;
+        try
+        {
+            _mapImageBytes = await File.ReadAllBytesAsync(path);
+            using var stream = new MemoryStream(_mapImageBytes);
+            MapImage = new Bitmap(stream);
 
-        _session = new MapSession(Guid.NewGuid(), pixelSize.Width, pixelSize.Height);
-        FogSeed = _session.SessionId;
-        _undoRedo.Clear();
-        IsMapLoaded = true;
+            var pixelSize = MapImage.PixelSize;
+            _fogService.Initialize(pixelSize.Width, pixelSize.Height);
+            FogMask = _fogService.Mask;
 
-        FogUpdated?.Invoke(this, new PixelRect(0, 0, pixelSize.Width, pixelSize.Height));
+            _session = new MapSession(Guid.NewGuid(), pixelSize.Width, pixelSize.Height);
+            FogSeed = _session.SessionId;
+            _undoRedo.Clear();
+            IsMapLoaded = true;
 
-        await StartHostingAsync();
-        BroadcastFogAppearance();
-        BroadcastGridSettings();
-        QueueViewportBroadcast();
+            FogUpdated?.Invoke(this, new PixelRect(0, 0, pixelSize.Width, pixelSize.Height));
+
+            await StartHostingAsync();
+            BroadcastFogAppearance();
+            BroadcastGridSettings();
+            QueueViewportBroadcast();
+
+            Log.Information(
+                "Loaded map {MapFileName} with dimensions {Width}x{Height}.",
+                Path.GetFileName(path),
+                pixelSize.Width,
+                pixelSize.Height);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to load map from {MapPath}.", path);
+            throw;
+        }
     }
 
     /// <summary>Returns the current process working set formatted as "<c>N MB</c>".</summary>
@@ -858,6 +895,10 @@ public class DmViewModel : ViewModelBase, IDisposable
             await _hostService.SendCursorAsync(_latestCursor, default);
 
         await _discoveryService.StartBroadcastingAsync(_session, _hostService.Port, default);
+        Log.Information(
+            "Hosting session {SessionId} on TCP port {Port} and broadcasting discovery.",
+            _session.SessionId,
+            _hostService.Port);
     }
 
     /// <inheritdoc/>

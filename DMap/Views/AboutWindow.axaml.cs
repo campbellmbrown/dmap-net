@@ -1,7 +1,7 @@
-using System.Reflection;
-
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+
+using DMap.ViewModels;
 
 namespace DMap.Views;
 
@@ -11,15 +11,7 @@ public partial class AboutWindow : Window
     public AboutWindow()
     {
         InitializeComponent();
-        InformationalVersionText.Text = GetInformationalVersion();
-    }
-
-    static string GetInformationalVersion()
-    {
-        var assembly = Assembly.GetEntryAssembly() ?? typeof(AboutWindow).Assembly;
-        return assembly
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-            ?.InformationalVersion ?? "Unknown";
+        DataContext = new AboutWindowViewModel();
     }
 
     void CloseButton_Click(object? sender, RoutedEventArgs e) => Close();

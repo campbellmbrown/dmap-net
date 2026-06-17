@@ -1,8 +1,11 @@
 using System;
+using System.Runtime.InteropServices;
 
 using Avalonia;
 
 using ReactiveUI.Avalonia;
+
+using Serilog;
 
 namespace DMap;
 
@@ -18,8 +21,32 @@ sealed class Program
     /// Application entry point. Builds the Avalonia app and starts the classic desktop lifetime.
     /// </summary>
     [STAThread]
-    public static void Main(string[] args) => BuildAvaloniaApp()
-        .StartWithClassicDesktopLifetime(args);
+    public static void Main(string[] args)
+    {
+        AppDiagnostics.ConfigureLogging();
+        AppDiagnostics.RegisterProcessExceptionHandlers();
+
+        var localTimeZone = TimeZoneInfo.Local;
+
+        Log.Information(
+            "Starting DMap {Version} on {OS} ({Architecture}). Time zone: {TimeZoneId} ({TimeZoneName}). Logs: {LogDirectory}",
+            AppVersion.Version,
+            RuntimeInformation.OSDescription,
+            RuntimeInformation.ProcessArchitecture,
+            localTimeZone.Id,
+            localTimeZone.DisplayName,
+            AppDiagnostics.LogDirectory);
+
+        try
+        {
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+            Log.Information("DMap shutdown completed.");
+        }
+        finally
+        {
+            Log.CloseAndFlush();
+        }
+    }
 
     // Avalonia configuration, don't remove; also used by visual designer.
     /// <summary>
