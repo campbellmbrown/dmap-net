@@ -72,7 +72,7 @@ Message type IDs
      - Fog rendering mode, colour, and texture seed.
    * - 6
      - Viewport
-     - Camera position and zoom.
+     - Camera position, zoom, and map rotation.
    * - 7
      - Cursor
      - Cursor position, appearance, and visibility.
@@ -202,6 +202,8 @@ Viewport payload
 ----------------
 
 This payload defines the camera state that players should apply to the map.
+Rotation is applied client-side and does not modify the transmitted map image,
+fog mask, grid settings, or cursor coordinates.
 
 .. list-table:: Viewport payload fields
    :header-rows: 1
@@ -217,7 +219,10 @@ This payload defines the camera state that players should apply to the map.
      - The map-space Y coordinate that should be centred in the viewport.
    * - Zoom level
      - 8 (float64)
-     - The zoom multiplier to apply around the centered map coordinate.
+     - The zoom multiplier to apply around the centred map coordinate.
+   * - Rotation quarter turns
+     - 4 (int32)
+     - Clockwise map rotation in 90-degree increments, normalized to the range 0-3.
 
 Cursor payload
 --------------
