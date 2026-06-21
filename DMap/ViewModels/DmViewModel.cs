@@ -742,21 +742,21 @@ public class DmViewModel : ViewModelBase, IDisposable
     void OnFogSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is null
-            || e.PropertyName == nameof(FogToolSettingsViewModel.SelectedFogType)
-            || e.PropertyName == nameof(FogToolSettingsViewModel.Color))
+            or (nameof(FogToolSettingsViewModel.SelectedFogType))
+            or (nameof(FogToolSettingsViewModel.Color)))
             BroadcastFogAppearance();
     }
 
     void OnGridSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is null
-            || e.PropertyName == nameof(GridToolSettingsViewModel.IsVisible)
-            || e.PropertyName == nameof(GridToolSettingsViewModel.SquareSize)
-            || e.PropertyName == nameof(GridToolSettingsViewModel.LineWidth)
-            || e.PropertyName == nameof(GridToolSettingsViewModel.Opacity)
-            || e.PropertyName == nameof(GridToolSettingsViewModel.Color)
-            || e.PropertyName == nameof(GridToolSettingsViewModel.OffsetX)
-            || e.PropertyName == nameof(GridToolSettingsViewModel.OffsetY))
+            or (nameof(GridToolSettingsViewModel.IsVisible))
+            or (nameof(GridToolSettingsViewModel.SquareSize))
+            or (nameof(GridToolSettingsViewModel.LineWidth))
+            or (nameof(GridToolSettingsViewModel.Opacity))
+            or (nameof(GridToolSettingsViewModel.Color))
+            or (nameof(GridToolSettingsViewModel.OffsetX))
+            or (nameof(GridToolSettingsViewModel.OffsetY)))
             BroadcastGridSettings();
     }
 
