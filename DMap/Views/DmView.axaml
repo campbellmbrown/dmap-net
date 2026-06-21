@@ -186,6 +186,17 @@
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator />
+                <MenuItem Header="Rotate Left" Command="{Binding #MapCanvas.RotateLeftCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{SvgImage /Assets/Icons/rotate-ccw-square.svg}" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Rotate Right" Command="{Binding #MapCanvas.RotateRightCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="{SvgImage /Assets/Icons/rotate-cw-square.svg}" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <Separator />
                 <MenuItem Header="Show Map" Command="{Binding ToggleMapVisibilityCommand}" InputGesture="Ctrl+M"
                           ToggleType="CheckBox" IsChecked="{Binding IsMapVisible, Mode=OneWay}">
                     <MenuItem.Icon>
@@ -302,6 +313,13 @@
                 <Separator Classes="toolbar" />
                 <Button Classes="toolbar" Command="{Binding #MapCanvas.RefitViewCommand}" ToolTip.Tip="Refit View">
                     <Image Source="{SvgImage /Assets/Icons/scan-eye.svg}" />
+                </Button>
+                <Separator Classes="toolbar" />
+                <Button Classes="toolbar" Command="{Binding #MapCanvas.RotateLeftCommand}" ToolTip.Tip="Rotate Left">
+                    <Image Source="{SvgImage /Assets/Icons/rotate-ccw-square.svg}" />
+                </Button>
+                <Button Classes="toolbar" Command="{Binding #MapCanvas.RotateRightCommand}" ToolTip.Tip="Rotate Right">
+                    <Image Source="{SvgImage /Assets/Icons/rotate-cw-square.svg}" />
                 </Button>
 
             </StackPanel>

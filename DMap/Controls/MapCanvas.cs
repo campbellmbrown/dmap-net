@@ -405,6 +405,12 @@ public class MapCanvas : Control
     /// <summary>Fits the map height to the canvas and aligns its top and bottom edges with the canvas.</summary>
     public ICommand RefitViewCommand { get; }
 
+    /// <summary>Rotates the map view 90 degrees counter-clockwise.</summary>
+    public ICommand RotateLeftCommand { get; }
+
+    /// <summary>Rotates the map view 90 degrees clockwise.</summary>
+    public ICommand RotateRightCommand { get; }
+
     readonly MapViewportController _viewport = new();
     readonly FogBitmapController _fogBitmapController;
     bool _isPanning;
@@ -443,6 +449,8 @@ public class MapCanvas : Control
         ZoomInCommand = new RelayCommand(() => ZoomLevel *= 1.2);
         ZoomOutCommand = new RelayCommand(() => ZoomLevel /= 1.2);
         RefitViewCommand = new RelayCommand(RefitViewToMapHeight);
+        RotateLeftCommand = new RelayCommand(() => RotateView(-1));
+        RotateRightCommand = new RelayCommand(() => RotateView(1));
     }
 
     static Dictionary<CursorType, IImage> CreateCursorIcons()
@@ -482,7 +490,7 @@ public class MapCanvas : Control
     /// be mirrored on canvases with different screen sizes.
     /// </summary>
     public ViewportPayload GetViewport()
-        => _viewport.GetViewport(Bounds.Size);
+        => _viewport.GetViewport(Bounds.Size, MapImage?.Size);
 
     /// <summary>
     /// Applies a remotely provided viewport by deriving local screen offsets from the current control
@@ -515,7 +523,14 @@ public class MapCanvas : Control
     /// This is the DM-facing 100% zoom baseline.
     /// </summary>
     public double GetHeightFitZoomLevel()
-        => MapViewportController.GetHeightFitZoomLevel(Bounds.Size, MapImage?.Size);
+        => MapViewportController.GetHeightFitZoomLevel(Bounds.Size, MapImage?.Size, _viewport.RotationQuarterTurns);
+
+    /// <summary>Rotates the view by the specified number of clockwise quarter-turns.</summary>
+    void RotateView(int quarterTurns)
+    {
+        _viewport.RotateBy(quarterTurns, Bounds.Size, MapImage?.Size);
+        OnViewportStateChanged();
+    }
 
     /// <summary>
     /// Fits the map vertically so its top and bottom edges align with the canvas, and centers it horizontally.
@@ -543,8 +558,8 @@ public class MapCanvas : Control
 
     /// <summary>
     /// Renders the black background, the map image, the fog overlay, and (in DM mode) the tool cursor preview.
-    /// The map and fog are drawn inside a scale+translate transform derived from <see cref="ZoomLevel"/>,
-    /// <see cref="OffsetX"/>, and <see cref="OffsetY"/>.
+    /// The map and fog are drawn inside a rotation+scale+translate transform derived from the
+    /// viewport rotation, <see cref="ZoomLevel"/>, <see cref="OffsetX"/>, and <see cref="OffsetY"/>.
     /// </summary>
     public override void Render(DrawingContext context)
     {
@@ -560,10 +575,7 @@ public class MapCanvas : Control
             return;
 
         var zoom = ZoomLevel;
-        var offsetX = OffsetX;
-        var offsetY = OffsetY;
-
-        var transform = Matrix.CreateScale(zoom, zoom) * Matrix.CreateTranslation(offsetX, offsetY);
+        var transform = _viewport.GetMapToScreenTransform(mapImage.Size);
 
         using (context.PushTransform(transform))
         {
@@ -601,8 +613,9 @@ public class MapCanvas : Control
             return;
 
         var size = Math.Max(1, CursorSize);
-        var x = mapX * ZoomLevel + OffsetX - size / 2.0;
-        var y = mapY * ZoomLevel + OffsetY - size / 2.0;
+        var position = _viewport.MapToScreen(new Point(mapX, mapY), MapImage?.Size);
+        var x = position.X - size / 2.0;
+        var y = position.Y - size / 2.0;
         context.DrawImage(icon, new Rect(x, y, size, size));
     }
 
@@ -740,7 +753,10 @@ public class MapCanvas : Control
         }
 
         if (change.Property == MapImageProperty && MapImage is not null)
+        {
+            _viewport.ResetRotation();
             RefitViewToMapHeight();
+        }
 
         if (change.Property == BoundsProperty)
         {
@@ -1011,7 +1027,7 @@ public class MapCanvas : Control
     /// <summary>Stores the current cursor position in map-space styled properties.</summary>
     void UpdateCursorMapPosition(Point screenPosition)
     {
-        var mapPosition = _viewport.ScreenToMap(screenPosition);
+        var mapPosition = _viewport.ScreenToMap(screenPosition, MapImage?.Size);
         SetValue(CursorMapXProperty, mapPosition.X);
         SetValue(CursorMapYProperty, mapPosition.Y);
     }
@@ -1047,7 +1063,7 @@ public class MapCanvas : Control
     /// </summary>
     void InitBrushMapPos(Point screenPos)
     {
-        var mapPos = _viewport.ScreenToMap(screenPos);
+        var mapPos = _viewport.ScreenToMap(screenPos, MapImage?.Size);
         _lastBrushMapX = (int)mapPos.X;
         _lastBrushMapY = (int)mapPos.Y;
     }
@@ -1058,7 +1074,7 @@ public class MapCanvas : Control
     /// </summary>
     void RaiseBrushStroke(Point screenTo)
     {
-        var mapTo = _viewport.ScreenToMap(screenTo);
+        var mapTo = _viewport.ScreenToMap(screenTo, MapImage?.Size);
         var mapX2 = (int)mapTo.X;
         var mapY2 = (int)mapTo.Y;
 
@@ -1081,8 +1097,8 @@ public class MapCanvas : Control
     /// </summary>
     void FireShapeStroke(Point screenStart, Point screenEnd)
     {
-        var mapStart = _viewport.ScreenToMap(screenStart);
-        var mapEnd = _viewport.ScreenToMap(screenEnd);
+        var mapStart = _viewport.ScreenToMap(screenStart, MapImage?.Size);
+        var mapEnd = _viewport.ScreenToMap(screenEnd, MapImage?.Size);
         var mapX1 = (int)mapStart.X;
         var mapY1 = (int)mapStart.Y;
         var mapX2 = (int)mapEnd.X;

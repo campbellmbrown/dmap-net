@@ -4,6 +4,7 @@ Changelog
 Unreleased
 ----------
 
+* Added 90-degree map rotation controls, synchronized with player views.
 * Added file logging and a File menu action to open the log directory.
 * Added the app version to the title bar.
 * Split the semantic version and revision into separate lines in the About dialog.
