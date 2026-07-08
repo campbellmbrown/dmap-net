@@ -1,14 +1,11 @@
 ; Inno Setup script for DMap.
 ;
-; All external inputs are supplied as /D defines on the ISCC command line, using
-; container-absolute /work/... paths when compiled via the amake/innosetup Docker
-; image (see .github/workflows/release.yml). Required defines:
-;   AppVersion   - release version, e.g. v1.3.0
-;   SourceDir    - the published, self-contained win-x64 folder to package
-;   LicenseFile  - path to the license shown in the wizard
-;   SetupIconFile- path to the .ico used for the setup executable
-;   OutputDir    - directory the setup.exe is written to
-;   OutputName   - base filename (without extension) of the setup.exe
+; Compiled in CI via the amake/innosetup Docker image (Inno Setup under Wine) on the
+; ubuntu-latest runner; see .github/workflows/release.yml. The workflow mounts the repo
+; at /work and passes only the release version:
+;   /DAppVersion=<tag>   e.g. v1.3.0
+; All file paths below are relative to this script's own directory (installer/), which
+; resolves correctly under both Wine and native Windows ISCC.
 
 #ifndef AppVersion
   #define AppVersion "dev"
@@ -16,17 +13,22 @@
 
 #define AppName "DMap"
 #define AppPublisher "Campbell Brown"
+#define AppURL "https://github.com/campbellmbrown/dmap-net"
 #define AppExeName "DMap.exe"
 
 [Setup]
 ; AppId uniquely identifies this application; it must NOT change between releases,
 ; otherwise upgrades and uninstall entries will not bind to the same product.
-AppId={{7B2F4C1E-9A3D-4E6B-8F52-1C7D0A9E4B33}
+AppId={{16D59015-AA4E-448B-8239-B05BAE601E29}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher={#AppPublisher}
+AppPublisherURL={#AppURL}
+AppSupportURL={#AppURL}
+AppUpdatesURL={#AppURL}
 DefaultDirName={autopf}\{#AppName}
-DefaultGroupName={#AppName}
+DisableProgramGroupPage=yes
+; Install per-user by default (no forced UAC); logs live in %LOCALAPPDATA%\DMap.
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 ArchitecturesAllowed=x64compatible
@@ -34,11 +36,11 @@ ArchitecturesInstallIn64BitMode=x64compatible
 WizardStyle=modern
 Compression=lzma2/ultra64
 SolidCompression=yes
-LicenseFile={#LicenseFile}
-SetupIconFile={#SetupIconFile}
+LicenseFile=..\LICENSE
+SetupIconFile=..\DMap\Assets\avalonia-logo.ico
 UninstallDisplayIcon={app}\{#AppExeName}
-OutputDir={#OutputDir}
-OutputBaseFilename={#OutputName}
+OutputDir=..\artifacts\release
+OutputBaseFilename=DMap-{#AppVersion}-win-x64-setup
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -47,10 +49,11 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
+; Package the entire self-contained win-x64 publish folder.
+Source: "..\artifacts\publish\win-x64\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
 
 [Icons]
-Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
+Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExeName}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
 
 [Run]
