@@ -1,8 +1,11 @@
 Changelog
 =========
 
-Unreleased
-----------
+.. Unreleased
+.. ----------
+
+:release-link:`v1.3.0`
+----------------------
 
 * Added 90-degree map rotation controls, synchronized with player views.
 * Added file logging and a File menu action to open the log directory.

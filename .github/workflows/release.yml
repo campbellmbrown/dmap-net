@@ -23,6 +23,17 @@ jobs:
       - name: Build release artifacts
         run: python scripts/release.py
 
+      - name: Build Windows installer
+        run: |
+          docker run --rm -v "$PWD:/work" amake/innosetup \
+            /work/installer/DMap.iss \
+            "/DAppVersion=${GITHUB_REF_NAME}" \
+            "/DSourceDir=/work/artifacts/publish/win-x64" \
+            "/DLicenseFile=/work/LICENSE" \
+            "/DSetupIconFile=/work/DMap/Assets/avalonia-logo.ico" \
+            "/DOutputDir=/work/artifacts/release" \
+            "/DOutputName=DMap-${GITHUB_REF_NAME}-win-x64-setup"
+
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
