@@ -24,7 +24,12 @@ jobs:
         run: python scripts/release.py
 
       - name: Build Windows installer
-        run: docker run --rm -v "$PWD:/work" amake/innosetup /work/installer/DMap.iss "/DAppVersion=${GITHUB_REF_NAME}"
+        run: |
+          # The amake/innosetup container runs as a non-root user (uid 1000), so it
+          # cannot write the installer into artifacts/release (created by release.py as
+          # the runner user). Make the output tree writable before compiling.
+          chmod -R a+rwX artifacts
+          docker run --rm -v "$PWD:/work" amake/innosetup /work/installer/DMap.iss "/DAppVersion=${GITHUB_REF_NAME}"
 
       - name: Create GitHub release
         env:
