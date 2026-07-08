@@ -28,10 +28,10 @@ jobs:
           docker run --rm -v "$PWD:/work" amake/innosetup \
             /work/installer/DMap.iss \
             "/DAppVersion=${GITHUB_REF_NAME}" \
-            "/DSourceDir=/work/artifacts/publish/win-x64" \
-            "/DLicenseFile=/work/LICENSE" \
-            "/DSetupIconFile=/work/DMap/Assets/avalonia-logo.ico" \
-            "/DOutputDir=/work/artifacts/release" \
+            "/DSourceDir=../artifacts/publish/win-x64" \
+            "/DLicenseFile=../LICENSE" \
+            "/DSetupIconFile=../DMap/Assets/avalonia-logo.ico" \
+            "/DOutputDir=../artifacts/release" \
             "/DOutputName=DMap-${GITHUB_REF_NAME}-win-x64-setup"
 
       - name: Create GitHub release
