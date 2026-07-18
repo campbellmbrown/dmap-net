@@ -1,8 +1,10 @@
 Changelog
 =========
 
-.. Unreleased
-.. ----------
+Unreleased
+----------
+
+* Changed the default font
 
 :release-link:`v1.3.0`
 ----------------------

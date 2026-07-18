@@ -46,8 +46,7 @@
                 <SelectableTextBlock Grid.Row="0"
                                      Grid.Column="1"
                                      Text="{Binding Version}"
-                                     TextWrapping="Wrap"
-                                     FontFamily="Consolas, Courier New, monospace" />
+                                     TextWrapping="Wrap" />
                 <TextBlock Grid.Row="1"
                            Grid.Column="0"
                            Text="Revision"
@@ -55,8 +54,7 @@
                 <SelectableTextBlock Grid.Row="1"
                                      Grid.Column="1"
                                      Text="{Binding GitSha}"
-                                     TextWrapping="Wrap"
-                                     FontFamily="Consolas, Courier New, monospace" />
+                                     TextWrapping="Wrap" />
             </Grid>
             <TextBlock Text="Source"
                        FontWeight="Bold"

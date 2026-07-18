@@ -1,5 +1,6 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:media="using:Avalonia.Media"
              x:Class="DMap.App"
              RequestedThemeVariant="Light">
 
@@ -11,6 +12,7 @@
         <Color x:Key="DMapHighlight">#444499</Color> <!-- "#444499" -->
         <!-- <Color x:Key="DMapForeground">#A1A1E8</Color> "#A1A1E8" -->
         <Color x:Key="DMapForeground">#FFFFFF</Color> <!-- "#FFFFFF" -->
+        <media:FontFamily x:Key="DMapFontFamily">avares://DMap/Assets/Fonts#Pixelify Sans</media:FontFamily>
 
         <!-- https://github.com/AvaloniaUI/Avalonia/blob/master/src/Avalonia.Themes.Fluent/Controls/Menu.xaml -->
         <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="{StaticResource DMapBackground}" />
@@ -152,6 +154,22 @@
     <Application.Styles>
         <FluentTheme />
         <StyleInclude Source="avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml" />
+
+        <Style Selector="Window">
+            <Setter Property="FontFamily" Value="{StaticResource DMapFontFamily}" />
+        </Style>
+        <Style Selector="UserControl">
+            <Setter Property="FontFamily" Value="{StaticResource DMapFontFamily}" />
+        </Style>
+        <Style Selector="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource DMapFontFamily}" />
+        </Style>
+        <Style Selector="SelectableTextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource DMapFontFamily}" />
+        </Style>
+        <Style Selector="ContentPresenter">
+            <Setter Property="FontFamily" Value="{StaticResource DMapFontFamily}" />
+        </Style>
 
         <Style Selector="Separator">
             <Setter Property="Background" Value="{StaticResource DMapHighlight}" />
