@@ -164,7 +164,7 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
 
     /// <summary>
     /// Handles the <see cref="DmViewModel.ShowOpenFileDialog"/> interaction by opening the
-    /// platform file picker filtered to common image formats, returning the chosen local path
+    /// platform file picker filtered to supported map formats, returning the chosen local path
     /// or <see langword="null"/> if the dialog was cancelled.
     /// </summary>
     async Task HandleOpenFileDialog(IInteractionContext<Unit, string?> context)
@@ -178,11 +178,11 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
 
         var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Open Map Image",
+            Title = "Open Map",
             AllowMultiple = false,
             FileTypeFilter =
             [
-                new FilePickerFileType("Images") { Patterns = ["*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif", "*.webp"] },
+                new FilePickerFileType("Map files") { Patterns = ["*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif", "*.webp", "*.pdf"] },
                 FilePickerFileTypes.All
             ]
         });

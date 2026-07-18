@@ -115,7 +115,9 @@ Map image payload
 
 This payload contains the map image bytes exactly as transmitted by the host.
 The protocol treats the image data as opaque encoded bytes and does not define
-an image container format.
+an image container format. If the DM loads a PDF map, the host rasterizes the
+selected PDF page to encoded image bytes before sending this payload; PDF bytes
+are never sent directly.
 
 Fog delta payload
 -----------------

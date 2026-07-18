@@ -25,7 +25,7 @@ public interface IPlayerClientService : IDisposable
 
     /// <summary>
     /// Raised when a <see cref="MessageType.MapImage"/> frame is received.
-    /// The event argument is the raw image file bytes suitable for decoding into a bitmap.
+    /// The event argument is encoded image bytes suitable for decoding into a bitmap.
     /// </summary>
     event EventHandler<byte[]>? MapImageReceived;
 

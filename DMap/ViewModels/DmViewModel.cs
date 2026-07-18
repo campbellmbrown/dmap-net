@@ -16,6 +16,7 @@ using DMap.Protocol;
 using DMap.Services.Brushes;
 using DMap.Services.Fog;
 using DMap.Services.History;
+using DMap.Services.Maps;
 using DMap.Services.Networking;
 using DMap.ViewModels.ToolSettings;
 
@@ -41,6 +42,7 @@ public class DmViewModel : ViewModelBase, IDisposable
     readonly IBrush _diamondBrush;
     readonly IDmHostService _hostService;
     readonly IDiscoveryService _discoveryService;
+    readonly IMapLoader _mapLoader;
     readonly Func<PlayerViewModel> _createPlayer;
 
     /// <summary>The decoded map background image, or <see langword="null"/> before a map is loaded.</summary>
@@ -193,7 +195,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    /// <summary>Opens a file picker and loads the selected image as the map background.</summary>
+    /// <summary>Opens a file picker and loads the selected image or PDF as the map background.</summary>
     public ReactiveCommand<Unit, Unit> LoadMapCommand { get; }
 
     /// <summary>Activates the Brush tool.</summary>
@@ -341,7 +343,7 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// <summary>
     /// Constructs the ViewModel and wires up all reactive commands and service event handlers.
     /// </summary>
-    public DmViewModel(IFogMaskService fogService, IUndoRedoService undoRedo, IDmHostService hostService, IDiscoveryService discoveryService, Func<PlayerViewModel> createPlayer)
+    public DmViewModel(IFogMaskService fogService, IUndoRedoService undoRedo, IDmHostService hostService, IDiscoveryService discoveryService, IMapLoader mapLoader, Func<PlayerViewModel> createPlayer)
     {
         _fogService = fogService;
         _undoRedo = undoRedo;
@@ -350,6 +352,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         _diamondBrush = new DiamondBrush();
         _hostService = hostService;
         _discoveryService = discoveryService;
+        _mapLoader = mapLoader;
         _createPlayer = createPlayer;
 
         BrushSettings = new BrushToolSettingsViewModel();
@@ -507,11 +510,11 @@ public class DmViewModel : ViewModelBase, IDisposable
 
         try
         {
-            _mapImageBytes = await File.ReadAllBytesAsync(path);
-            using var stream = new MemoryStream(_mapImageBytes);
-            MapImage = new Bitmap(stream);
+            var loadedMap = await _mapLoader.LoadAsync(path);
+            _mapImageBytes = loadedMap.EncodedBytes;
+            MapImage = loadedMap.Image;
 
-            var pixelSize = MapImage.PixelSize;
+            var pixelSize = loadedMap.PixelSize;
             _fogService.Initialize(pixelSize.Width, pixelSize.Height);
             FogMask = _fogService.Mask;
 

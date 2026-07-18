@@ -6,6 +6,7 @@ using Avalonia.Markup.Xaml;
 
 using DMap.Services.Fog;
 using DMap.Services.History;
+using DMap.Services.Maps;
 using DMap.Services.Networking;
 using DMap.ViewModels;
 using DMap.Views;
@@ -60,6 +61,7 @@ public partial class App : Application
     ///   <item><see cref="DmHostService"/> — TCP server for broadcasting to players.</item>
     ///   <item><see cref="DiscoveryService"/> — UDP broadcast/listen for session discovery.</item>
     ///   <item><see cref="PlayerClientService"/> — TCP client for connecting to the DM.</item>
+    ///   <item><see cref="MapLoader"/> — image/PDF map loader for the DM.</item>
     /// </list>
     /// </summary>
     static IContainer BuildContainer()
@@ -71,6 +73,7 @@ public partial class App : Application
         builder.RegisterType<DmHostService>().As<IDmHostService>();
         builder.RegisterType<DiscoveryService>().As<IDiscoveryService>();
         builder.RegisterType<PlayerClientService>().As<IPlayerClientService>();
+        builder.RegisterType<MapLoader>().As<IMapLoader>().SingleInstance();
 
         builder.RegisterType<MainWindowViewModel>().AsSelf().SingleInstance();
         builder.RegisterType<DmViewModel>().AsSelf();

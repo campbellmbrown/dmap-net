@@ -42,7 +42,7 @@ public interface IDmHostService : IDisposable
     /// Broadcasts the map image to all currently connected players and caches it so
     /// newly connecting players also receive it on join.
     /// </summary>
-    /// <param name="imageBytes">Raw image file bytes (PNG, JPEG, etc.).</param>
+    /// <param name="imageBytes">Encoded image bytes (PNG, JPEG, etc.). PDF maps are rasterized before transmission.</param>
     /// <param name="ct">Cancellation token.</param>
     Task SendMapImageAsync(byte[] imageBytes, CancellationToken ct);
 
