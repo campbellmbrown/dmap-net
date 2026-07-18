@@ -1,8 +1,11 @@
 Changelog
 =========
 
-Unreleased
-----------
+.. Unreleased
+.. ----------
+
+:release-link:`v1.4.0`
+----------------------
 
 * Changed the default font.
 * Allow opening PDF maps.
