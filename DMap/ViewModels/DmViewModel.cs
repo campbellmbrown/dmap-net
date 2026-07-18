@@ -101,6 +101,13 @@ public class DmViewModel : ViewModelBase, IDisposable
         private set => this.RaiseAndSetIfChanged(ref field, value);
     } = string.Empty;
 
+    /// <summary>Loaded map dimensions formatted for the status bar.</summary>
+    public string MapSize
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    } = "Map: -";
+
     /// <summary>
     /// The currently active editing tool.
     /// Changing this value also raises change notifications for the derived
@@ -515,6 +522,7 @@ public class DmViewModel : ViewModelBase, IDisposable
             MapImage = loadedMap.Image;
 
             var pixelSize = loadedMap.PixelSize;
+            MapSize = $"Map: {pixelSize.Width} x {pixelSize.Height}";
             _fogService.Initialize(pixelSize.Width, pixelSize.Height);
             FogMask = _fogService.Mask;
 

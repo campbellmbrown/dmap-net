@@ -332,9 +332,12 @@
                 BorderBrush="{StaticResource DMapHighlight}"
                 BorderThickness="0,2,0,0">
             <DockPanel Margin="8,0" LastChildFill="False">
-                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
                     <TextBlock Foreground="{StaticResource DMapForeground}"
                                Text="{Binding ConnectedPlayers, StringFormat='Players: {0}'}"
+                               VerticalAlignment="Center" FontSize="11" />
+                    <TextBlock Foreground="{StaticResource DMapForeground}"
+                               Text="{Binding MapSize}"
                                VerticalAlignment="Center" FontSize="11" />
                     <TextBlock Foreground="{StaticResource DMapForeground}"
                                Text="{Binding MemoryUsage}"

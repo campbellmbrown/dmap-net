@@ -6,6 +6,7 @@ Unreleased
 
 * Changed the default font.
 * Allow opening PDF maps.
+* Add the map size to the status bar.
 
 :release-link:`v1.3.0`
 ----------------------
