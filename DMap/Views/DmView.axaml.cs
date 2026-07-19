@@ -9,6 +9,7 @@ using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 
 using DMap.Controls;
+using DMap.Protocol;
 using DMap.ViewModels;
 
 using ReactiveUI;
@@ -72,6 +73,10 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
             _activationDisposables.Add(
                 Disposable.Create(() => vm.FogUpdated -= OnFogUpdated));
 
+            vm.RestorePausedViewportRequested += OnRestorePausedViewportRequested;
+            _activationDisposables.Add(
+                Disposable.Create(() => vm.RestorePausedViewportRequested -= OnRestorePausedViewportRequested));
+
             _activationDisposables.Add(
                 vm.ShowOpenFileDialog.RegisterHandler(HandleOpenFileDialog));
 
@@ -124,6 +129,15 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
     {
         var canvas = this.FindControl<MapCanvas>("MapCanvas")!;
         canvas.InvalidateFogRegion(dirtyRect);
+    }
+
+    /// <summary>
+    /// Moves the DM canvas back to the viewport captured when player updates were paused.
+    /// </summary>
+    void OnRestorePausedViewportRequested(object? sender, ViewportPayload viewport)
+    {
+        var canvas = this.FindControl<MapCanvas>("MapCanvas")!;
+        canvas.ApplyViewport(viewport);
     }
 
     /// <summary>

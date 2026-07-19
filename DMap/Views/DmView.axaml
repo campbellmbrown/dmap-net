@@ -390,15 +390,26 @@
                         HorizontalAlignment="Right"
                         VerticalAlignment="Bottom"
                         IsVisible="{Binding IsUpdatesPaused}">
-                    <Button Background="Transparent"
-                            BorderThickness="0"
-                            Padding="10"
-                            Command="{Binding TogglePauseUpdatesCommand}"
-                            ToolTip.Tip="Resume Player Updates">
-                        <Image Width="20"
-                               Height="20"
-                               Source="{SvgImage /Assets/Icons/radio-off.svg}" />
-                    </Button>
+                    <StackPanel Orientation="Horizontal">
+                        <Button Background="Transparent"
+                                BorderThickness="0"
+                                Padding="10"
+                                Command="{Binding RestorePausedViewportCommand}"
+                                ToolTip.Tip="Return to Paused View">
+                            <Image Width="20"
+                                   Height="20"
+                                   Source="{SvgImage /Assets/Icons/scan-eye.svg}" />
+                        </Button>
+                        <Button Background="Transparent"
+                                BorderThickness="0"
+                                Padding="10"
+                                Command="{Binding TogglePauseUpdatesCommand}"
+                                ToolTip.Tip="Resume Player Updates">
+                            <Image Width="20"
+                                   Height="20"
+                                   Source="{SvgImage /Assets/Icons/radio-off.svg}" />
+                        </Button>
+                    </StackPanel>
                 </Border>
             </Panel>
 

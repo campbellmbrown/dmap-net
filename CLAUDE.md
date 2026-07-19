@@ -53,6 +53,11 @@ All business-logic services are behind interfaces and registered with Autofac in
 
 ## Conventions
 
+### Changelog
+
+- For any user-visible change, update `docs/source/changelog.rst` in the same change set unless the user explicitly says not to.
+- Add new entries under the `Unreleased` section, keeping wording concise and user-facing.
+
 ### Naming
 
 | Symbol | Style |

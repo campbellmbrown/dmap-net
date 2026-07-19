@@ -293,11 +293,21 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// <summary>Toggles whether fog and viewport updates are held locally or sent to connected players immediately.</summary>
     public ReactiveCommand<Unit, Unit> TogglePauseUpdatesCommand { get; }
 
+    /// <summary>Restores the DM canvas to the viewport that was active when player updates were paused.</summary>
+    public ReactiveCommand<Unit, Unit> RestorePausedViewportCommand { get; }
+
     /// <summary>
     /// When <see langword="true"/>, fog and viewport changes are applied locally but not broadcast to players.
     /// Resuming sends a single full-mask delta and latest viewport to bring all players up to date.
     /// </summary>
     public bool IsUpdatesPaused
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    /// <summary><see langword="true"/> when a pause-start viewport snapshot is available to restore.</summary>
+    public bool CanRestorePausedViewport
     {
         get;
         private set => this.RaiseAndSetIfChanged(ref field, value);
@@ -328,6 +338,11 @@ public class DmViewModel : ViewModelBase, IDisposable
     public Interaction<string, Unit> OpenDirectory { get; } = new();
 
     /// <summary>
+    /// Raised when the view should move the DM canvas back to the viewport captured when updates were paused.
+    /// </summary>
+    public event EventHandler<ViewportPayload>? RestorePausedViewportRequested;
+
+    /// <summary>
     /// Raised after any fog modification (brush, shape, undo, redo, reveal-all, refog-all).
     /// The event argument is the bounding rectangle of the changed region. The view uses
     /// this to update only the affected portion of the fog bitmap rather than rebuilding it entirely.
@@ -340,6 +355,7 @@ public class DmViewModel : ViewModelBase, IDisposable
     bool _hasPendingViewportUpdate;
     bool _hasPendingCursorUpdate;
     ViewportPayload? _latestViewport;
+    ViewportPayload? _pausedViewport;
     CursorPayload? _latestCursor;
     bool _isViewportBroadcastQueued;
     bool _isCursorBroadcastQueued;
@@ -407,9 +423,26 @@ public class DmViewModel : ViewModelBase, IDisposable
         ToggleMapVisibilityCommand = ReactiveCommand.Create(() => { IsMapVisible = !IsMapVisible; });
         ToggleOverlayVisibilityCommand = ReactiveCommand.Create(() => { IsOverlayVisible = !IsOverlayVisible; });
         ToggleToolSettingsPanelVisibilityCommand = ReactiveCommand.Create(() => { IsToolSettingsPanelVisible = !IsToolSettingsPanelVisible; });
+        var canRestorePausedViewport = this.WhenAnyValue(
+            x => x.IsUpdatesPaused,
+            x => x.CanRestorePausedViewport,
+            (isPaused, canRestore) => isPaused && canRestore);
+        RestorePausedViewportCommand = ReactiveCommand.Create(RestorePausedViewport, canRestorePausedViewport);
         TogglePauseUpdatesCommand = ReactiveCommand.Create(() =>
         {
-            IsUpdatesPaused = !IsUpdatesPaused;
+            if (IsUpdatesPaused)
+            {
+                IsUpdatesPaused = false;
+                _pausedViewport = null;
+                CanRestorePausedViewport = false;
+            }
+            else
+            {
+                _pausedViewport = _latestViewport;
+                CanRestorePausedViewport = _pausedViewport is not null;
+                IsUpdatesPaused = true;
+            }
+
             Log.Information("Player updates {State}.", IsUpdatesPaused ? "paused" : "resumed");
             if (!IsUpdatesPaused)
                 FlushPendingUpdates();
@@ -678,6 +711,21 @@ public class DmViewModel : ViewModelBase, IDisposable
     {
         _latestCursor = cursor;
         QueueCursorBroadcast();
+    }
+
+    /// <summary>
+    /// Requests the view to move the local canvas back to the viewport captured at pause time.
+    /// The restored viewport is also retained as the pending player viewport for the next resume.
+    /// </summary>
+    void RestorePausedViewport()
+    {
+        if (!IsUpdatesPaused || _pausedViewport is null)
+            return;
+
+        _latestViewport = _pausedViewport;
+        _hasPendingViewportUpdate = true;
+        RestorePausedViewportRequested?.Invoke(this, _pausedViewport);
+        Log.Information("Restoring DM view to paused viewport.");
     }
 
     /// <summary>

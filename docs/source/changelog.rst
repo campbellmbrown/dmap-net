@@ -1,22 +1,24 @@
 Changelog
 =========
 
-.. Unreleased
-.. ----------
+Unreleased
+----------
+
+* Add a paused-view restore button so the DM can return to the viewport that was active when player updates were paused.
 
 :release-link:`v1.4.0`
 ----------------------
 
-* Changed the default font.
+* Change the default font.
 * Allow opening PDF maps.
 * Add the map size to the status bar.
 
 :release-link:`v1.3.0`
 ----------------------
 
-* Added 90-degree map rotation controls, synchronized with player views.
-* Added file logging and a File menu action to open the log directory.
-* Added the app version to the title bar.
+* Add 90-degree map rotation controls, synchronized with player views.
+* Add file logging and a File menu action to open the log directory.
+* Add the app version to the title bar.
 * Split the semantic version and revision into separate lines in the About dialog.
 * Hide the tool settings panel when the pan tool is active, because it has no settings.
 * Allow collapsing the tool settings panel.
@@ -26,9 +28,9 @@ Changelog
 :release-link:`v1.2.1`
 ----------------------
 
-* Added headers on tool setting panels.
-* Added numerical inputs alongside slider settings.
-* Rearranged parts of the tool setting panels.
+* Add headers on tool setting panels.
+* Add numerical inputs alongside slider settings.
+* Rearrange parts of the tool setting panels.
 
 :release-link:`v1.2.0`
 ----------------------
@@ -38,16 +40,16 @@ Changelog
 :release-link:`v1.1.0`
 ----------------------
 
-* Added a player-visible Cursor tool.
-* Added icon to the "About DMap" menu item in the Help menu.
-* Updated the “Reset View” action: renamed to “Refit View”, updated icon, and now fits the map to the window.
-* Linux release builds are now single-file executables.
-* Allow cancelling shape drawing with the Escape key.
-* Improved constrained square and circle sizing so shallow drags use a 45 degree sizing rule instead of collapsing to the smaller axis delta.
-* Added centered shape variants and a fixed corner-radius setting for rectangle and square shape tools.
+* Add a player-visible Cursor tool.
+* Add icon to the "About DMap" menu item in the Help menu.
+* Update the “Reset View” action: renamed to “Refit View”, updated icon, and now fits the map to the window.
+* Make Linux release builds single-file executables.
+* Allow canceling shape drawing with the Escape key.
+* Improve constrained square and circle sizing so shallow drags use a 45 degree sizing rule instead of collapsing to the smaller axis delta.
+* Add centered shape variants and a fixed corner-radius setting for rectangle and square shape tools.
 * Toggle the tool overlay with F8, the "View > Show Tools" menu item, or the "Show/Hide Tools" button.
 * Add an overlay and icon when player updates are paused.
-* Fix the entire map briefly revealed to the player when swapping maps.
+* Fix the entire map being briefly revealed to the player when swapping maps.
 
 :release-link:`v1.0.0`
 ----------------------
