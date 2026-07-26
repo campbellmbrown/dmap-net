@@ -40,6 +40,7 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
         FogGenerationDialog? fogGenerationDialog = null;
         canvas.ViewportChanged += (_, viewport) => ViewModel?.UpdateViewport(viewport);
         canvas.CursorUpdated += (_, cursor) => ViewModel?.UpdateCursor(cursor);
+        canvas.StampChanged += (_, _) => ViewModel?.OnStampChanged();
 
         canvas.BrushStrokeStarted += (_, _) => ViewModel?.BeginBrushStroke();
         canvas.BrushStrokeEnded += (_, _) => ViewModel?.EndBrushStroke();

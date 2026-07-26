@@ -22,4 +22,7 @@ public enum ToolType
 
     /// <summary>Grid overlay settings (visibility, size, style, and offset). Does not modify the fog mask.</summary>
     Grid,
+
+    /// <summary>Stamp image placement and editing tool.</summary>
+    Stamp,
 }

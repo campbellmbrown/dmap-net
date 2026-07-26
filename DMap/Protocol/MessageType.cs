@@ -44,4 +44,9 @@ public enum MessageType
     /// Grid overlay settings broadcast from the DM to players.
     /// </summary>
     GridSettings = 8,
+
+    /// <summary>
+    /// Full stamp layer state broadcast from the DM to players.
+    /// </summary>
+    Stamps = 9,
 }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Collections.ObjectModel;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
@@ -87,6 +88,23 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// <summary>Settings placeholder for the Pan tool.</summary>
     public PanToolSettingsViewModel PanSettings { get; }
 
+    /// <summary>Settings for the Stamp tool.</summary>
+    public StampToolSettingsViewModel StampSettings { get; }
+
+    /// <summary>Placed stamps in map-space coordinates.</summary>
+    public ObservableCollection<StampInstance> Stamps { get; } = new();
+
+    /// <summary>The currently selected stamp, or <see langword="null"/> when none is selected.</summary>
+    public StampInstance? SelectedStamp
+    {
+        get;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref field, value);
+            StampSettings.HasSelectedStamp = value is not null;
+        }
+    }
+
     /// <summary>Number of player TCP connections currently open on the host service.</summary>
     public int ConnectedPlayers
     {
@@ -131,6 +149,7 @@ public class DmViewModel : ViewModelBase, IDisposable
             this.RaisePropertyChanged(nameof(IsFogSelected));
             this.RaisePropertyChanged(nameof(IsCursorSelected));
             this.RaisePropertyChanged(nameof(IsGridSelected));
+            this.RaisePropertyChanged(nameof(IsStampSelected));
             CurrentToolSettings = GetCurrentToolSettings(value);
             this.RaisePropertyChanged(nameof(HasCurrentToolSettings));
             this.RaisePropertyChanged(nameof(ShowToolSettingsRailToggle));
@@ -154,6 +173,9 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     /// <summary><see langword="true"/> when the Grid tool is active.</summary>
     public bool IsGridSelected => SelectedTool == ToolType.Grid;
+
+    /// <summary><see langword="true"/> when the Stamp tool is active.</summary>
+    public bool IsStampSelected => SelectedTool == ToolType.Stamp;
 
     /// <summary>All available tool types, used to populate the toolbar's tool selector.</summary>
     public IReadOnlyList<ToolType> ToolTypes { get; } = Enum.GetValues<ToolType>();
@@ -222,6 +244,9 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     /// <summary>Activates the Grid tool.</summary>
     public ReactiveCommand<Unit, Unit> SelectGridCommand { get; }
+
+    /// <summary>Activates the Stamp tool.</summary>
+    public ReactiveCommand<Unit, Unit> SelectStampCommand { get; }
 
     /// <summary>Sets all fog mask pixels to 255 (fully revealed) and pushes an undo entry.</summary>
     public ReactiveCommand<Unit, Unit> RevealAllCommand { get; }
@@ -354,6 +379,7 @@ public class DmViewModel : ViewModelBase, IDisposable
     bool _hasPendingUpdates;
     bool _hasPendingViewportUpdate;
     bool _hasPendingCursorUpdate;
+    bool _hasPendingStampUpdate;
     ViewportPayload? _latestViewport;
     ViewportPayload? _pausedViewport;
     CursorPayload? _latestCursor;
@@ -384,6 +410,13 @@ public class DmViewModel : ViewModelBase, IDisposable
         CursorSettings = new CursorToolSettingsViewModel();
         GridSettings = new GridToolSettingsViewModel();
         PanSettings = new PanToolSettingsViewModel();
+        StampSettings = new StampToolSettingsViewModel(
+            () => ReorderSelectedStampToFront(),
+            () => ReorderSelectedStampBy(1),
+            () => ReorderSelectedStampBy(-1),
+            () => ReorderSelectedStampToBack(),
+            DuplicateSelectedStamp,
+            DeleteSelectedStamp);
         CurrentToolSettings = GetCurrentToolSettings(SelectedTool);
 
         FogSettings.PropertyChanged += OnFogSettingsPropertyChanged;
@@ -403,6 +436,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         SelectFogCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Fog; });
         SelectCursorCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Cursor; });
         SelectGridCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Grid; });
+        SelectStampCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Stamp; });
 
         var mapLoaded = this.WhenAnyValue(x => x.IsMapLoaded);
         RevealAllCommand = ReactiveCommand.Create(ExecuteRevealAll, mapLoaded);
@@ -562,6 +596,8 @@ public class DmViewModel : ViewModelBase, IDisposable
             _session = new MapSession(Guid.NewGuid(), pixelSize.Width, pixelSize.Height);
             FogSeed = _session.SessionId;
             _undoRedo.Clear();
+            SelectedStamp = null;
+            Stamps.Clear();
             IsMapLoaded = true;
 
             FogUpdated?.Invoke(this, new PixelRect(0, 0, pixelSize.Width, pixelSize.Height));
@@ -569,6 +605,7 @@ public class DmViewModel : ViewModelBase, IDisposable
             await StartHostingAsync();
             BroadcastFogAppearance();
             BroadcastGridSettings();
+            BroadcastStamps();
             QueueViewportBroadcast();
 
             Log.Information(
@@ -713,6 +750,97 @@ public class DmViewModel : ViewModelBase, IDisposable
         QueueCursorBroadcast();
     }
 
+    /// <summary>Broadcasts the current stamp layer after the canvas changes it.</summary>
+    public void OnStampChanged()
+    {
+        BroadcastStamps();
+    }
+
+    void DeleteSelectedStamp()
+    {
+        var stamp = SelectedStamp;
+        if (stamp is null)
+            return;
+
+        Stamps.Remove(stamp);
+        SelectedStamp = null;
+        BroadcastStamps();
+    }
+
+    void ReorderSelectedStampBy(int delta)
+    {
+        var stamp = SelectedStamp;
+        if (stamp is null)
+            return;
+
+        var index = Stamps.IndexOf(stamp);
+        if (index < 0)
+            return;
+
+        ReorderSelectedStampTo(Math.Clamp(index + delta, 0, Stamps.Count - 1));
+    }
+
+    void ReorderSelectedStampToFront()
+    {
+        if (Stamps.Count > 0)
+            ReorderSelectedStampTo(Stamps.Count - 1);
+    }
+
+    void ReorderSelectedStampToBack()
+    {
+        ReorderSelectedStampTo(0);
+    }
+
+    void ReorderSelectedStampTo(int nextIndex)
+    {
+        var stamp = SelectedStamp;
+        if (stamp is null)
+            return;
+
+        var index = Stamps.IndexOf(stamp);
+        if (index < 0)
+            return;
+
+        nextIndex = Math.Clamp(nextIndex, 0, Stamps.Count - 1);
+
+        if (nextIndex == index)
+            return;
+
+        Stamps.RemoveAt(index);
+        Stamps.Insert(nextIndex, stamp);
+        SelectedStamp = stamp;
+        BroadcastStamps();
+    }
+
+    void DuplicateSelectedStamp()
+    {
+        var stamp = SelectedStamp;
+        if (stamp is null)
+            return;
+
+        var x = stamp.X + 16;
+        var y = stamp.Y + 16;
+        if (MapImage is not null)
+        {
+            x = Math.Clamp(x, 0, Math.Max(0, MapImage.Size.Width - stamp.Width));
+            y = Math.Clamp(y, 0, Math.Max(0, MapImage.Size.Height - stamp.Height));
+        }
+
+        var duplicate = new StampInstance
+        {
+            TemplateId = stamp.TemplateId,
+            X = x,
+            Y = y,
+            Width = stamp.Width,
+            Height = stamp.Height,
+            RotationDegrees = stamp.RotationDegrees,
+        };
+
+        Stamps.Add(duplicate);
+        SelectedStamp = duplicate;
+        BroadcastStamps();
+    }
+
     /// <summary>
     /// Requests the view to move the local canvas back to the viewport captured at pause time.
     /// The restored viewport is also retained as the pending player viewport for the next resume.
@@ -777,6 +905,20 @@ public class DmViewModel : ViewModelBase, IDisposable
         _ = _hostService.SendGridSettingsAsync(payload, default);
     }
 
+    void BroadcastStamps()
+    {
+        if (_session is null)
+            return;
+
+        if (IsUpdatesPaused)
+        {
+            _hasPendingStampUpdate = true;
+            return;
+        }
+
+        _ = _hostService.SendStampsAsync(new StampLayerPayload { Stamps = Stamps }, default);
+    }
+
     /// <summary>
     /// Fires-and-forgets a broadcast of the current fog appearance (type + colour + seed)
     /// to all connected players. Called whenever the fog settings change, and once per map load.
@@ -827,6 +969,7 @@ public class DmViewModel : ViewModelBase, IDisposable
             ToolType.Fog => FogSettings,
             ToolType.Cursor => CursorSettings,
             ToolType.Grid => GridSettings,
+            ToolType.Stamp => StampSettings,
             ToolType.Pan => PanSettings,
             _ => PanSettings
         };
@@ -926,6 +1069,12 @@ public class DmViewModel : ViewModelBase, IDisposable
             _hasPendingCursorUpdate = false;
             _ = _hostService.SendCursorAsync(_latestCursor, default);
         }
+
+        if (_hasPendingStampUpdate && _session is not null)
+        {
+            _hasPendingStampUpdate = false;
+            _ = _hostService.SendStampsAsync(new StampLayerPayload { Stamps = Stamps }, default);
+        }
     }
 
     /// <summary>
@@ -952,6 +1101,8 @@ public class DmViewModel : ViewModelBase, IDisposable
 
         if (_latestCursor is not null)
             await _hostService.SendCursorAsync(_latestCursor, default);
+
+        await _hostService.SendStampsAsync(new StampLayerPayload { Stamps = Stamps }, default);
 
         await _discoveryService.StartBroadcastingAsync(_session, _hostService.Port, default);
         Log.Information(

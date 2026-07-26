@@ -4,6 +4,8 @@ Changelog
 Unreleased
 ----------
 
+* Add a Stamp tool for placing, selecting, moving, resizing, rotating, reordering, duplicating, and deleting PNG stamps above the map image and below fog.
+* Synchronize the full stamp layer to player clients, including paused-update catch-up and late joiners.
 * Add a paused-view restore button so the DM can return to the viewport that was active when player updates were paused.
 
 :release-link:`v1.4.0`

@@ -148,7 +148,8 @@
                                 GridOpacity="{Binding GridOpacity}"
                                 GridColor="{Binding GridColor}"
                                 GridOffsetX="{Binding GridOffsetX}"
-                                GridOffsetY="{Binding GridOffsetY}" />
+                                GridOffsetY="{Binding GridOffsetY}"
+                                Stamps="{Binding Stamps}" />
         </DockPanel>
     </Grid>
 

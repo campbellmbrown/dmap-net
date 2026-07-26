@@ -1,0 +1,159 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="using:DMap.Converters"
+             xmlns:models="using:DMap.Models"
+             xmlns:vm="using:DMap.ViewModels.ToolSettings"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="DMap.Views.ToolSettings.StampToolSettingsView"
+             x:DataType="vm:StampToolSettingsViewModel">
+
+    <UserControl.Resources>
+        <converters:StampTemplateImageConverter x:Key="StampTemplateImageConverter" />
+    </UserControl.Resources>
+
+    <UserControl.Styles>
+        <Style Selector="FlyoutPresenter">
+            <Setter Property="Background" Value="{StaticResource DMapBackground}" />
+            <Setter Property="BorderBrush" Value="{StaticResource DMapHighlight}" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="Padding" Value="8" />
+        </Style>
+        <Style Selector="ListBox.stampCatalog">
+            <Setter Property="Background" Value="{StaticResource DMapBackground}" />
+            <Setter Property="BorderBrush" Value="{StaticResource DMapHighlight}" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="Padding" Value="4" />
+        </Style>
+        <Style Selector="ListBox.stampCatalog ListBoxItem">
+            <Setter Property="Padding" Value="4" />
+            <Setter Property="Margin" Value="3" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+        <Style Selector="ListBox.stampCatalog ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource DMapHover}" />
+        </Style>
+        <Style Selector="ListBox.stampCatalog ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource DMapSelected}" />
+        </Style>
+        <Style Selector="ListBox.stampCatalog ListBoxItem:selected:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource DMapHighlight}" />
+        </Style>
+    </UserControl.Styles>
+
+    <StackPanel Spacing="8" Width="220">
+        <TextBlock Classes="toolSetting" Text="Selected Stamp" />
+        <Button x:Name="StampCatalogButton"
+                Classes="text"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                ToolTip.Tip="{Binding SelectedTemplate.DisplayName}">
+            <Image Width="48"
+                   Height="48"
+                   Source="{Binding SelectedTemplate, Converter={StaticResource StampTemplateImageConverter}}"
+                   Stretch="Uniform" />
+            <Button.Flyout>
+                <Flyout>
+                    <ListBox Classes="stampCatalog"
+                             ItemsSource="{Binding Templates}"
+                             SelectedItem="{Binding SelectedTemplate}"
+                             Width="304"
+                             MaxHeight="220"
+                             PointerReleased="StampCatalogPointerReleased">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="models:StampTemplate">
+                                <Border Width="58"
+                                        Height="58"
+                                        Padding="4"
+                                        ToolTip.Tip="{Binding DisplayName}">
+                                    <Border Padding="2"
+                                            BorderBrush="{StaticResource DMapHighlight}"
+                                            BorderThickness="1"
+                                            Background="{StaticResource DMapBackground}">
+                                        <Image Source="{Binding Converter={StaticResource StampTemplateImageConverter}}"
+                                               Stretch="Uniform" />
+                                    </Border>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Flyout>
+            </Button.Flyout>
+        </Button>
+        <TextBlock Classes="toolSetting" Text="Controls" Margin="0,4,0,0" />
+        <Button Classes="text"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Stretch"
+                Command="{Binding BringSelectedStampToFrontCommand}"
+                IsEnabled="{Binding HasSelectedStamp}"
+                ToolTip.Tip="Bring Selected Stamp to Front">
+            <Grid ColumnDefinitions="20,*" ColumnSpacing="6" HorizontalAlignment="Stretch">
+                <Image Width="16" Height="16" Source="{SvgImage /Assets/Icons/bring-to-front.svg}" />
+                <TextBlock Grid.Column="1" Text="Bring to Front" VerticalAlignment="Center" />
+            </Grid>
+        </Button>
+        <Button Classes="text"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Stretch"
+                Command="{Binding BringSelectedStampForwardCommand}"
+                IsEnabled="{Binding HasSelectedStamp}"
+                ToolTip.Tip="Bring Selected Stamp Forward">
+            <Grid ColumnDefinitions="20,*" ColumnSpacing="6" HorizontalAlignment="Stretch">
+                <Image Width="16" Height="16" Source="{SvgImage /Assets/Icons/move-up.svg}" />
+                <TextBlock Grid.Column="1" Text="Bring Forward" VerticalAlignment="Center" />
+            </Grid>
+        </Button>
+        <Button Classes="text"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Stretch"
+                Command="{Binding SendSelectedStampBackwardCommand}"
+                IsEnabled="{Binding HasSelectedStamp}"
+                ToolTip.Tip="Send Selected Stamp Backward">
+            <Grid ColumnDefinitions="20,*" ColumnSpacing="6" HorizontalAlignment="Stretch">
+                <Image Width="16" Height="16" Source="{SvgImage /Assets/Icons/move-down.svg}" />
+                <TextBlock Grid.Column="1" Text="Send Backward" VerticalAlignment="Center" />
+            </Grid>
+        </Button>
+        <Button Classes="text"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Stretch"
+                Command="{Binding SendSelectedStampToBackCommand}"
+                IsEnabled="{Binding HasSelectedStamp}"
+                ToolTip.Tip="Send Selected Stamp to Back">
+            <Grid ColumnDefinitions="20,*" ColumnSpacing="6" HorizontalAlignment="Stretch">
+                <Image Width="16" Height="16" Source="{SvgImage /Assets/Icons/send-to-back.svg}" />
+                <TextBlock Grid.Column="1" Text="Send to Back" VerticalAlignment="Center" />
+            </Grid>
+        </Button>
+        <Button Classes="text"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Stretch"
+                Command="{Binding DuplicateSelectedStampCommand}"
+                IsEnabled="{Binding HasSelectedStamp}"
+                ToolTip.Tip="Duplicate Selected Stamp">
+            <Grid ColumnDefinitions="20,*" ColumnSpacing="6" HorizontalAlignment="Stretch">
+                <Image Width="16" Height="16" Source="{SvgImage /Assets/Icons/copy.svg}" />
+                <TextBlock Grid.Column="1" Text="Duplicate" VerticalAlignment="Center" />
+            </Grid>
+        </Button>
+        <Button Classes="text"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Stretch"
+                Command="{Binding DeleteSelectedStampCommand}"
+                IsEnabled="{Binding HasSelectedStamp}"
+                ToolTip.Tip="Delete Selected Stamp">
+            <Grid ColumnDefinitions="20,*" ColumnSpacing="6" HorizontalAlignment="Stretch">
+                <Image Width="16" Height="16" Source="{SvgImage /Assets/Icons/trash-2.svg}" />
+                <TextBlock Grid.Column="1" Text="Delete" VerticalAlignment="Center" />
+            </Grid>
+        </Button>
+    </StackPanel>
+</UserControl>

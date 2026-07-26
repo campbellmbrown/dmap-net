@@ -130,6 +130,9 @@
         <DataTemplate DataType="toolVm:GridToolSettingsViewModel">
             <toolViews:GridToolSettingsView />
         </DataTemplate>
+        <DataTemplate DataType="toolVm:StampToolSettingsViewModel">
+            <toolViews:StampToolSettingsView />
+        </DataTemplate>
     </UserControl.DataTemplates>
 
     <UserControl.KeyBindings>
@@ -373,7 +376,10 @@
                             GridOpacity="{Binding GridSettings.Opacity}"
                             GridColor="{Binding GridSettings.Color}"
                             GridOffsetX="{Binding GridSettings.OffsetX}"
-                            GridOffsetY="{Binding GridSettings.OffsetY}">
+                            GridOffsetY="{Binding GridSettings.OffsetY}"
+                            Stamps="{Binding Stamps}"
+                            SelectedStamp="{Binding SelectedStamp, Mode=TwoWay}"
+                            SelectedStampTemplateId="{Binding StampSettings.SelectedTemplateId}">
             </controls:MapCanvas>
 
             <Panel IsVisible="{Binding IsOverlayVisible}">
@@ -442,6 +448,14 @@
                                     Command="{Binding SelectShapeCommand}"
                                     ToolTip.Tip="Shape">
                                 <Image Source="{SvgImage /Assets/Icons/shapes.svg}" />
+                            </Button>
+
+                            <!-- Stamp tool -->
+                            <Button Classes="toolbox"
+                                    Classes.toolSelected="{Binding IsStampSelected}"
+                                    Command="{Binding SelectStampCommand}"
+                                    ToolTip.Tip="Stamp">
+                                <Image Source="{SvgImage /Assets/Icons/stamp.svg}" />
                             </Button>
 
                             <!-- Fog tool -->

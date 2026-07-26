@@ -96,6 +96,9 @@ public interface IDmHostService : IDisposable
 
     /// <summary>Broadcasts the current grid overlay settings to players and caches them for late joiners.</summary>
     Task SendGridSettingsAsync(GridSettingsPayload settings, CancellationToken ct);
+
+    /// <summary>Broadcasts the current stamp layer to players and caches it for late joiners.</summary>
+    Task SendStampsAsync(StampLayerPayload stamps, CancellationToken ct);
 }
 
 /// <summary>
@@ -132,6 +135,7 @@ public sealed class DmHostService : IDmHostService
     /// <summary>Cached cursor payload sent to new clients on connect, or <see langword="null"/> if never set.</summary>
     byte[]? _pendingCursor;
     byte[]? _pendingGridSettings;
+    byte[]? _pendingStamps;
 
     /// <inheritdoc/>
     public int Port { get; set; }
@@ -195,6 +199,7 @@ public sealed class DmHostService : IDmHostService
             byte[]? pendingViewport;
             byte[]? pendingCursor;
             byte[]? pendingGridSettings;
+            byte[]? pendingStamps;
             lock (_clientsLock)
             {
                 pendingSessionInfo = _pendingSession is not null && _pendingFogMask is not null
@@ -205,6 +210,7 @@ public sealed class DmHostService : IDmHostService
                 pendingViewport = _pendingViewport;
                 pendingCursor = _pendingCursor;
                 pendingGridSettings = _pendingGridSettings;
+                pendingStamps = _pendingStamps;
             }
 
             if (pendingSessionInfo is not null)
@@ -224,6 +230,9 @@ public sealed class DmHostService : IDmHostService
 
             if (pendingGridSettings is not null)
                 await ProtocolFraming.WriteFrameAsync(stream, MessageType.GridSettings, pendingGridSettings, default);
+
+            if (pendingStamps is not null)
+                await ProtocolFraming.WriteFrameAsync(stream, MessageType.Stamps, pendingStamps, default);
 
             // Keep connection alive until cancelled or disconnected
             var buffer = new byte[1];
@@ -336,6 +345,18 @@ public sealed class DmHostService : IDmHostService
         }
 
         return BroadcastAsync(MessageType.GridSettings, payload, ct);
+    }
+
+    /// <inheritdoc/>
+    public Task SendStampsAsync(StampLayerPayload stamps, CancellationToken ct)
+    {
+        var payload = stamps.Serialize();
+        lock (_clientsLock)
+        {
+            _pendingStamps = payload;
+        }
+
+        return BroadcastAsync(MessageType.Stamps, payload, ct);
     }
 
     /// <inheritdoc/>

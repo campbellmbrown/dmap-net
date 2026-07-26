@@ -45,6 +45,7 @@ messages are sent in this order:
 4. Viewport
 5. Cursor
 6. Grid settings
+7. Stamps
 
 Message type IDs
 ----------------
@@ -79,6 +80,9 @@ Message type IDs
    * - 8
      - Grid settings
      - Grid visibility, dimensions, colour, opacity, and offsets.
+   * - 9
+     - Stamps
+     - Full stamp layer state.
 
 Session info payload
 --------------------
@@ -292,3 +296,56 @@ This payload controls the grid overlay shown to players.
    * - Offset Y
      - 8 (float64)
      - Vertical offset in grid-square units, typically in the range 0-1.
+
+Stamps payload
+--------------
+
+This payload replaces the full stamp layer. The DM sends the complete list
+after stamp placement, movement, resizing, rotation, ordering, duplication, or
+deletion. The host also caches the latest stamp layer so late-joining players
+receive the current stamp state during initial state transfer.
+
+Stamps are rendered in list order. Earlier records are lower in the stamp
+stack; later records render above earlier stamps. The whole stamp layer renders
+above the map image and below the fog layer.
+
+.. list-table:: Stamps payload fields
+   :header-rows: 1
+
+   * - Field
+     - Size (bytes)
+     - Notes
+   * - Stamp count
+     - 4
+     - Number of stamp records in the payload.
+   * - Stamp records
+     - Variable
+     - ``stamp count`` records, each using the layout below.
+
+.. list-table:: Stamp record fields
+   :header-rows: 1
+
+   * - Field
+     - Size (bytes)
+     - Notes
+   * - Stamp ID
+     - 16
+     - A 128-bit UUID. The first 4-byte field, the next 2-byte field, and the next 2-byte field are little-endian; the final 8 bytes are stored as-is.
+   * - Template ID
+     - Variable
+     - A .NET ``BinaryWriter`` string: 7-bit encoded byte length followed by UTF-8 bytes.
+   * - X
+     - 8 (float64)
+     - Map-space X coordinate of the unrotated stamp bounds.
+   * - Y
+     - 8 (float64)
+     - Map-space Y coordinate of the unrotated stamp bounds.
+   * - Width
+     - 8 (float64)
+     - Width of the unrotated stamp bounds in map pixels.
+   * - Height
+     - 8 (float64)
+     - Height of the unrotated stamp bounds in map pixels.
+   * - Rotation
+     - 8 (float64)
+     - Clockwise stamp rotation in degrees around the stamp centre, normalized to the range 0-360.

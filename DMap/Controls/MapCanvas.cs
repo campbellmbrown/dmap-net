@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Windows.Input;
 
 using Avalonia;
@@ -8,6 +9,7 @@ using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Svg.Skia;
 
 using DMap.Commands;
@@ -58,6 +60,19 @@ public class ShapeStrokeEventArgs : EventArgs
 
     /// <summary><see langword="true"/> when the shape is removing fog; <see langword="false"/> when revealing.</summary>
     public bool IsErasing { get; init; }
+}
+
+/// <summary>
+/// Event arguments for stamp-layer mutations produced by the canvas.
+/// </summary>
+public class StampChangedEventArgs : EventArgs
+{
+    public StampChangedEventArgs(StampInstance stamp)
+    {
+        Stamp = stamp;
+    }
+
+    public StampInstance Stamp { get; }
 }
 
 /// <summary>
@@ -162,6 +177,17 @@ public class MapCanvas : Control
     public static readonly StyledProperty<Color> GridColorProperty = AvaloniaProperty.Register<MapCanvas, Color>(nameof(GridColor), Colors.White);
     public static readonly StyledProperty<double> GridOffsetXProperty = AvaloniaProperty.Register<MapCanvas, double>(nameof(GridOffsetX));
     public static readonly StyledProperty<double> GridOffsetYProperty = AvaloniaProperty.Register<MapCanvas, double>(nameof(GridOffsetY));
+
+    public static readonly StyledProperty<IList<StampInstance>?> StampsProperty =
+        AvaloniaProperty.Register<MapCanvas, IList<StampInstance>?>(nameof(Stamps));
+
+    public static readonly StyledProperty<StampInstance?> SelectedStampProperty =
+        AvaloniaProperty.Register<MapCanvas, StampInstance?>(
+            nameof(SelectedStamp),
+            defaultBindingMode: BindingMode.TwoWay);
+
+    public static readonly StyledProperty<string?> SelectedStampTemplateIdProperty =
+        AvaloniaProperty.Register<MapCanvas, string?>(nameof(SelectedStampTemplateId));
 
     /// <summary>The map background image, or <see langword="null"/> when no map is loaded.</summary>
     public Bitmap? MapImage
@@ -368,6 +394,24 @@ public class MapCanvas : Control
     public double GridOffsetX { get => GetValue(GridOffsetXProperty); set => SetValue(GridOffsetXProperty, value); }
     public double GridOffsetY { get => GetValue(GridOffsetYProperty); set => SetValue(GridOffsetYProperty, value); }
 
+    public IList<StampInstance>? Stamps
+    {
+        get => GetValue(StampsProperty);
+        set => SetValue(StampsProperty, value);
+    }
+
+    public StampInstance? SelectedStamp
+    {
+        get => GetValue(SelectedStampProperty);
+        set => SetValue(SelectedStampProperty, value);
+    }
+
+    public string? SelectedStampTemplateId
+    {
+        get => GetValue(SelectedStampTemplateIdProperty);
+        set => SetValue(SelectedStampTemplateIdProperty, value);
+    }
+
     /// <summary>Raised when the user presses the pointer to begin a brush stroke.</summary>
     public event EventHandler? BrushStrokeStarted;
 
@@ -385,6 +429,8 @@ public class MapCanvas : Control
     /// carrying the bounding box corners in map coordinates.
     /// </summary>
     public event EventHandler<ShapeStrokeEventArgs>? ShapeStrokeApplied;
+
+    public event EventHandler<StampChangedEventArgs>? StampChanged;
 
     /// <summary>
     /// Raised whenever the viewport camera changes, expressed as a map-space center coordinate plus zoom.
@@ -413,6 +459,7 @@ public class MapCanvas : Control
 
     readonly MapViewportController _viewport = new();
     readonly FogBitmapController _fogBitmapController;
+    readonly ContextMenu _stampContextMenu;
     bool _isPanning;
     Point _lastPanPoint;
     bool _isPainting;
@@ -421,11 +468,42 @@ public class MapCanvas : Control
     int _lastBrushMapY;
     bool _isDraggingShape;
     bool _isCursorPressed;
+    bool _isDraggingStamp;
+    StampDragMode _stampDragMode;
+    StampHandle _activeStampHandle;
+    Point _stampDragStartMap;
+    Rect _stampDragStartRect;
+    double _stampDragStartRotationDegrees;
+    double _stampDragStartPointerAngleDegrees;
     Point _shapeDragStart;
     Point _lastMousePosition;
     decimal? _zoomPercent;
+    INotifyCollectionChanged? _subscribedStampsCollection;
     static readonly Uri _iconBaseUri = new("avares://DMap/Assets/Icons/");
     static readonly IReadOnlyDictionary<CursorType, IImage> _cursorIcons = CreateCursorIcons();
+    static readonly IReadOnlyDictionary<string, IImage> _stampImages = CreateStampImages();
+
+    enum StampDragMode
+    {
+        None,
+        Move,
+        Resize,
+        Rotate,
+    }
+
+    enum StampHandle
+    {
+        None,
+        TopLeft,
+        Top,
+        TopRight,
+        Right,
+        BottomRight,
+        Bottom,
+        BottomLeft,
+        Left,
+        Rotate,
+    }
 
     static MapCanvas()
     {
@@ -435,7 +513,7 @@ public class MapCanvas : Control
             ShapeTypeProperty, ShapeCornerRadiusProperty, CursorTypeProperty, CursorSizeProperty, CursorMapXProperty,
             CursorMapYProperty, IsCursorVisibleProperty, ShowMapProperty,
             IsGridVisibleProperty, GridSquareSizeProperty, GridLineWidthProperty, GridOpacityProperty, GridColorProperty, GridOffsetXProperty, GridOffsetYProperty,
-            FogTypeProperty, FogColorProperty, FogSeedProperty);
+            FogTypeProperty, FogColorProperty, FogSeedProperty, StampsProperty, SelectedStampProperty);
     }
 
     /// <summary>Initialises the control with clipping and keyboard focus enabled.</summary>
@@ -444,6 +522,7 @@ public class MapCanvas : Control
         ClipToBounds = true;
         Focusable = true;
         _fogBitmapController = new FogBitmapController();
+        _stampContextMenu = CreateStampContextMenu();
         _fogBitmapController.Invalidated += (_, _) => InvalidateVisual();
         _fogBitmapController.IsGeneratingChanged += (_, isGenerating) => IsFogGenerating = isGenerating;
         ZoomInCommand = new RelayCommand(() => ZoomLevel *= 1.2);
@@ -451,6 +530,52 @@ public class MapCanvas : Control
         RefitViewCommand = new RelayCommand(RefitViewToMapHeight);
         RotateLeftCommand = new RelayCommand(() => RotateView(-1));
         RotateRightCommand = new RelayCommand(() => RotateView(1));
+    }
+
+    ContextMenu CreateStampContextMenu()
+    {
+        var bringToFront = CreateStampMenuItem("Bring to Front", "bring-to-front.svg");
+        bringToFront.Click += (_, _) => ReorderSelectedStampToFront();
+
+        var bringForward = CreateStampMenuItem("Bring Forward", "move-up.svg");
+        bringForward.Click += (_, _) => ReorderSelectedStampBy(1);
+
+        var sendBackward = CreateStampMenuItem("Send Backward", "move-down.svg");
+        sendBackward.Click += (_, _) => ReorderSelectedStampBy(-1);
+
+        var sendToBack = CreateStampMenuItem("Send to Back", "send-to-back.svg");
+        sendToBack.Click += (_, _) => ReorderSelectedStampToBack();
+
+        var duplicate = CreateStampMenuItem("Duplicate", "copy.svg");
+        duplicate.Click += (_, _) => DuplicateSelectedStamp();
+
+        return new ContextMenu
+        {
+            Placement = PlacementMode.Pointer,
+            ItemsSource = new Control[]
+            {
+                bringToFront,
+                bringForward,
+                sendBackward,
+                sendToBack,
+                duplicate,
+            },
+        };
+    }
+
+    static MenuItem CreateStampMenuItem(string header, string iconFileName)
+    {
+        var uri = new Uri(_iconBaseUri, iconFileName);
+        return new MenuItem
+        {
+            Header = header,
+            Icon = new Image
+            {
+                Width = 16,
+                Height = 16,
+                Source = new SvgImage { Source = SvgSource.Load(uri.ToString(), null) },
+            },
+        };
     }
 
     static Dictionary<CursorType, IImage> CreateCursorIcons()
@@ -463,6 +588,15 @@ public class MapCanvas : Control
         }
 
         return icons;
+    }
+
+    static Dictionary<string, IImage> CreateStampImages()
+    {
+        var images = new Dictionary<string, IImage>();
+        foreach (var template in StampCatalog.Templates)
+            images[template.Id] = new Bitmap(AssetLoader.Open(new Uri(template.AssetPath)));
+
+        return images;
     }
 
     /// <summary>
@@ -508,14 +642,17 @@ public class MapCanvas : Control
     /// </summary>
     public void CancelActiveInteraction()
     {
-        var hadShapePreview = _isDraggingShape;
+        var hadPreview = _isDraggingShape || _isDraggingStamp;
 
         _isDraggingShape = false;
+        _isDraggingStamp = false;
+        _stampDragMode = StampDragMode.None;
+        _activeStampHandle = StampHandle.None;
         _isPainting = false;
         _isPanning = false;
         UpdateCursor();
 
-        if (hadShapePreview)
+        if (hadPreview)
             InvalidateVisual();
     }
 
@@ -585,6 +722,7 @@ public class MapCanvas : Control
             else
                 context.FillRectangle(Brushes.White, imageRect);
 
+            RenderStamps(context);
             RenderGrid(context, imageRect);
 
             if (_fogBitmapController.Bitmap != null)
@@ -598,8 +736,79 @@ public class MapCanvas : Control
         if (ShouldRenderCursor())
             RenderCursor(context, CursorMapX, CursorMapY);
 
+        if (IsDmMode && ActiveTool == ToolType.Stamp)
+            RenderStampEditorOverlay(context);
+
         if (IsDmMode && IsPointerOver && ActiveTool != ToolType.Cursor)
             RenderToolOverlay(context, zoom);
+    }
+
+    void RenderStamps(DrawingContext context)
+    {
+        if (Stamps is not { Count: > 0 })
+            return;
+
+        foreach (var stamp in Stamps)
+        {
+            if (!_stampImages.TryGetValue(stamp.TemplateId, out var image))
+                continue;
+
+            var rect = GetStampRect(stamp);
+            if (Math.Abs(stamp.RotationDegrees) < 0.001)
+            {
+                context.DrawImage(image, rect);
+                continue;
+            }
+
+            var center = GetStampCenter(stamp);
+            using (context.PushTransform(
+                Matrix.CreateTranslation(-center.X, -center.Y)
+                * Matrix.CreateRotation(DegreesToRadians(stamp.RotationDegrees))
+                * Matrix.CreateTranslation(center.X, center.Y)))
+            {
+                context.DrawImage(image, rect);
+            }
+        }
+    }
+
+    void RenderStampEditorOverlay(DrawingContext context)
+    {
+        var stamp = SelectedStamp;
+        if (stamp is null || MapImage is null)
+            return;
+
+        var topLeft = _viewport.MapToScreen(GetStampHandlePoint(stamp, StampHandle.TopLeft), MapImage.Size);
+        var top = _viewport.MapToScreen(GetStampHandlePoint(stamp, StampHandle.Top), MapImage.Size);
+        var topRight = _viewport.MapToScreen(GetStampHandlePoint(stamp, StampHandle.TopRight), MapImage.Size);
+        var right = _viewport.MapToScreen(GetStampHandlePoint(stamp, StampHandle.Right), MapImage.Size);
+        var bottomRight = _viewport.MapToScreen(GetStampHandlePoint(stamp, StampHandle.BottomRight), MapImage.Size);
+        var bottom = _viewport.MapToScreen(GetStampHandlePoint(stamp, StampHandle.Bottom), MapImage.Size);
+        var bottomLeft = _viewport.MapToScreen(GetStampHandlePoint(stamp, StampHandle.BottomLeft), MapImage.Size);
+        var left = _viewport.MapToScreen(GetStampHandlePoint(stamp, StampHandle.Left), MapImage.Size);
+        var rotate = _viewport.MapToScreen(GetStampHandlePoint(stamp, StampHandle.Rotate), MapImage.Size);
+        var pen = new Pen(Brushes.White, 1.5);
+
+        context.DrawLine(pen, topLeft, topRight);
+        context.DrawLine(pen, topRight, bottomRight);
+        context.DrawLine(pen, bottomRight, bottomLeft);
+        context.DrawLine(pen, bottomLeft, topLeft);
+        context.DrawLine(pen, top, rotate);
+
+        DrawStampHandle(context, topLeft);
+        DrawStampHandle(context, top);
+        DrawStampHandle(context, topRight);
+        DrawStampHandle(context, right);
+        DrawStampHandle(context, bottomRight);
+        DrawStampHandle(context, bottom);
+        DrawStampHandle(context, bottomLeft);
+        DrawStampHandle(context, left);
+        DrawStampHandle(context, rotate);
+    }
+
+    static void DrawStampHandle(DrawingContext context, Point center)
+    {
+        const double radius = 4.5;
+        context.DrawEllipse(Brushes.Black, new Pen(Brushes.White, 1), center, radius, radius);
     }
 
     /// <summary>Returns <see langword="true"/> when the configured cursor icon should be drawn.</summary>
@@ -752,6 +961,9 @@ public class MapCanvas : Control
             UpdateCursor();
         }
 
+        if (change.Property == StampsProperty)
+            SubscribeToStampsCollection();
+
         if (change.Property == MapImageProperty && MapImage is not null)
         {
             _viewport.ResetRotation();
@@ -782,6 +994,26 @@ public class MapCanvas : Control
         }
     }
 
+    void SubscribeToStampsCollection()
+    {
+        if (_subscribedStampsCollection is not null)
+            _subscribedStampsCollection.CollectionChanged -= OnStampsCollectionChanged;
+
+        _subscribedStampsCollection = Stamps as INotifyCollectionChanged;
+        if (_subscribedStampsCollection is not null)
+            _subscribedStampsCollection.CollectionChanged += OnStampsCollectionChanged;
+
+        InvalidateVisual();
+    }
+
+    void OnStampsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (SelectedStamp is not null && Stamps is not null && !Stamps.Contains(SelectedStamp))
+            SelectedStamp = null;
+
+        InvalidateVisual();
+    }
+
     /// <summary>
     /// Updates the cursor based on the current tool and interaction state:
     /// hidden during painting (to show the brush outline instead), resize-all during panning,
@@ -798,6 +1030,14 @@ public class MapCanvas : Control
         if (_isPanning || ActiveTool == ToolType.Pan)
         {
             Cursor = new Cursor(StandardCursorType.SizeAll);
+            return;
+        }
+
+        if (ActiveTool == ToolType.Stamp)
+        {
+            Cursor = _isDraggingStamp && _stampDragMode == StampDragMode.Move
+                ? new Cursor(StandardCursorType.SizeAll)
+                : Cursor.Default;
             return;
         }
 
@@ -850,6 +1090,21 @@ public class MapCanvas : Control
                 _isCursorPressed = true;
             RaiseCursorUpdated();
             UpdateCursor();
+            e.Handled = true;
+            return;
+        }
+
+        if (ActiveTool == ToolType.Stamp && point.Properties.IsLeftButtonPressed)
+        {
+            StartStampInteraction(point.Position);
+            UpdateCursor();
+            e.Handled = true;
+            return;
+        }
+
+        if (ActiveTool == ToolType.Stamp && point.Properties.IsRightButtonPressed)
+        {
+            ShowStampContextMenu(point.Position);
             e.Handled = true;
             return;
         }
@@ -927,6 +1182,15 @@ public class MapCanvas : Control
             return;
         }
 
+        if (ActiveTool == ToolType.Stamp && _isDraggingStamp)
+        {
+            UpdateStampInteraction(point.Position, e.KeyModifiers.HasFlag(KeyModifiers.Shift));
+            UpdateCursor();
+            InvalidateVisual();
+            e.Handled = true;
+            return;
+        }
+
         if (_isPainting)
         {
             RaiseBrushStroke(point.Position);
@@ -958,6 +1222,20 @@ public class MapCanvas : Control
             UpdateCursorMapPosition(point.Position);
             _isCursorPressed = point.Properties.IsLeftButtonPressed;
             RaiseCursorUpdated();
+            UpdateCursor();
+            InvalidateVisual();
+            e.Handled = true;
+            return;
+        }
+
+        if (ActiveTool == ToolType.Stamp && _isDraggingStamp)
+        {
+            var stamp = SelectedStamp;
+            _isDraggingStamp = false;
+            _stampDragMode = StampDragMode.None;
+            _activeStampHandle = StampHandle.None;
+            if (stamp is not null)
+                StampChanged?.Invoke(this, new StampChangedEventArgs(stamp));
             UpdateCursor();
             InvalidateVisual();
             e.Handled = true;
@@ -1004,6 +1282,22 @@ public class MapCanvas : Control
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
+
+        if (ActiveTool == ToolType.Stamp && e.Key is Key.Delete or Key.Back)
+        {
+            DeleteSelectedStamp();
+            e.Handled = true;
+            return;
+        }
+
+        if (ActiveTool == ToolType.Stamp && e.Key == Key.Escape)
+        {
+            CancelActiveInteraction();
+            SelectedStamp = null;
+            InvalidateVisual();
+            e.Handled = true;
+            return;
+        }
 
         if (e.Key == Key.Escape && _isDraggingShape)
         {
@@ -1056,6 +1350,450 @@ public class MapCanvas : Control
 
         InvalidateVisual();
     }
+
+    void StartStampInteraction(Point screenPosition)
+    {
+        if (MapImage is null || Stamps is null)
+            return;
+
+        var mapPosition = _viewport.ScreenToMap(screenPosition, MapImage.Size);
+        if (SelectedStamp is not null
+            && TryHitStampHandle(mapPosition, SelectedStamp, out var handle))
+        {
+            BeginStampDrag(
+                mapPosition,
+                handle == StampHandle.Rotate ? StampDragMode.Rotate : StampDragMode.Resize,
+                handle);
+            return;
+        }
+
+        var hit = HitTestStamp(mapPosition);
+        if (hit is not null)
+        {
+            SelectedStamp = hit;
+            BeginStampDrag(mapPosition, StampDragMode.Move, StampHandle.None);
+            return;
+        }
+
+        if (SelectedStamp is not null)
+        {
+            SelectedStamp = null;
+            InvalidateVisual();
+            return;
+        }
+
+        PlaceStamp(mapPosition);
+    }
+
+    void ShowStampContextMenu(Point screenPosition)
+    {
+        if (MapImage is null)
+            return;
+
+        var mapPosition = _viewport.ScreenToMap(screenPosition, MapImage.Size);
+        var hit = HitTestStamp(mapPosition);
+        if (hit is null)
+            return;
+
+        SelectedStamp = hit;
+        _stampContextMenu.Open(this);
+        InvalidateVisual();
+    }
+
+    void ReorderSelectedStampBy(int delta)
+    {
+        var stamp = SelectedStamp;
+        if (stamp is null || Stamps is null)
+            return;
+
+        var index = Stamps.IndexOf(stamp);
+        if (index < 0)
+            return;
+
+        ReorderSelectedStampTo(Math.Clamp(index + delta, 0, Stamps.Count - 1));
+    }
+
+    void ReorderSelectedStampToFront()
+    {
+        if (Stamps is { Count: > 0 })
+            ReorderSelectedStampTo(Stamps.Count - 1);
+    }
+
+    void ReorderSelectedStampToBack()
+    {
+        ReorderSelectedStampTo(0);
+    }
+
+    void ReorderSelectedStampTo(int nextIndex)
+    {
+        var stamp = SelectedStamp;
+        if (stamp is null || Stamps is null)
+            return;
+
+        var index = Stamps.IndexOf(stamp);
+        if (index < 0)
+            return;
+
+        nextIndex = Math.Clamp(nextIndex, 0, Stamps.Count - 1);
+
+        if (nextIndex == index)
+            return;
+
+        Stamps.RemoveAt(index);
+        Stamps.Insert(nextIndex, stamp);
+        SelectedStamp = stamp;
+        StampChanged?.Invoke(this, new StampChangedEventArgs(stamp));
+        InvalidateVisual();
+    }
+
+    void DuplicateSelectedStamp()
+    {
+        var stamp = SelectedStamp;
+        if (stamp is null || Stamps is null)
+            return;
+
+        var rect = ClampStampRect(new Rect(stamp.X + 16, stamp.Y + 16, stamp.Width, stamp.Height));
+        var duplicate = new StampInstance
+        {
+            TemplateId = stamp.TemplateId,
+            X = rect.X,
+            Y = rect.Y,
+            Width = rect.Width,
+            Height = rect.Height,
+            RotationDegrees = stamp.RotationDegrees,
+        };
+
+        Stamps.Add(duplicate);
+        SelectedStamp = duplicate;
+        StampChanged?.Invoke(this, new StampChangedEventArgs(duplicate));
+        InvalidateVisual();
+    }
+
+    void BeginStampDrag(Point mapPosition, StampDragMode mode, StampHandle handle)
+    {
+        var stamp = SelectedStamp;
+        if (stamp is null)
+            return;
+
+        _isDraggingStamp = true;
+        _stampDragMode = mode;
+        _activeStampHandle = handle;
+        _stampDragStartMap = mapPosition;
+        _stampDragStartRect = GetStampRect(stamp);
+        _stampDragStartRotationDegrees = stamp.RotationDegrees;
+        _stampDragStartPointerAngleDegrees = GetAngleDegrees(GetStampCenter(stamp), mapPosition);
+    }
+
+    void UpdateStampInteraction(Point screenPosition, bool preserveAspect)
+    {
+        var stamp = SelectedStamp;
+        if (stamp is null || MapImage is null)
+            return;
+
+        var mapPosition = _viewport.ScreenToMap(screenPosition, MapImage.Size);
+        if (_stampDragMode == StampDragMode.Rotate)
+        {
+            RotateStamp(stamp, mapPosition);
+            return;
+        }
+
+        var rect = _stampDragMode == StampDragMode.Resize
+            ? ResizeStampRect(mapPosition, preserveAspect)
+            : MoveStampRect(mapPosition);
+
+        ApplyStampRect(stamp, ClampStampRect(rect));
+    }
+
+    void RotateStamp(StampInstance stamp, Point mapPosition)
+    {
+        var angle = GetAngleDegrees(GetStampCenter(stamp), mapPosition);
+        stamp.RotationDegrees = NormalizeDegrees(
+            _stampDragStartRotationDegrees + angle - _stampDragStartPointerAngleDegrees);
+    }
+
+    Rect MoveStampRect(Point mapPosition)
+    {
+        var delta = mapPosition - _stampDragStartMap;
+        return new Rect(
+            _stampDragStartRect.X + delta.X,
+            _stampDragStartRect.Y + delta.Y,
+            _stampDragStartRect.Width,
+            _stampDragStartRect.Height);
+    }
+
+    Rect ResizeStampRect(Point mapPosition, bool preserveAspect)
+    {
+        const double minSize = 12;
+        var (xSign, ySign) = GetStampHandleSigns(_activeStampHandle);
+        var affectsWidth = xSign != 0;
+        var affectsHeight = ySign != 0;
+        var center = _stampDragStartRect.Center;
+        var (xAxis, yAxis) = GetRotatedAxes(_stampDragStartRotationDegrees);
+        var anchor = Add(
+            Add(center, Scale(xAxis, -xSign * _stampDragStartRect.Width / 2.0)),
+            Scale(yAxis, -ySign * _stampDragStartRect.Height / 2.0));
+        var pointerFromAnchor = mapPosition - anchor;
+        var width = affectsWidth
+            ? Math.Max(minSize, xSign * Dot(pointerFromAnchor, xAxis))
+            : _stampDragStartRect.Width;
+        var height = affectsHeight
+            ? Math.Max(minSize, ySign * Dot(pointerFromAnchor, yAxis))
+            : _stampDragStartRect.Height;
+
+        if (preserveAspect && IsCornerHandle(_activeStampHandle))
+        {
+            var aspect = _stampDragStartRect.Width / Math.Max(minSize, _stampDragStartRect.Height);
+            if (width / height > aspect)
+                width = height * aspect;
+            else
+                height = width / aspect;
+        }
+
+        var nextCenter = anchor;
+        if (affectsWidth)
+            nextCenter = Add(nextCenter, Scale(xAxis, xSign * width / 2.0));
+        if (affectsHeight)
+            nextCenter = Add(nextCenter, Scale(yAxis, ySign * height / 2.0));
+
+        return new Rect(nextCenter.X - width / 2.0, nextCenter.Y - height / 2.0, width, height);
+    }
+
+    static bool IsCornerHandle(StampHandle handle) =>
+        handle is StampHandle.TopLeft or StampHandle.TopRight or StampHandle.BottomRight or StampHandle.BottomLeft;
+
+    void PlaceStamp(Point mapPosition)
+    {
+        if (Stamps is null)
+            return;
+
+        var templateId = SelectedStampTemplateId ?? StampCatalog.Templates[0].Id;
+        var template = StampCatalog.Find(templateId) ?? StampCatalog.Templates[0];
+        var rect = ClampStampRect(new Rect(
+            mapPosition.X - template.DefaultWidth / 2,
+            mapPosition.Y - template.DefaultHeight / 2,
+            template.DefaultWidth,
+            template.DefaultHeight));
+
+        var stamp = new StampInstance
+        {
+            TemplateId = template.Id,
+            X = rect.X,
+            Y = rect.Y,
+            Width = rect.Width,
+            Height = rect.Height,
+            RotationDegrees = 0,
+        };
+
+        Stamps.Add(stamp);
+        SelectedStamp = stamp;
+        StampChanged?.Invoke(this, new StampChangedEventArgs(stamp));
+        InvalidateVisual();
+    }
+
+    void DeleteSelectedStamp()
+    {
+        var stamp = SelectedStamp;
+        if (stamp is null || Stamps is null)
+            return;
+
+        Stamps.Remove(stamp);
+        SelectedStamp = null;
+        StampChanged?.Invoke(this, new StampChangedEventArgs(stamp));
+        InvalidateVisual();
+    }
+
+    StampInstance? HitTestStamp(Point mapPosition)
+    {
+        if (Stamps is null)
+            return null;
+
+        for (var i = Stamps.Count - 1; i >= 0; i--)
+        {
+            var stamp = Stamps[i];
+            if (GetStampRect(stamp).Contains(UnrotatePoint(mapPosition, GetStampCenter(stamp), stamp.RotationDegrees)))
+                return stamp;
+        }
+
+        return null;
+    }
+
+    bool TryHitStampHandle(Point mapPosition, StampInstance stamp, out StampHandle handle)
+    {
+        var threshold = Math.Max(4, 10 / Math.Max(ZoomLevel, 0.01));
+
+        if (IsNear(mapPosition, GetStampHandlePoint(stamp, StampHandle.Rotate), threshold))
+        {
+            handle = StampHandle.Rotate;
+            return true;
+        }
+
+        if (IsNear(mapPosition, GetStampHandlePoint(stamp, StampHandle.TopLeft), threshold))
+        {
+            handle = StampHandle.TopLeft;
+            return true;
+        }
+
+        if (IsNear(mapPosition, GetStampHandlePoint(stamp, StampHandle.Top), threshold))
+        {
+            handle = StampHandle.Top;
+            return true;
+        }
+
+        if (IsNear(mapPosition, GetStampHandlePoint(stamp, StampHandle.TopRight), threshold))
+        {
+            handle = StampHandle.TopRight;
+            return true;
+        }
+
+        if (IsNear(mapPosition, GetStampHandlePoint(stamp, StampHandle.Right), threshold))
+        {
+            handle = StampHandle.Right;
+            return true;
+        }
+
+        if (IsNear(mapPosition, GetStampHandlePoint(stamp, StampHandle.BottomRight), threshold))
+        {
+            handle = StampHandle.BottomRight;
+            return true;
+        }
+
+        if (IsNear(mapPosition, GetStampHandlePoint(stamp, StampHandle.Bottom), threshold))
+        {
+            handle = StampHandle.Bottom;
+            return true;
+        }
+
+        if (IsNear(mapPosition, GetStampHandlePoint(stamp, StampHandle.BottomLeft), threshold))
+        {
+            handle = StampHandle.BottomLeft;
+            return true;
+        }
+
+        if (IsNear(mapPosition, GetStampHandlePoint(stamp, StampHandle.Left), threshold))
+        {
+            handle = StampHandle.Left;
+            return true;
+        }
+
+        handle = StampHandle.None;
+        return false;
+    }
+
+    static bool IsNear(Point point, Point target, double threshold) =>
+        Math.Abs(point.X - target.X) <= threshold && Math.Abs(point.Y - target.Y) <= threshold;
+
+    static (int X, int Y) GetStampHandleSigns(StampHandle handle) =>
+        handle switch
+        {
+            StampHandle.TopLeft => (-1, -1),
+            StampHandle.Top => (0, -1),
+            StampHandle.TopRight => (1, -1),
+            StampHandle.Right => (1, 0),
+            StampHandle.BottomRight => (1, 1),
+            StampHandle.Bottom => (0, 1),
+            StampHandle.BottomLeft => (-1, 1),
+            StampHandle.Left => (-1, 0),
+            _ => (1, 1),
+        };
+
+    Rect ClampStampRect(Rect rect)
+    {
+        const double minSize = 12;
+        var width = Math.Max(minSize, rect.Width);
+        var height = Math.Max(minSize, rect.Height);
+        var x = rect.X;
+        var y = rect.Y;
+
+        if (MapImage is not null)
+        {
+            width = Math.Min(width, Math.Max(minSize, MapImage.Size.Width));
+            height = Math.Min(height, Math.Max(minSize, MapImage.Size.Height));
+            x = Math.Clamp(x, 0, Math.Max(0, MapImage.Size.Width - width));
+            y = Math.Clamp(y, 0, Math.Max(0, MapImage.Size.Height - height));
+        }
+
+        return new Rect(x, y, width, height);
+    }
+
+    static Rect GetStampRect(StampInstance stamp) =>
+        new(stamp.X, stamp.Y, stamp.Width, stamp.Height);
+
+    static Point GetStampCenter(StampInstance stamp) =>
+        new(stamp.X + stamp.Width / 2.0, stamp.Y + stamp.Height / 2.0);
+
+    Point GetStampHandlePoint(StampInstance stamp, StampHandle handle)
+    {
+        var rect = GetStampRect(stamp);
+        var rotateHandleOffset = 28 / Math.Max(ZoomLevel, 0.01);
+        var localPoint = handle switch
+        {
+            StampHandle.TopLeft => rect.TopLeft,
+            StampHandle.Top => new Point(rect.X + rect.Width / 2.0, rect.Y),
+            StampHandle.TopRight => rect.TopRight,
+            StampHandle.Right => new Point(rect.Right, rect.Y + rect.Height / 2.0),
+            StampHandle.BottomRight => rect.BottomRight,
+            StampHandle.Bottom => new Point(rect.X + rect.Width / 2.0, rect.Bottom),
+            StampHandle.BottomLeft => rect.BottomLeft,
+            StampHandle.Left => new Point(rect.X, rect.Y + rect.Height / 2.0),
+            StampHandle.Rotate => new Point(rect.X + rect.Width / 2.0, rect.Y - rotateHandleOffset),
+            _ => GetStampCenter(stamp),
+        };
+
+        return RotatePoint(localPoint, GetStampCenter(stamp), stamp.RotationDegrees);
+    }
+
+    static void ApplyStampRect(StampInstance stamp, Rect rect)
+    {
+        stamp.X = rect.X;
+        stamp.Y = rect.Y;
+        stamp.Width = rect.Width;
+        stamp.Height = rect.Height;
+    }
+
+    static Point RotatePoint(Point point, Point center, double degrees)
+    {
+        var radians = DegreesToRadians(degrees);
+        var cos = Math.Cos(radians);
+        var sin = Math.Sin(radians);
+        var x = point.X - center.X;
+        var y = point.Y - center.Y;
+
+        return new Point(
+            center.X + x * cos - y * sin,
+            center.Y + x * sin + y * cos);
+    }
+
+    static Point UnrotatePoint(Point point, Point center, double degrees) =>
+        RotatePoint(point, center, -degrees);
+
+    static (Vector XAxis, Vector YAxis) GetRotatedAxes(double degrees)
+    {
+        var radians = DegreesToRadians(degrees);
+        var cos = Math.Cos(radians);
+        var sin = Math.Sin(radians);
+        return (new Vector(cos, sin), new Vector(-sin, cos));
+    }
+
+    static Point Add(Point point, Vector vector) =>
+        new(point.X + vector.X, point.Y + vector.Y);
+
+    static Vector Scale(Vector vector, double scale) =>
+        new(vector.X * scale, vector.Y * scale);
+
+    static double Dot(Vector left, Vector right) =>
+        left.X * right.X + left.Y * right.Y;
+
+    static double GetAngleDegrees(Point center, Point point) =>
+        Math.Atan2(point.Y - center.Y, point.X - center.X) * 180.0 / Math.PI;
+
+    static double NormalizeDegrees(double degrees)
+    {
+        var normalized = degrees % 360.0;
+        return normalized < 0 ? normalized + 360.0 : normalized;
+    }
+
+    static double DegreesToRadians(double degrees) =>
+        degrees * Math.PI / 180.0;
 
     /// <summary>
     /// Records the current pointer position converted to map coordinates as the starting

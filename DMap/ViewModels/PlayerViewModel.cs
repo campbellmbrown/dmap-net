@@ -162,6 +162,9 @@ public class PlayerViewModel : ViewModelBase, IDisposable
     public double GridOffsetX { get; private set => this.RaiseAndSetIfChanged(ref field, value); }
     public double GridOffsetY { get; private set => this.RaiseAndSetIfChanged(ref field, value); }
 
+    /// <summary>Stamp layer received from the DM.</summary>
+    public ObservableCollection<StampInstance> Stamps { get; } = new();
+
     /// <summary>Current state of the player window shell.</summary>
     public WindowState WindowState
     {
@@ -208,6 +211,7 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         _clientService.ViewportReceived += OnViewportReceived;
         _clientService.CursorReceived += OnCursorReceived;
         _clientService.GridSettingsReceived += OnGridSettingsReceived;
+        _clientService.StampsReceived += OnStampsReceived;
         _clientService.Disconnected += OnDisconnected;
 
         var canConnect = this.WhenAnyValue(
@@ -291,6 +295,7 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         FogMask = null;
         Viewport = null;
         IsCursorVisible = false;
+        Stamps.Clear();
         StatusText = "Disconnected. Searching for DM sessions...";
     }
 
@@ -387,6 +392,16 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         });
     }
 
+    void OnStampsReceived(object? sender, StampLayerPayload stampLayer)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            Stamps.Clear();
+            foreach (var stamp in stampLayer.Stamps)
+                Stamps.Add(stamp);
+        });
+    }
+
     void OnDisconnected(object? sender, EventArgs e)
     {
         Dispatcher.UIThread.Post(() =>
@@ -394,6 +409,7 @@ public class PlayerViewModel : ViewModelBase, IDisposable
             IsConnected = false;
             Viewport = null;
             IsCursorVisible = false;
+            Stamps.Clear();
             StatusText = "Disconnected from DM. Searching for sessions...";
         });
     }
