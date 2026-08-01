@@ -1,54 +1,119 @@
 using System;
 
 using Avalonia;
+using Avalonia.Input;
 
-using DMap.Dm;
 using DMap.Protocol;
 
 namespace DMap.Controls.MapCanvas;
 
-/// <summary>Map-space rectangle math for editing the player viewport selection.</summary>
-internal static class PlayerViewportGeometry
+/// <summary>Owns DM-side player viewport selection hit testing, dragging, resizing, and cursor selection.</summary>
+public sealed class PlayerViewportEditor
 {
     const double MinSize = 16;
 
-    public static Rect GetRect(ViewportPayload viewport) =>
+    PlayerViewportHandle _activeHandle;
+    Point _dragStartMap;
+    Rect _dragStartRect;
+
+    public bool IsDragging { get; private set; }
+
+    public PlayerViewportHandle ActiveHandle => _activeHandle;
+
+    public Rect GetRect(ViewportPayload viewport) =>
         new(
             viewport.CenterMapX - viewport.WidthMap / 2.0,
             viewport.CenterMapY - viewport.HeightMap / 2.0,
             viewport.WidthMap,
             viewport.HeightMap);
 
-    public static ViewportPayload CreatePayload(Rect rect, ViewportPayload current) =>
-        new()
-        {
-            CenterMapX = rect.X + rect.Width / 2.0,
-            CenterMapY = rect.Y + rect.Height / 2.0,
-            ZoomLevel = current.ZoomLevel <= 0 ? 1.0 : current.ZoomLevel,
-            RotationQuarterTurns = current.RotationQuarterTurns,
-            WidthMap = rect.Width,
-            HeightMap = rect.Height,
-            PaddingPixels = Math.Max(0, current.PaddingPixels),
-        };
-
-    public static Rect MoveRect(Rect dragStartRect, Point dragStartMap, Point mapPosition)
+    public bool TryBeginDrag(Point mapPosition, ViewportPayload? viewport, double zoomLevel)
     {
-        var delta = mapPosition - dragStartMap;
-        return new Rect(
-            dragStartRect.X + delta.X,
-            dragStartRect.Y + delta.Y,
-            dragStartRect.Width,
-            dragStartRect.Height);
+        if (viewport is null || !viewport.HasMapRect)
+            return false;
+
+        var rect = GetRect(viewport);
+        if (!TryHitHandle(mapPosition, rect, zoomLevel, out var handle))
+        {
+            if (rect.Contains(mapPosition))
+                handle = PlayerViewportHandle.Move;
+            else
+                return false;
+        }
+
+        IsDragging = true;
+        _activeHandle = handle;
+        _dragStartMap = mapPosition;
+        _dragStartRect = rect;
+        return true;
     }
 
-    public static Rect ResizeRect(Rect dragStartRect, PlayerViewportHandle handle, Point mapPosition)
+    public ViewportPayload? UpdateDrag(Point mapPosition, ViewportPayload? current, Size mapSize)
     {
-        var left = dragStartRect.Left;
-        var top = dragStartRect.Top;
-        var right = dragStartRect.Right;
-        var bottom = dragStartRect.Bottom;
+        if (!IsDragging || current is null)
+            return null;
 
-        switch (handle)
+        var rect = _activeHandle == PlayerViewportHandle.Move
+            ? MoveRect(mapPosition)
+            : ResizeRect(mapPosition);
+
+        return CreatePayload(ClampRect(rect, mapSize), current);
+    }
+
+    public PlayerViewportHandle GetHoverHandle(Point mapPosition, ViewportPayload? viewport, double zoomLevel)
+    {
+        if (viewport is null || !viewport.HasMapRect)
+            return PlayerViewportHandle.None;
+
+        var rect = GetRect(viewport);
+        if (TryHitHandle(mapPosition, rect, zoomLevel, out var handle))
+            return handle;
+
+        return rect.Contains(mapPosition)
+            ? PlayerViewportHandle.Move
+            : PlayerViewportHandle.None;
+    }
+
+    public Cursor GetCursor(Point mapPosition, ViewportPayload? viewport, double zoomLevel)
+    {
+        var handle = IsDragging ? _activeHandle : GetHoverHandle(mapPosition, viewport, zoomLevel);
+        return handle switch
+        {
+            PlayerViewportHandle.Move => new Cursor(StandardCursorType.SizeAll),
+            PlayerViewportHandle.Top or PlayerViewportHandle.Bottom => new Cursor(StandardCursorType.SizeNorthSouth),
+            PlayerViewportHandle.Left or PlayerViewportHandle.Right => new Cursor(StandardCursorType.SizeWestEast),
+            PlayerViewportHandle.TopLeft or PlayerViewportHandle.BottomRight => new Cursor(StandardCursorType.TopLeftCorner),
+            PlayerViewportHandle.TopRight or PlayerViewportHandle.BottomLeft => new Cursor(StandardCursorType.TopRightCorner),
+            _ => Cursor.Default,
+        };
+    }
+
+    public void EndDrag()
+    {
+        IsDragging = false;
+        _activeHandle = PlayerViewportHandle.None;
+    }
+
+    public void Cancel() => EndDrag();
+
+    Rect MoveRect(Point mapPosition)
+    {
+        var delta = mapPosition - _dragStartMap;
+        return new Rect(
+            _dragStartRect.X + delta.X,
+            _dragStartRect.Y + delta.Y,
+            _dragStartRect.Width,
+            _dragStartRect.Height);
+    }
+
+    Rect ResizeRect(Point mapPosition)
+    {
+        var left = _dragStartRect.Left;
+        var top = _dragStartRect.Top;
+        var right = _dragStartRect.Right;
+        var bottom = _dragStartRect.Bottom;
+
+        switch (_activeHandle)
         {
             case PlayerViewportHandle.TopLeft:
                 left = Math.Min(mapPosition.X, right - MinSize);
@@ -83,7 +148,19 @@ internal static class PlayerViewportGeometry
         return new Rect(left, top, right - left, bottom - top);
     }
 
-    public static Rect ClampRect(Rect rect, Size mapSize)
+    static ViewportPayload CreatePayload(Rect rect, ViewportPayload current) =>
+        new()
+        {
+            CenterMapX = rect.X + rect.Width / 2.0,
+            CenterMapY = rect.Y + rect.Height / 2.0,
+            ZoomLevel = current.ZoomLevel <= 0 ? 1.0 : current.ZoomLevel,
+            RotationQuarterTurns = current.RotationQuarterTurns,
+            WidthMap = rect.Width,
+            HeightMap = rect.Height,
+            PaddingPixels = Math.Max(0, current.PaddingPixels),
+        };
+
+    static Rect ClampRect(Rect rect, Size mapSize)
     {
         var width = Math.Clamp(rect.Width, Math.Min(MinSize, mapSize.Width), mapSize.Width);
         var height = Math.Clamp(rect.Height, Math.Min(MinSize, mapSize.Height), mapSize.Height);
@@ -92,7 +169,7 @@ internal static class PlayerViewportGeometry
         return new Rect(x, y, width, height);
     }
 
-    public static bool TryHitHandle(Point mapPosition, Rect rect, double zoomLevel, out PlayerViewportHandle handle)
+    static bool TryHitHandle(Point mapPosition, Rect rect, double zoomLevel, out PlayerViewportHandle handle)
     {
         var threshold = Math.Max(4, 10 / Math.Max(zoomLevel, 0.01));
 
@@ -135,5 +212,4 @@ internal static class PlayerViewportGeometry
         handle = value;
         return true;
     }
-
 }

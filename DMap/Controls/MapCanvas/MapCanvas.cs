@@ -416,6 +416,8 @@ public class MapCanvas : Control
     public ICommand RotateRightCommand { get; }
 
     readonly MapViewportController _viewport = new();
+    readonly PlayerViewportEditor _playerViewportEditor = new();
+    readonly StampEditor _stampEditor = new();
     readonly FogBitmapController _fogBitmapController;
     readonly ContextMenu _stampContextMenu;
     bool _isPanning;
@@ -426,17 +428,6 @@ public class MapCanvas : Control
     int _lastBrushMapY;
     bool _isDraggingShape;
     bool _isCursorPressed;
-    bool _isDraggingStamp;
-    bool _isDraggingPlayerViewport;
-    StampDragMode _stampDragMode;
-    StampHandle _activeStampHandle;
-    PlayerViewportHandle _activePlayerViewportHandle;
-    Point _stampDragStartMap;
-    Rect _stampDragStartRect;
-    Point _playerViewportDragStartMap;
-    Rect _playerViewportDragStartRect;
-    double _stampDragStartRotationDegrees;
-    double _stampDragStartPointerAngleDegrees;
     Point _shapeDragStart;
     Point _lastMousePosition;
     Rect _playerContentClip;
@@ -590,14 +581,11 @@ public class MapCanvas : Control
     /// </summary>
     public void CancelActiveInteraction()
     {
-        var hadPreview = _isDraggingShape || _isDraggingStamp || _isDraggingPlayerViewport;
+        var hadPreview = _isDraggingShape || _stampEditor.IsDragging || _playerViewportEditor.IsDragging;
 
         _isDraggingShape = false;
-        _isDraggingStamp = false;
-        _isDraggingPlayerViewport = false;
-        _stampDragMode = StampDragMode.None;
-        _activeStampHandle = StampHandle.None;
-        _activePlayerViewportHandle = PlayerViewportHandle.None;
+        _stampEditor.Cancel();
+        _playerViewportEditor.Cancel();
         _isPainting = false;
         _isPanning = false;
         UpdateCursor();
@@ -729,17 +717,17 @@ public class MapCanvas : Control
             if (!_stampImages.TryGetValue(stamp.TemplateId, out var image))
                 continue;
 
-            var rect = StampGeometry.GetRect(stamp);
+            var rect = _stampEditor.GetRect(stamp);
             if (Math.Abs(stamp.RotationDegrees) < 0.001)
             {
                 context.DrawImage(image, rect);
                 continue;
             }
 
-            var center = StampGeometry.GetCenter(stamp);
+            var center = _stampEditor.GetCenter(stamp);
             using (context.PushTransform(
                 Matrix.CreateTranslation(-center.X, -center.Y)
-                * Matrix.CreateRotation(StampGeometry.GetRotationRadians(stamp))
+                * Matrix.CreateRotation(_stampEditor.GetRotationRadians(stamp))
                 * Matrix.CreateTranslation(center.X, center.Y)))
             {
                 context.DrawImage(image, rect);
@@ -786,7 +774,7 @@ public class MapCanvas : Control
         if (!viewport.HasMapRect || MapImage is null)
             return;
 
-        var rect = PlayerViewportGeometry.GetRect(viewport);
+        var rect = _playerViewportEditor.GetRect(viewport);
         var topLeft = _viewport.MapToScreen(rect.TopLeft, MapImage.Size);
         var topRight = _viewport.MapToScreen(rect.TopRight, MapImage.Size);
         var bottomRight = _viewport.MapToScreen(rect.BottomRight, MapImage.Size);
@@ -1046,7 +1034,7 @@ public class MapCanvas : Control
 
         if (ActiveTool == ToolType.Stamp)
         {
-            Cursor = _isDraggingStamp && _stampDragMode == StampDragMode.Move
+            Cursor = _stampEditor.IsDragging && _stampEditor.DragMode == StampDragMode.Move
                 ? new Cursor(StandardCursorType.SizeAll)
                 : Cursor.Default;
             return;
@@ -1054,10 +1042,14 @@ public class MapCanvas : Control
 
         if (ActiveTool == ToolType.PlayerView)
         {
-            var handle = _isDraggingPlayerViewport
-                ? _activePlayerViewportHandle
-                : GetPlayerViewportHoverHandle(_lastMousePosition);
-            Cursor = PlayerViewportCursors.GetCursor(handle);
+            if (MapImage is null)
+            {
+                Cursor = Cursor.Default;
+                return;
+            }
+
+            var mapPosition = _viewport.ScreenToMap(_lastMousePosition, MapImage.Size);
+            Cursor = _playerViewportEditor.GetCursor(mapPosition, PlayerViewport, ZoomLevel);
             return;
         }
 
@@ -1210,7 +1202,7 @@ public class MapCanvas : Control
             return;
         }
 
-        if (ActiveTool == ToolType.PlayerView && !_isDraggingPlayerViewport)
+        if (ActiveTool == ToolType.PlayerView && !_playerViewportEditor.IsDragging)
         {
             UpdateCursor();
             InvalidateVisual();
@@ -1218,7 +1210,7 @@ public class MapCanvas : Control
             return;
         }
 
-        if (ActiveTool == ToolType.PlayerView && _isDraggingPlayerViewport)
+        if (ActiveTool == ToolType.PlayerView && _playerViewportEditor.IsDragging)
         {
             UpdatePlayerViewportInteraction(point.Position);
             UpdateCursor();
@@ -1226,7 +1218,7 @@ public class MapCanvas : Control
             return;
         }
 
-        if (ActiveTool == ToolType.Stamp && _isDraggingStamp)
+        if (ActiveTool == ToolType.Stamp && _stampEditor.IsDragging)
         {
             UpdateStampInteraction(point.Position, e.KeyModifiers.HasFlag(KeyModifiers.Shift));
             UpdateCursor();
@@ -1272,22 +1264,19 @@ public class MapCanvas : Control
             return;
         }
 
-        if (ActiveTool == ToolType.PlayerView && _isDraggingPlayerViewport)
+        if (ActiveTool == ToolType.PlayerView && _playerViewportEditor.IsDragging)
         {
-            _isDraggingPlayerViewport = false;
-            _activePlayerViewportHandle = PlayerViewportHandle.None;
+            _playerViewportEditor.EndDrag();
             UpdateCursor();
             InvalidateVisual();
             e.Handled = true;
             return;
         }
 
-        if (ActiveTool == ToolType.Stamp && _isDraggingStamp)
+        if (ActiveTool == ToolType.Stamp && _stampEditor.IsDragging)
         {
             var stamp = SelectedStamp;
-            _isDraggingStamp = false;
-            _stampDragMode = StampDragMode.None;
-            _activeStampHandle = StampHandle.None;
+            _stampEditor.EndDrag();
             if (stamp is not null)
                 StampChanged?.Invoke(this, new StampChangedEventArgs(stamp));
             UpdateCursor();
@@ -1353,7 +1342,7 @@ public class MapCanvas : Control
             return;
         }
 
-        if (e.Key == Key.Escape && (_isDraggingShape || _isDraggingPlayerViewport))
+        if (e.Key == Key.Escape && (_isDraggingShape || _playerViewportEditor.IsDragging))
         {
             CancelActiveInteraction();
             e.Handled = true;
@@ -1407,38 +1396,11 @@ public class MapCanvas : Control
 
     void StartPlayerViewportInteraction(Point screenPosition)
     {
-        if (MapImage is null || PlayerViewport is null || !PlayerViewport.HasMapRect)
+        if (MapImage is null)
             return;
 
         var mapPosition = _viewport.ScreenToMap(screenPosition, MapImage.Size);
-        var rect = PlayerViewportGeometry.GetRect(PlayerViewport);
-        if (!PlayerViewportGeometry.TryHitHandle(mapPosition, rect, ZoomLevel, out var handle))
-        {
-            if (rect.Contains(mapPosition))
-                handle = PlayerViewportHandle.Move;
-            else
-                return;
-        }
-
-        _isDraggingPlayerViewport = true;
-        _activePlayerViewportHandle = handle;
-        _playerViewportDragStartMap = mapPosition;
-        _playerViewportDragStartRect = rect;
-    }
-
-    PlayerViewportHandle GetPlayerViewportHoverHandle(Point screenPosition)
-    {
-        if (MapImage is null || PlayerViewport is null || !PlayerViewport.HasMapRect)
-            return PlayerViewportHandle.None;
-
-        var mapPosition = _viewport.ScreenToMap(screenPosition, MapImage.Size);
-        var rect = PlayerViewportGeometry.GetRect(PlayerViewport);
-        if (PlayerViewportGeometry.TryHitHandle(mapPosition, rect, ZoomLevel, out var handle))
-            return handle;
-
-        return rect.Contains(mapPosition)
-            ? PlayerViewportHandle.Move
-            : PlayerViewportHandle.None;
+        _playerViewportEditor.TryBeginDrag(mapPosition, PlayerViewport, ZoomLevel);
     }
 
     void UpdatePlayerViewportInteraction(Point screenPosition)
@@ -1447,30 +1409,12 @@ public class MapCanvas : Control
             return;
 
         var mapPosition = _viewport.ScreenToMap(screenPosition, MapImage.Size);
-        var rect = _activePlayerViewportHandle == PlayerViewportHandle.Move
-            ? PlayerViewportGeometry.MoveRect(_playerViewportDragStartRect, _playerViewportDragStartMap, mapPosition)
-            : PlayerViewportGeometry.ResizeRect(_playerViewportDragStartRect, _activePlayerViewportHandle, mapPosition);
-
-        ApplyPlayerViewportRect(ClampPlayerViewportRect(rect));
-        InvalidateVisual();
-    }
-
-    void ApplyPlayerViewportRect(Rect rect)
-    {
-        if (PlayerViewport is null)
+        var next = _playerViewportEditor.UpdateDrag(mapPosition, PlayerViewport, MapImage.Size);
+        if (next is null)
             return;
 
-        var next = PlayerViewportGeometry.CreatePayload(rect, PlayerViewport);
         PlayerViewportChanged?.Invoke(this, next);
-    }
-
-    Rect ClampPlayerViewportRect(Rect rect)
-    {
-        var mapImage = MapImage;
-        if (mapImage is null)
-            return rect;
-
-        return PlayerViewportGeometry.ClampRect(rect, mapImage.Size);
+        InvalidateVisual();
     }
 
     void StartStampInteraction(Point screenPosition)
@@ -1479,21 +1423,14 @@ public class MapCanvas : Control
             return;
 
         var mapPosition = _viewport.ScreenToMap(screenPosition, MapImage.Size);
-        if (SelectedStamp is not null
-            && StampGeometry.TryHitHandle(mapPosition, SelectedStamp, ZoomLevel, out var handle))
-        {
-            BeginStampDrag(
-                mapPosition,
-                handle == StampHandle.Rotate ? StampDragMode.Rotate : StampDragMode.Resize,
-                handle);
+        if (_stampEditor.TryBeginHandleDrag(SelectedStamp, mapPosition, ZoomLevel))
             return;
-        }
 
         var hit = HitTestStamp(mapPosition);
         if (hit is not null)
         {
             SelectedStamp = hit;
-            BeginStampDrag(mapPosition, StampDragMode.Move, StampHandle.None);
+            _stampEditor.BeginMoveDrag(hit, mapPosition);
             return;
         }
 
@@ -1591,53 +1528,13 @@ public class MapCanvas : Control
         InvalidateVisual();
     }
 
-    void BeginStampDrag(Point mapPosition, StampDragMode mode, StampHandle handle)
-    {
-        var stamp = SelectedStamp;
-        if (stamp is null)
-            return;
-
-        _isDraggingStamp = true;
-        _stampDragMode = mode;
-        _activeStampHandle = handle;
-        _stampDragStartMap = mapPosition;
-        _stampDragStartRect = StampGeometry.GetRect(stamp);
-        _stampDragStartRotationDegrees = stamp.RotationDegrees;
-        _stampDragStartPointerAngleDegrees = StampGeometry.GetPointerAngleDegrees(stamp, mapPosition);
-    }
-
     void UpdateStampInteraction(Point screenPosition, bool preserveAspect)
     {
-        var stamp = SelectedStamp;
-        if (stamp is null || MapImage is null)
+        if (MapImage is null)
             return;
 
         var mapPosition = _viewport.ScreenToMap(screenPosition, MapImage.Size);
-        if (_stampDragMode == StampDragMode.Rotate)
-        {
-            RotateStamp(stamp, mapPosition);
-            return;
-        }
-
-        var rect = _stampDragMode == StampDragMode.Resize
-            ? StampGeometry.ResizeRect(
-                _stampDragStartRect,
-                _stampDragStartRotationDegrees,
-                _activeStampHandle,
-                mapPosition,
-                preserveAspect)
-            : StampGeometry.MoveRect(_stampDragStartRect, _stampDragStartMap, mapPosition);
-
-        StampGeometry.ApplyRect(stamp, ClampStampRect(rect));
-    }
-
-    void RotateStamp(StampInstance stamp, Point mapPosition)
-    {
-        stamp.RotationDegrees = StampGeometry.GetRotationAfterDrag(
-            stamp,
-            mapPosition,
-            _stampDragStartRotationDegrees,
-            _stampDragStartPointerAngleDegrees);
+        _stampEditor.UpdateDrag(SelectedStamp, mapPosition, MapImage.Size, preserveAspect);
     }
 
     void PlaceStamp(Point mapPosition)
@@ -1682,25 +1579,13 @@ public class MapCanvas : Control
     }
 
     StampInstance? HitTestStamp(Point mapPosition)
-    {
-        if (Stamps is null)
-            return null;
-
-        for (var i = Stamps.Count - 1; i >= 0; i--)
-        {
-            var stamp = Stamps[i];
-            if (StampGeometry.Contains(stamp, mapPosition))
-                return stamp;
-        }
-
-        return null;
-    }
+        => _stampEditor.HitTest(Stamps, mapPosition);
 
     Rect ClampStampRect(Rect rect)
-        => StampGeometry.ClampRect(rect, MapImage?.Size);
+        => _stampEditor.ClampRect(rect, MapImage?.Size);
 
     Point GetStampHandlePoint(StampInstance stamp, StampHandle handle)
-        => StampGeometry.GetHandlePoint(stamp, handle, ZoomLevel);
+        => _stampEditor.GetHandlePoint(stamp, handle, ZoomLevel);
 
     /// <summary>
     /// Records the current pointer position converted to map coordinates as the starting
