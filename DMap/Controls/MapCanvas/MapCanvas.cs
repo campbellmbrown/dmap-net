@@ -13,7 +13,6 @@ using Avalonia.Platform;
 using Avalonia.Svg.Skia;
 
 using DMap.Commands;
-using DMap.Dm;
 using DMap.Models;
 using DMap.Protocol;
 

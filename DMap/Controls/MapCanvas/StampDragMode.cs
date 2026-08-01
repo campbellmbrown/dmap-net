@@ -1,4 +1,4 @@
-namespace DMap.Dm;
+namespace DMap.Controls.MapCanvas;
 
 public enum StampDragMode
 {
