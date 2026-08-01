@@ -13,6 +13,7 @@ using Avalonia.Platform;
 using Avalonia.Svg.Skia;
 
 using DMap.Commands;
+using DMap.Dm;
 using DMap.Models;
 using DMap.Protocol;
 
@@ -502,42 +503,6 @@ public class MapCanvas : Control
     static readonly Uri _iconBaseUri = new("avares://DMap/Assets/Icons/");
     static readonly IReadOnlyDictionary<CursorType, IImage> _cursorIcons = CreateCursorIcons();
     static readonly IReadOnlyDictionary<string, IImage> _stampImages = CreateStampImages();
-
-    enum StampDragMode
-    {
-        None,
-        Move,
-        Resize,
-        Rotate,
-    }
-
-    enum StampHandle
-    {
-        None,
-        TopLeft,
-        Top,
-        TopRight,
-        Right,
-        BottomRight,
-        Bottom,
-        BottomLeft,
-        Left,
-        Rotate,
-    }
-
-    enum PlayerViewportHandle
-    {
-        None,
-        Move,
-        TopLeft,
-        Top,
-        TopRight,
-        Right,
-        BottomRight,
-        Bottom,
-        BottomLeft,
-        Left,
-    }
 
     static MapCanvas()
     {
