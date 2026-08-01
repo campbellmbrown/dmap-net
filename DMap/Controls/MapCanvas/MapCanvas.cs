@@ -456,7 +456,12 @@ public class MapCanvas : Control
         Focusable = true;
         _fogBitmapController = new FogBitmapController();
         _stampLayerEditor = new StampLayerEditor(_stampEditor);
-        _stampContextMenu = CreateStampContextMenu();
+        _stampContextMenu = new StampContextMenuBuilder(_iconBaseUri).Build(
+            ReorderSelectedStampToFront,
+            () => ReorderSelectedStampBy(1),
+            () => ReorderSelectedStampBy(-1),
+            ReorderSelectedStampToBack,
+            DuplicateSelectedStamp);
         _fogBitmapController.Invalidated += (_, _) => InvalidateVisual();
         _fogBitmapController.IsGeneratingChanged += (_, isGenerating) => IsFogGenerating = isGenerating;
         ZoomInCommand = new RelayCommand(() => ZoomLevel *= 1.2);
@@ -464,52 +469,6 @@ public class MapCanvas : Control
         RefitViewCommand = new RelayCommand(RefitViewToMapHeight);
         RotateLeftCommand = new RelayCommand(() => RotateView(-1));
         RotateRightCommand = new RelayCommand(() => RotateView(1));
-    }
-
-    ContextMenu CreateStampContextMenu()
-    {
-        var bringToFront = CreateStampMenuItem("Bring to Front", "bring-to-front.svg");
-        bringToFront.Click += (_, _) => ReorderSelectedStampToFront();
-
-        var bringForward = CreateStampMenuItem("Bring Forward", "move-up.svg");
-        bringForward.Click += (_, _) => ReorderSelectedStampBy(1);
-
-        var sendBackward = CreateStampMenuItem("Send Backward", "move-down.svg");
-        sendBackward.Click += (_, _) => ReorderSelectedStampBy(-1);
-
-        var sendToBack = CreateStampMenuItem("Send to Back", "send-to-back.svg");
-        sendToBack.Click += (_, _) => ReorderSelectedStampToBack();
-
-        var duplicate = CreateStampMenuItem("Duplicate", "copy.svg");
-        duplicate.Click += (_, _) => DuplicateSelectedStamp();
-
-        return new ContextMenu
-        {
-            Placement = PlacementMode.Pointer,
-            ItemsSource = new Control[]
-            {
-                bringToFront,
-                bringForward,
-                sendBackward,
-                sendToBack,
-                duplicate,
-            },
-        };
-    }
-
-    static MenuItem CreateStampMenuItem(string header, string iconFileName)
-    {
-        var uri = new Uri(_iconBaseUri, iconFileName);
-        return new MenuItem
-        {
-            Header = header,
-            Icon = new Image
-            {
-                Width = 16,
-                Height = 16,
-                Source = new SvgImage { Source = SvgSource.Load(uri.ToString(), null) },
-            },
-        };
     }
 
     static Dictionary<CursorType, IImage> CreateCursorIcons()
