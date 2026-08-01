@@ -219,9 +219,9 @@ public sealed class MapViewportController
 
     static Rect ClampMapRect(Rect rect, Size mapSize)
     {
-        const double minSize = 1;
-        var width = Math.Clamp(rect.Width, minSize, Math.Max(minSize, mapSize.Width));
-        var height = Math.Clamp(rect.Height, minSize, Math.Max(minSize, mapSize.Height));
+        const double MinSize = 1;
+        var width = Math.Clamp(rect.Width, MinSize, Math.Max(MinSize, mapSize.Width));
+        var height = Math.Clamp(rect.Height, MinSize, Math.Max(MinSize, mapSize.Height));
         var x = Math.Clamp(rect.X, 0, Math.Max(0, mapSize.Width - width));
         var y = Math.Clamp(rect.Y, 0, Math.Max(0, mapSize.Height - height));
         return new Rect(x, y, width, height);

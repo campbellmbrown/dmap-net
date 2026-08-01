@@ -872,14 +872,14 @@ public class MapCanvas : Control
 
     static void DrawPlayerViewportHandle(DrawingContext context, Point center, IBrush brush)
     {
-        const double radius = 4.5;
-        context.DrawEllipse(Brushes.Black, new Pen(brush, 1.5), center, radius, radius);
+        const double Radius = 4.5;
+        context.DrawEllipse(Brushes.Black, new Pen(brush, 1.5), center, Radius, Radius);
     }
 
     static void DrawStampHandle(DrawingContext context, Point center)
     {
-        const double radius = 4.5;
-        context.DrawEllipse(Brushes.Black, new Pen(Brushes.White, 1), center, radius, radius);
+        const double Radius = 4.5;
+        context.DrawEllipse(Brushes.Black, new Pen(Brushes.White, 1), center, Radius, Radius);
     }
 
     /// <summary>Returns <see langword="true"/> when the configured cursor icon should be drawn.</summary>
@@ -1067,12 +1067,10 @@ public class MapCanvas : Control
 
     void SubscribeToStampsCollection()
     {
-        if (_subscribedStampsCollection is not null)
-            _subscribedStampsCollection.CollectionChanged -= OnStampsCollectionChanged;
+        _subscribedStampsCollection?.CollectionChanged -= OnStampsCollectionChanged;
 
         _subscribedStampsCollection = Stamps as INotifyCollectionChanged;
-        if (_subscribedStampsCollection is not null)
-            _subscribedStampsCollection.CollectionChanged += OnStampsCollectionChanged;
+        _subscribedStampsCollection?.CollectionChanged += OnStampsCollectionChanged;
 
         InvalidateVisual();
     }
@@ -1538,7 +1536,7 @@ public class MapCanvas : Control
 
     Rect ResizePlayerViewportRect(Point mapPosition)
     {
-        const double minSize = 16;
+        const double MinSize = 16;
         var rect = _playerViewportDragStartRect;
         var left = rect.Left;
         var top = rect.Top;
@@ -1548,32 +1546,32 @@ public class MapCanvas : Control
         switch (_activePlayerViewportHandle)
         {
             case PlayerViewportHandle.TopLeft:
-                left = Math.Min(mapPosition.X, right - minSize);
-                top = Math.Min(mapPosition.Y, bottom - minSize);
+                left = Math.Min(mapPosition.X, right - MinSize);
+                top = Math.Min(mapPosition.Y, bottom - MinSize);
                 break;
             case PlayerViewportHandle.Top:
-                top = Math.Min(mapPosition.Y, bottom - minSize);
+                top = Math.Min(mapPosition.Y, bottom - MinSize);
                 break;
             case PlayerViewportHandle.TopRight:
-                right = Math.Max(mapPosition.X, left + minSize);
-                top = Math.Min(mapPosition.Y, bottom - minSize);
+                right = Math.Max(mapPosition.X, left + MinSize);
+                top = Math.Min(mapPosition.Y, bottom - MinSize);
                 break;
             case PlayerViewportHandle.Right:
-                right = Math.Max(mapPosition.X, left + minSize);
+                right = Math.Max(mapPosition.X, left + MinSize);
                 break;
             case PlayerViewportHandle.BottomRight:
-                right = Math.Max(mapPosition.X, left + minSize);
-                bottom = Math.Max(mapPosition.Y, top + minSize);
+                right = Math.Max(mapPosition.X, left + MinSize);
+                bottom = Math.Max(mapPosition.Y, top + MinSize);
                 break;
             case PlayerViewportHandle.Bottom:
-                bottom = Math.Max(mapPosition.Y, top + minSize);
+                bottom = Math.Max(mapPosition.Y, top + MinSize);
                 break;
             case PlayerViewportHandle.BottomLeft:
-                left = Math.Min(mapPosition.X, right - minSize);
-                bottom = Math.Max(mapPosition.Y, top + minSize);
+                left = Math.Min(mapPosition.X, right - MinSize);
+                bottom = Math.Max(mapPosition.Y, top + MinSize);
                 break;
             case PlayerViewportHandle.Left:
-                left = Math.Min(mapPosition.X, right - minSize);
+                left = Math.Min(mapPosition.X, right - MinSize);
                 break;
         }
 
@@ -1635,13 +1633,13 @@ public class MapCanvas : Control
 
     Rect ClampPlayerViewportRect(Rect rect)
     {
-        const double minSize = 16;
+        const double MinSize = 16;
         var mapImage = MapImage;
         if (mapImage is null)
             return rect;
 
-        var width = Math.Clamp(rect.Width, Math.Min(minSize, mapImage.Size.Width), mapImage.Size.Width);
-        var height = Math.Clamp(rect.Height, Math.Min(minSize, mapImage.Size.Height), mapImage.Size.Height);
+        var width = Math.Clamp(rect.Width, Math.Min(MinSize, mapImage.Size.Width), mapImage.Size.Width);
+        var height = Math.Clamp(rect.Height, Math.Min(MinSize, mapImage.Size.Height), mapImage.Size.Height);
         var x = Math.Clamp(rect.X, 0, Math.Max(0, mapImage.Size.Width - width));
         var y = Math.Clamp(rect.Y, 0, Math.Max(0, mapImage.Size.Height - height));
         return new Rect(x, y, width, height);
@@ -1819,7 +1817,7 @@ public class MapCanvas : Control
 
     Rect ResizeStampRect(Point mapPosition, bool preserveAspect)
     {
-        const double minSize = 12;
+        const double MinSize = 12;
         var (xSign, ySign) = GetStampHandleSigns(_activeStampHandle);
         var affectsWidth = xSign != 0;
         var affectsHeight = ySign != 0;
@@ -1830,15 +1828,15 @@ public class MapCanvas : Control
             Scale(yAxis, -ySign * _stampDragStartRect.Height / 2.0));
         var pointerFromAnchor = mapPosition - anchor;
         var width = affectsWidth
-            ? Math.Max(minSize, xSign * Dot(pointerFromAnchor, xAxis))
+            ? Math.Max(MinSize, xSign * Dot(pointerFromAnchor, xAxis))
             : _stampDragStartRect.Width;
         var height = affectsHeight
-            ? Math.Max(minSize, ySign * Dot(pointerFromAnchor, yAxis))
+            ? Math.Max(MinSize, ySign * Dot(pointerFromAnchor, yAxis))
             : _stampDragStartRect.Height;
 
         if (preserveAspect && IsCornerHandle(_activeStampHandle))
         {
-            var aspect = _stampDragStartRect.Width / Math.Max(minSize, _stampDragStartRect.Height);
+            var aspect = _stampDragStartRect.Width / Math.Max(MinSize, _stampDragStartRect.Height);
             if (width / height > aspect)
                 width = height * aspect;
             else
@@ -1994,16 +1992,16 @@ public class MapCanvas : Control
 
     Rect ClampStampRect(Rect rect)
     {
-        const double minSize = 12;
-        var width = Math.Max(minSize, rect.Width);
-        var height = Math.Max(minSize, rect.Height);
+        const double MinSize = 12;
+        var width = Math.Max(MinSize, rect.Width);
+        var height = Math.Max(MinSize, rect.Height);
         var x = rect.X;
         var y = rect.Y;
 
         if (MapImage is not null)
         {
-            width = Math.Min(width, Math.Max(minSize, MapImage.Size.Width));
-            height = Math.Min(height, Math.Max(minSize, MapImage.Size.Height));
+            width = Math.Min(width, Math.Max(MinSize, MapImage.Size.Width));
+            height = Math.Min(height, Math.Max(MinSize, MapImage.Size.Height));
             x = Math.Clamp(x, 0, Math.Max(0, MapImage.Size.Width - width));
             y = Math.Clamp(y, 0, Math.Max(0, MapImage.Size.Height - height));
         }

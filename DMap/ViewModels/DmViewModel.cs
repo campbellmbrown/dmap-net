@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
-using System.Collections.ObjectModel;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
@@ -855,7 +855,7 @@ public class DmViewModel : ViewModelBase, IDisposable
     void OnPlayerViewSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is not null
-            && e.PropertyName != nameof(PlayerViewToolSettingsViewModel.Padding))
+            and not (nameof(PlayerViewToolSettingsViewModel.Padding)))
             return;
 
         if (PlayerViewport is not null)
