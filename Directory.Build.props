@@ -3,5 +3,7 @@
     <Version>1.4.0</Version>
     <AssemblyVersion>$(Version).0</AssemblyVersion>
     <IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 </Project>

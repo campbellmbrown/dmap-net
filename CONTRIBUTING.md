@@ -13,13 +13,13 @@ Thanks for helping improve DMap. This project is a cross-platform Avalonia/.NET 
 Restore dependencies before building:
 
 ```bash
-dotnet restore DMap/DMap.csproj
+dotnet restore
 ```
 
-Build the app:
+Build the app and test project:
 
 ```bash
-dotnet build DMap/DMap.csproj --configuration Release --no-restore
+dotnet build --configuration Release --no-restore
 ```
 
 Run the app:
@@ -29,6 +29,16 @@ dotnet run --project DMap
 ```
 
 To test both DM and player behavior on one machine, load a map in the DM window and open the player window from the DM menu.
+
+## Automated tests
+
+Run the unit test suite before opening a pull request:
+
+```bash
+dotnet test --configuration Release --no-build
+```
+
+If you have not already built the solution, omit `--no-build`.
 
 ## Formatting
 

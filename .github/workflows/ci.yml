@@ -19,10 +19,13 @@ jobs:
           dotnet-version: 10.0.x
 
       - name: Restore
-        run: dotnet restore DMap/DMap.csproj
+        run: dotnet restore
 
       - name: Build
-        run: dotnet build DMap/DMap.csproj --configuration Release --no-restore
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test --configuration Release --no-build
 
       - name: Verify formatting
-        run: dotnet format DMap/DMap.csproj --verify-no-changes --no-restore
+        run: dotnet format --verify-no-changes --no-restore
