@@ -2,7 +2,7 @@ using System;
 
 using Avalonia;
 
-namespace DMap.Controls;
+namespace DMap.Controls.MapCanvas;
 
 /// <summary>Generic geometry extensions for Avalonia primitives.</summary>
 public static class GeometryExtensions

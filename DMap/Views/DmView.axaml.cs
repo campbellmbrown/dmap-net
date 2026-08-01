@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 
-using DMap.Controls;
+using DMap.Controls.MapCanvas;
 using DMap.ViewModels;
 
 using ReactiveUI;

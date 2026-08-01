@@ -4,7 +4,7 @@ using System.Reactive.Disposables;
 using Avalonia;
 using Avalonia.Controls;
 
-using DMap.Controls;
+using DMap.Controls.MapCanvas;
 using DMap.ViewModels;
 
 using ReactiveUI;

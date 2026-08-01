@@ -4,7 +4,7 @@ using Avalonia;
 
 using DMap.Protocol;
 
-namespace DMap.Controls;
+namespace DMap.Controls.MapCanvas;
 
 /// <summary>
 /// Owns map camera state and viewport math for <see cref="MapCanvas"/>.

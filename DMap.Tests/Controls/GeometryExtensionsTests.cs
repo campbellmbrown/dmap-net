@@ -1,6 +1,6 @@
 using Avalonia;
 
-using DMap.Controls;
+using DMap.Controls.MapCanvas;
 
 using NUnit.Framework;
 

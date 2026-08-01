@@ -9,7 +9,7 @@ using Avalonia.Platform;
 using DMap.Models;
 using DMap.Services.Fog;
 
-namespace DMap.Controls;
+namespace DMap.Controls.MapCanvas;
 
 /// <summary>Snapshot of fog inputs needed to rebuild or update the renderable fog bitmap.</summary>
 public readonly record struct FogBitmapSettings(

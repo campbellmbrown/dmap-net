@@ -17,64 +17,7 @@ using DMap.Dm;
 using DMap.Models;
 using DMap.Protocol;
 
-namespace DMap.Controls;
-
-/// <summary>
-/// Event arguments for a brush stroke segment, carrying the start and end coordinates
-/// in map pixels and whether the stroke is erasing fog.
-/// </summary>
-public class BrushStrokeEventArgs : EventArgs
-{
-    /// <summary>Start X coordinate in map pixels.</summary>
-    public int MapX1 { get; init; }
-
-    /// <summary>Start Y coordinate in map pixels.</summary>
-    public int MapY1 { get; init; }
-
-    /// <summary>End X coordinate in map pixels.</summary>
-    public int MapX2 { get; init; }
-
-    /// <summary>End Y coordinate in map pixels.</summary>
-    public int MapY2 { get; init; }
-
-    /// <summary><see langword="true"/> when the stroke is removing fog; <see langword="false"/> when revealing.</summary>
-    public bool IsErasing { get; init; }
-}
-
-/// <summary>
-/// Event arguments for a completed shape drag gesture, carrying the bounding box corners
-/// in map pixels and whether the shape is erasing fog.
-/// </summary>
-public class ShapeStrokeEventArgs : EventArgs
-{
-    /// <summary>First corner X in map pixels.</summary>
-    public int MapX1 { get; init; }
-
-    /// <summary>First corner Y in map pixels.</summary>
-    public int MapY1 { get; init; }
-
-    /// <summary>Opposite corner X in map pixels.</summary>
-    public int MapX2 { get; init; }
-
-    /// <summary>Opposite corner Y in map pixels.</summary>
-    public int MapY2 { get; init; }
-
-    /// <summary><see langword="true"/> when the shape is removing fog; <see langword="false"/> when revealing.</summary>
-    public bool IsErasing { get; init; }
-}
-
-/// <summary>
-/// Event arguments for stamp-layer mutations produced by the canvas.
-/// </summary>
-public class StampChangedEventArgs : EventArgs
-{
-    public StampChangedEventArgs(StampInstance stamp)
-    {
-        Stamp = stamp;
-    }
-
-    public StampInstance Stamp { get; }
-}
+namespace DMap.Controls.MapCanvas;
 
 /// <summary>
 /// Custom Avalonia control that renders a map image, a fog-of-war overlay, and a tool cursor
@@ -787,17 +730,17 @@ public class MapCanvas : Control
             if (!_stampImages.TryGetValue(stamp.TemplateId, out var image))
                 continue;
 
-            var rect = GetStampRect(stamp);
+            var rect = StampGeometry.GetRect(stamp);
             if (Math.Abs(stamp.RotationDegrees) < 0.001)
             {
                 context.DrawImage(image, rect);
                 continue;
             }
 
-            var center = GetStampCenter(stamp);
+            var center = StampGeometry.GetCenter(stamp);
             using (context.PushTransform(
                 Matrix.CreateTranslation(-center.X, -center.Y)
-                * Matrix.CreateRotation(DegreesToRadians(stamp.RotationDegrees))
+                * Matrix.CreateRotation(StampGeometry.GetRotationRadians(stamp))
                 * Matrix.CreateTranslation(center.X, center.Y)))
             {
                 context.DrawImage(image, rect);
@@ -844,7 +787,7 @@ public class MapCanvas : Control
         if (!viewport.HasMapRect || MapImage is null)
             return;
 
-        var rect = GetPlayerViewportRect(viewport);
+        var rect = PlayerViewportGeometry.GetRect(viewport);
         var topLeft = _viewport.MapToScreen(rect.TopLeft, MapImage.Size);
         var topRight = _viewport.MapToScreen(rect.TopRight, MapImage.Size);
         var bottomRight = _viewport.MapToScreen(rect.BottomRight, MapImage.Size);
@@ -861,13 +804,13 @@ public class MapCanvas : Control
             return;
 
         DrawPlayerViewportHandle(context, topLeft, brush);
-        DrawPlayerViewportHandle(context, Midpoint(topLeft, topRight), brush);
+        DrawPlayerViewportHandle(context, topLeft.Midpoint(topRight), brush);
         DrawPlayerViewportHandle(context, topRight, brush);
-        DrawPlayerViewportHandle(context, Midpoint(topRight, bottomRight), brush);
+        DrawPlayerViewportHandle(context, topRight.Midpoint(bottomRight), brush);
         DrawPlayerViewportHandle(context, bottomRight, brush);
-        DrawPlayerViewportHandle(context, Midpoint(bottomLeft, bottomRight), brush);
+        DrawPlayerViewportHandle(context, bottomLeft.Midpoint(bottomRight), brush);
         DrawPlayerViewportHandle(context, bottomLeft, brush);
-        DrawPlayerViewportHandle(context, Midpoint(topLeft, bottomLeft), brush);
+        DrawPlayerViewportHandle(context, topLeft.Midpoint(bottomLeft), brush);
     }
 
     static void DrawPlayerViewportHandle(DrawingContext context, Point center, IBrush brush)
@@ -973,7 +916,7 @@ public class MapCanvas : Control
             }
             else
             {
-                var rect = MakeRect(start, end);
+                var rect = start.MakeRect(end);
                 var radius = ShapeTypeMetadata.SupportsCornerRadius(shapeType)
                     ? ShapeTypeMetadata.GetEffectiveCornerRadius(ShapeCornerRadius, rect.Width, rect.Height)
                     : 0;
@@ -1115,7 +1058,7 @@ public class MapCanvas : Control
             var handle = _isDraggingPlayerViewport
                 ? _activePlayerViewportHandle
                 : GetPlayerViewportHoverHandle(_lastMousePosition);
-            Cursor = GetPlayerViewportCursor(handle);
+            Cursor = PlayerViewportCursors.GetCursor(handle);
             return;
         }
 
@@ -1469,8 +1412,8 @@ public class MapCanvas : Control
             return;
 
         var mapPosition = _viewport.ScreenToMap(screenPosition, MapImage.Size);
-        var rect = GetPlayerViewportRect(PlayerViewport);
-        if (!TryHitPlayerViewportHandle(mapPosition, rect, out var handle))
+        var rect = PlayerViewportGeometry.GetRect(PlayerViewport);
+        if (!PlayerViewportGeometry.TryHitHandle(mapPosition, rect, ZoomLevel, out var handle))
         {
             if (rect.Contains(mapPosition))
                 handle = PlayerViewportHandle.Move;
@@ -1490,25 +1433,14 @@ public class MapCanvas : Control
             return PlayerViewportHandle.None;
 
         var mapPosition = _viewport.ScreenToMap(screenPosition, MapImage.Size);
-        var rect = GetPlayerViewportRect(PlayerViewport);
-        if (TryHitPlayerViewportHandle(mapPosition, rect, out var handle))
+        var rect = PlayerViewportGeometry.GetRect(PlayerViewport);
+        if (PlayerViewportGeometry.TryHitHandle(mapPosition, rect, ZoomLevel, out var handle))
             return handle;
 
         return rect.Contains(mapPosition)
             ? PlayerViewportHandle.Move
             : PlayerViewportHandle.None;
     }
-
-    static Cursor GetPlayerViewportCursor(PlayerViewportHandle handle) =>
-        handle switch
-        {
-            PlayerViewportHandle.Move => new Cursor(StandardCursorType.SizeAll),
-            PlayerViewportHandle.Top or PlayerViewportHandle.Bottom => new Cursor(StandardCursorType.SizeNorthSouth),
-            PlayerViewportHandle.Left or PlayerViewportHandle.Right => new Cursor(StandardCursorType.SizeWestEast),
-            PlayerViewportHandle.TopLeft or PlayerViewportHandle.BottomRight => new Cursor(StandardCursorType.TopLeftCorner),
-            PlayerViewportHandle.TopRight or PlayerViewportHandle.BottomLeft => new Cursor(StandardCursorType.TopRightCorner),
-            _ => Cursor.Default,
-        };
 
     void UpdatePlayerViewportInteraction(Point screenPosition)
     {
@@ -1517,109 +1449,11 @@ public class MapCanvas : Control
 
         var mapPosition = _viewport.ScreenToMap(screenPosition, MapImage.Size);
         var rect = _activePlayerViewportHandle == PlayerViewportHandle.Move
-            ? MovePlayerViewportRect(mapPosition)
-            : ResizePlayerViewportRect(mapPosition);
+            ? PlayerViewportGeometry.MoveRect(_playerViewportDragStartRect, _playerViewportDragStartMap, mapPosition)
+            : PlayerViewportGeometry.ResizeRect(_playerViewportDragStartRect, _activePlayerViewportHandle, mapPosition);
 
         ApplyPlayerViewportRect(ClampPlayerViewportRect(rect));
         InvalidateVisual();
-    }
-
-    Rect MovePlayerViewportRect(Point mapPosition)
-    {
-        var delta = mapPosition - _playerViewportDragStartMap;
-        return new Rect(
-            _playerViewportDragStartRect.X + delta.X,
-            _playerViewportDragStartRect.Y + delta.Y,
-            _playerViewportDragStartRect.Width,
-            _playerViewportDragStartRect.Height);
-    }
-
-    Rect ResizePlayerViewportRect(Point mapPosition)
-    {
-        const double MinSize = 16;
-        var rect = _playerViewportDragStartRect;
-        var left = rect.Left;
-        var top = rect.Top;
-        var right = rect.Right;
-        var bottom = rect.Bottom;
-
-        switch (_activePlayerViewportHandle)
-        {
-            case PlayerViewportHandle.TopLeft:
-                left = Math.Min(mapPosition.X, right - MinSize);
-                top = Math.Min(mapPosition.Y, bottom - MinSize);
-                break;
-            case PlayerViewportHandle.Top:
-                top = Math.Min(mapPosition.Y, bottom - MinSize);
-                break;
-            case PlayerViewportHandle.TopRight:
-                right = Math.Max(mapPosition.X, left + MinSize);
-                top = Math.Min(mapPosition.Y, bottom - MinSize);
-                break;
-            case PlayerViewportHandle.Right:
-                right = Math.Max(mapPosition.X, left + MinSize);
-                break;
-            case PlayerViewportHandle.BottomRight:
-                right = Math.Max(mapPosition.X, left + MinSize);
-                bottom = Math.Max(mapPosition.Y, top + MinSize);
-                break;
-            case PlayerViewportHandle.Bottom:
-                bottom = Math.Max(mapPosition.Y, top + MinSize);
-                break;
-            case PlayerViewportHandle.BottomLeft:
-                left = Math.Min(mapPosition.X, right - MinSize);
-                bottom = Math.Max(mapPosition.Y, top + MinSize);
-                break;
-            case PlayerViewportHandle.Left:
-                left = Math.Min(mapPosition.X, right - MinSize);
-                break;
-        }
-
-        return new Rect(left, top, right - left, bottom - top);
-    }
-
-    bool TryHitPlayerViewportHandle(Point mapPosition, Rect rect, out PlayerViewportHandle handle)
-    {
-        var threshold = Math.Max(4, 10 / Math.Max(ZoomLevel, 0.01));
-
-        if (IsNear(mapPosition, rect.TopLeft, threshold))
-            return SetHandle(PlayerViewportHandle.TopLeft, out handle);
-        if (IsNear(mapPosition, new Point(rect.X + rect.Width / 2.0, rect.Y), threshold))
-            return SetHandle(PlayerViewportHandle.Top, out handle);
-        if (IsNear(mapPosition, rect.TopRight, threshold))
-            return SetHandle(PlayerViewportHandle.TopRight, out handle);
-        if (IsNear(mapPosition, new Point(rect.Right, rect.Y + rect.Height / 2.0), threshold))
-            return SetHandle(PlayerViewportHandle.Right, out handle);
-        if (IsNear(mapPosition, rect.BottomRight, threshold))
-            return SetHandle(PlayerViewportHandle.BottomRight, out handle);
-        if (IsNear(mapPosition, new Point(rect.X + rect.Width / 2.0, rect.Bottom), threshold))
-            return SetHandle(PlayerViewportHandle.Bottom, out handle);
-        if (IsNear(mapPosition, rect.BottomLeft, threshold))
-            return SetHandle(PlayerViewportHandle.BottomLeft, out handle);
-        if (IsNear(mapPosition, new Point(rect.X, rect.Y + rect.Height / 2.0), threshold))
-            return SetHandle(PlayerViewportHandle.Left, out handle);
-
-        var expanded = rect.Inflate(threshold);
-        if (expanded.Contains(mapPosition))
-        {
-            if (Math.Abs(mapPosition.Y - rect.Top) <= threshold)
-                return SetHandle(PlayerViewportHandle.Top, out handle);
-            if (Math.Abs(mapPosition.X - rect.Right) <= threshold)
-                return SetHandle(PlayerViewportHandle.Right, out handle);
-            if (Math.Abs(mapPosition.Y - rect.Bottom) <= threshold)
-                return SetHandle(PlayerViewportHandle.Bottom, out handle);
-            if (Math.Abs(mapPosition.X - rect.Left) <= threshold)
-                return SetHandle(PlayerViewportHandle.Left, out handle);
-        }
-
-        handle = PlayerViewportHandle.None;
-        return false;
-    }
-
-    static bool SetHandle(PlayerViewportHandle value, out PlayerViewportHandle handle)
-    {
-        handle = value;
-        return true;
     }
 
     void ApplyPlayerViewportRect(Rect rect)
@@ -1627,22 +1461,17 @@ public class MapCanvas : Control
         if (PlayerViewport is null)
             return;
 
-        var next = CreatePlayerViewportPayload(rect, PlayerViewport);
+        var next = PlayerViewportGeometry.CreatePayload(rect, PlayerViewport);
         PlayerViewportChanged?.Invoke(this, next);
     }
 
     Rect ClampPlayerViewportRect(Rect rect)
     {
-        const double MinSize = 16;
         var mapImage = MapImage;
         if (mapImage is null)
             return rect;
 
-        var width = Math.Clamp(rect.Width, Math.Min(MinSize, mapImage.Size.Width), mapImage.Size.Width);
-        var height = Math.Clamp(rect.Height, Math.Min(MinSize, mapImage.Size.Height), mapImage.Size.Height);
-        var x = Math.Clamp(rect.X, 0, Math.Max(0, mapImage.Size.Width - width));
-        var y = Math.Clamp(rect.Y, 0, Math.Max(0, mapImage.Size.Height - height));
-        return new Rect(x, y, width, height);
+        return PlayerViewportGeometry.ClampRect(rect, mapImage.Size);
     }
 
     void StartStampInteraction(Point screenPosition)
@@ -1652,7 +1481,7 @@ public class MapCanvas : Control
 
         var mapPosition = _viewport.ScreenToMap(screenPosition, MapImage.Size);
         if (SelectedStamp is not null
-            && TryHitStampHandle(mapPosition, SelectedStamp, out var handle))
+            && StampGeometry.TryHitHandle(mapPosition, SelectedStamp, ZoomLevel, out var handle))
         {
             BeginStampDrag(
                 mapPosition,
@@ -1773,9 +1602,9 @@ public class MapCanvas : Control
         _stampDragMode = mode;
         _activeStampHandle = handle;
         _stampDragStartMap = mapPosition;
-        _stampDragStartRect = GetStampRect(stamp);
+        _stampDragStartRect = StampGeometry.GetRect(stamp);
         _stampDragStartRotationDegrees = stamp.RotationDegrees;
-        _stampDragStartPointerAngleDegrees = GetAngleDegrees(GetStampCenter(stamp), mapPosition);
+        _stampDragStartPointerAngleDegrees = StampGeometry.GetPointerAngleDegrees(stamp, mapPosition);
     }
 
     void UpdateStampInteraction(Point screenPosition, bool preserveAspect)
@@ -1792,68 +1621,25 @@ public class MapCanvas : Control
         }
 
         var rect = _stampDragMode == StampDragMode.Resize
-            ? ResizeStampRect(mapPosition, preserveAspect)
-            : MoveStampRect(mapPosition);
+            ? StampGeometry.ResizeRect(
+                _stampDragStartRect,
+                _stampDragStartRotationDegrees,
+                _activeStampHandle,
+                mapPosition,
+                preserveAspect)
+            : StampGeometry.MoveRect(_stampDragStartRect, _stampDragStartMap, mapPosition);
 
-        ApplyStampRect(stamp, ClampStampRect(rect));
+        StampGeometry.ApplyRect(stamp, ClampStampRect(rect));
     }
 
     void RotateStamp(StampInstance stamp, Point mapPosition)
     {
-        var angle = GetAngleDegrees(GetStampCenter(stamp), mapPosition);
-        stamp.RotationDegrees = NormalizeDegrees(
-            _stampDragStartRotationDegrees + angle - _stampDragStartPointerAngleDegrees);
+        stamp.RotationDegrees = StampGeometry.GetRotationAfterDrag(
+            stamp,
+            mapPosition,
+            _stampDragStartRotationDegrees,
+            _stampDragStartPointerAngleDegrees);
     }
-
-    Rect MoveStampRect(Point mapPosition)
-    {
-        var delta = mapPosition - _stampDragStartMap;
-        return new Rect(
-            _stampDragStartRect.X + delta.X,
-            _stampDragStartRect.Y + delta.Y,
-            _stampDragStartRect.Width,
-            _stampDragStartRect.Height);
-    }
-
-    Rect ResizeStampRect(Point mapPosition, bool preserveAspect)
-    {
-        const double MinSize = 12;
-        var (xSign, ySign) = GetStampHandleSigns(_activeStampHandle);
-        var affectsWidth = xSign != 0;
-        var affectsHeight = ySign != 0;
-        var center = _stampDragStartRect.Center;
-        var (xAxis, yAxis) = GetRotatedAxes(_stampDragStartRotationDegrees);
-        var anchor = Add(
-            Add(center, Scale(xAxis, -xSign * _stampDragStartRect.Width / 2.0)),
-            Scale(yAxis, -ySign * _stampDragStartRect.Height / 2.0));
-        var pointerFromAnchor = mapPosition - anchor;
-        var width = affectsWidth
-            ? Math.Max(MinSize, xSign * Dot(pointerFromAnchor, xAxis))
-            : _stampDragStartRect.Width;
-        var height = affectsHeight
-            ? Math.Max(MinSize, ySign * Dot(pointerFromAnchor, yAxis))
-            : _stampDragStartRect.Height;
-
-        if (preserveAspect && IsCornerHandle(_activeStampHandle))
-        {
-            var aspect = _stampDragStartRect.Width / Math.Max(MinSize, _stampDragStartRect.Height);
-            if (width / height > aspect)
-                width = height * aspect;
-            else
-                height = width / aspect;
-        }
-
-        var nextCenter = anchor;
-        if (affectsWidth)
-            nextCenter = Add(nextCenter, Scale(xAxis, xSign * width / 2.0));
-        if (affectsHeight)
-            nextCenter = Add(nextCenter, Scale(yAxis, ySign * height / 2.0));
-
-        return new Rect(nextCenter.X - width / 2.0, nextCenter.Y - height / 2.0, width, height);
-    }
-
-    static bool IsCornerHandle(StampHandle handle) =>
-        handle is StampHandle.TopLeft or StampHandle.TopRight or StampHandle.BottomRight or StampHandle.BottomLeft;
 
     void PlaceStamp(Point mapPosition)
     {
@@ -1904,190 +1690,18 @@ public class MapCanvas : Control
         for (var i = Stamps.Count - 1; i >= 0; i--)
         {
             var stamp = Stamps[i];
-            if (GetStampRect(stamp).Contains(UnrotatePoint(mapPosition, GetStampCenter(stamp), stamp.RotationDegrees)))
+            if (StampGeometry.Contains(stamp, mapPosition))
                 return stamp;
         }
 
         return null;
     }
 
-    bool TryHitStampHandle(Point mapPosition, StampInstance stamp, out StampHandle handle)
-    {
-        var threshold = Math.Max(4, 10 / Math.Max(ZoomLevel, 0.01));
-
-        if (IsNear(mapPosition, GetStampHandlePoint(stamp, StampHandle.Rotate), threshold))
-        {
-            handle = StampHandle.Rotate;
-            return true;
-        }
-
-        if (IsNear(mapPosition, GetStampHandlePoint(stamp, StampHandle.TopLeft), threshold))
-        {
-            handle = StampHandle.TopLeft;
-            return true;
-        }
-
-        if (IsNear(mapPosition, GetStampHandlePoint(stamp, StampHandle.Top), threshold))
-        {
-            handle = StampHandle.Top;
-            return true;
-        }
-
-        if (IsNear(mapPosition, GetStampHandlePoint(stamp, StampHandle.TopRight), threshold))
-        {
-            handle = StampHandle.TopRight;
-            return true;
-        }
-
-        if (IsNear(mapPosition, GetStampHandlePoint(stamp, StampHandle.Right), threshold))
-        {
-            handle = StampHandle.Right;
-            return true;
-        }
-
-        if (IsNear(mapPosition, GetStampHandlePoint(stamp, StampHandle.BottomRight), threshold))
-        {
-            handle = StampHandle.BottomRight;
-            return true;
-        }
-
-        if (IsNear(mapPosition, GetStampHandlePoint(stamp, StampHandle.Bottom), threshold))
-        {
-            handle = StampHandle.Bottom;
-            return true;
-        }
-
-        if (IsNear(mapPosition, GetStampHandlePoint(stamp, StampHandle.BottomLeft), threshold))
-        {
-            handle = StampHandle.BottomLeft;
-            return true;
-        }
-
-        if (IsNear(mapPosition, GetStampHandlePoint(stamp, StampHandle.Left), threshold))
-        {
-            handle = StampHandle.Left;
-            return true;
-        }
-
-        handle = StampHandle.None;
-        return false;
-    }
-
-    static bool IsNear(Point point, Point target, double threshold) =>
-        Math.Abs(point.X - target.X) <= threshold && Math.Abs(point.Y - target.Y) <= threshold;
-
-    static (int X, int Y) GetStampHandleSigns(StampHandle handle) =>
-        handle switch
-        {
-            StampHandle.TopLeft => (-1, -1),
-            StampHandle.Top => (0, -1),
-            StampHandle.TopRight => (1, -1),
-            StampHandle.Right => (1, 0),
-            StampHandle.BottomRight => (1, 1),
-            StampHandle.Bottom => (0, 1),
-            StampHandle.BottomLeft => (-1, 1),
-            StampHandle.Left => (-1, 0),
-            _ => (1, 1),
-        };
-
     Rect ClampStampRect(Rect rect)
-    {
-        const double MinSize = 12;
-        var width = Math.Max(MinSize, rect.Width);
-        var height = Math.Max(MinSize, rect.Height);
-        var x = rect.X;
-        var y = rect.Y;
-
-        if (MapImage is not null)
-        {
-            width = Math.Min(width, Math.Max(MinSize, MapImage.Size.Width));
-            height = Math.Min(height, Math.Max(MinSize, MapImage.Size.Height));
-            x = Math.Clamp(x, 0, Math.Max(0, MapImage.Size.Width - width));
-            y = Math.Clamp(y, 0, Math.Max(0, MapImage.Size.Height - height));
-        }
-
-        return new Rect(x, y, width, height);
-    }
-
-    static Rect GetStampRect(StampInstance stamp) =>
-        new(stamp.X, stamp.Y, stamp.Width, stamp.Height);
-
-    static Point GetStampCenter(StampInstance stamp) =>
-        new(stamp.X + stamp.Width / 2.0, stamp.Y + stamp.Height / 2.0);
+        => StampGeometry.ClampRect(rect, MapImage?.Size);
 
     Point GetStampHandlePoint(StampInstance stamp, StampHandle handle)
-    {
-        var rect = GetStampRect(stamp);
-        var rotateHandleOffset = 28 / Math.Max(ZoomLevel, 0.01);
-        var localPoint = handle switch
-        {
-            StampHandle.TopLeft => rect.TopLeft,
-            StampHandle.Top => new Point(rect.X + rect.Width / 2.0, rect.Y),
-            StampHandle.TopRight => rect.TopRight,
-            StampHandle.Right => new Point(rect.Right, rect.Y + rect.Height / 2.0),
-            StampHandle.BottomRight => rect.BottomRight,
-            StampHandle.Bottom => new Point(rect.X + rect.Width / 2.0, rect.Bottom),
-            StampHandle.BottomLeft => rect.BottomLeft,
-            StampHandle.Left => new Point(rect.X, rect.Y + rect.Height / 2.0),
-            StampHandle.Rotate => new Point(rect.X + rect.Width / 2.0, rect.Y - rotateHandleOffset),
-            _ => GetStampCenter(stamp),
-        };
-
-        return RotatePoint(localPoint, GetStampCenter(stamp), stamp.RotationDegrees);
-    }
-
-    static void ApplyStampRect(StampInstance stamp, Rect rect)
-    {
-        stamp.X = rect.X;
-        stamp.Y = rect.Y;
-        stamp.Width = rect.Width;
-        stamp.Height = rect.Height;
-    }
-
-    static Point RotatePoint(Point point, Point center, double degrees)
-    {
-        var radians = DegreesToRadians(degrees);
-        var cos = Math.Cos(radians);
-        var sin = Math.Sin(radians);
-        var x = point.X - center.X;
-        var y = point.Y - center.Y;
-
-        return new Point(
-            center.X + x * cos - y * sin,
-            center.Y + x * sin + y * cos);
-    }
-
-    static Point UnrotatePoint(Point point, Point center, double degrees) =>
-        RotatePoint(point, center, -degrees);
-
-    static (Vector XAxis, Vector YAxis) GetRotatedAxes(double degrees)
-    {
-        var radians = DegreesToRadians(degrees);
-        var cos = Math.Cos(radians);
-        var sin = Math.Sin(radians);
-        return (new Vector(cos, sin), new Vector(-sin, cos));
-    }
-
-    static Point Add(Point point, Vector vector) =>
-        new(point.X + vector.X, point.Y + vector.Y);
-
-    static Vector Scale(Vector vector, double scale) =>
-        new(vector.X * scale, vector.Y * scale);
-
-    static double Dot(Vector left, Vector right) =>
-        left.X * right.X + left.Y * right.Y;
-
-    static double GetAngleDegrees(Point center, Point point) =>
-        Math.Atan2(point.Y - center.Y, point.X - center.X) * 180.0 / Math.PI;
-
-    static double NormalizeDegrees(double degrees)
-    {
-        var normalized = degrees % 360.0;
-        return normalized < 0 ? normalized + 360.0 : normalized;
-    }
-
-    static double DegreesToRadians(double degrees) =>
-        degrees * Math.PI / 180.0;
+        => StampGeometry.GetHandlePoint(stamp, handle, ZoomLevel);
 
     /// <summary>
     /// Records the current pointer position converted to map coordinates as the starting
@@ -2146,32 +1760,4 @@ public class MapCanvas : Control
         });
     }
 
-    /// <summary>
-    /// Returns a normalized <see cref="Rect"/> whose top-left is at the minimum of both points
-    /// and whose size is the absolute difference.
-    /// </summary>
-    static Rect MakeRect(Point a, Point b) =>
-        new(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y), Math.Abs(b.X - a.X), Math.Abs(b.Y - a.Y));
-
-    static Rect GetPlayerViewportRect(ViewportPayload viewport) =>
-        new(
-            viewport.CenterMapX - viewport.WidthMap / 2.0,
-            viewport.CenterMapY - viewport.HeightMap / 2.0,
-            viewport.WidthMap,
-            viewport.HeightMap);
-
-    static ViewportPayload CreatePlayerViewportPayload(Rect rect, ViewportPayload current) =>
-        new()
-        {
-            CenterMapX = rect.X + rect.Width / 2.0,
-            CenterMapY = rect.Y + rect.Height / 2.0,
-            ZoomLevel = current.ZoomLevel <= 0 ? 1.0 : current.ZoomLevel,
-            RotationQuarterTurns = current.RotationQuarterTurns,
-            WidthMap = rect.Width,
-            HeightMap = rect.Height,
-            PaddingPixels = Math.Max(0, current.PaddingPixels),
-        };
-
-    static Point Midpoint(Point a, Point b) =>
-        new((a.X + b.X) / 2.0, (a.Y + b.Y) / 2.0);
 }
