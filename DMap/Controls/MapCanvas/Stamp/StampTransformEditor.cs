@@ -5,10 +5,10 @@ using Avalonia;
 
 using DMap.Models;
 
-namespace DMap.Controls.MapCanvas;
+namespace DMap.Controls.MapCanvas.Stamp;
 
 /// <summary>Owns stamp hit testing, handle geometry, dragging, resizing, rotation, and bounds clamping.</summary>
-public sealed class StampEditor
+public sealed class StampTransformEditor
 {
     const double MinSize = 12;
 

@@ -13,6 +13,7 @@ using Avalonia.Platform;
 using Avalonia.Svg.Skia;
 
 using DMap.Commands;
+using DMap.Controls.MapCanvas.Stamp;
 using DMap.Models;
 using DMap.Protocol;
 
@@ -417,8 +418,8 @@ public class MapCanvas : Control
 
     readonly MapViewportController _viewport = new();
     readonly PlayerViewportEditor _playerViewportEditor = new();
-    readonly StampEditor _stampEditor = new();
-    readonly StampLayerEditor _stampLayerEditor;
+    readonly StampTransformEditor _stampEditor = new();
+    readonly StampLayerController _stampLayer;
     readonly FogBitmapController _fogBitmapController;
     readonly ContextMenu _stampContextMenu;
     bool _isPanning;
@@ -455,13 +456,15 @@ public class MapCanvas : Control
         ClipToBounds = true;
         Focusable = true;
         _fogBitmapController = new FogBitmapController();
-        _stampLayerEditor = new StampLayerEditor(_stampEditor);
+        _stampLayer = new StampLayerController(_stampEditor);
+        _stampLayer.StampChanged += (_, stamp) => StampChanged?.Invoke(this, new StampChangedEventArgs(stamp));
+        _stampLayer.Invalidated += (_, _) => InvalidateVisual();
         _stampContextMenu = new StampContextMenuBuilder(_iconBaseUri).Build(
-            ReorderSelectedStampToFront,
-            () => ReorderSelectedStampBy(1),
-            () => ReorderSelectedStampBy(-1),
-            ReorderSelectedStampToBack,
-            DuplicateSelectedStamp);
+            () => EditStampLayer(_stampLayer.ReorderSelectedToFront),
+            () => EditStampLayer(() => _stampLayer.ReorderSelectedBy(1)),
+            () => EditStampLayer(() => _stampLayer.ReorderSelectedBy(-1)),
+            () => EditStampLayer(_stampLayer.ReorderSelectedToBack),
+            () => EditStampLayer(_stampLayer.DuplicateSelected));
         _fogBitmapController.Invalidated += (_, _) => InvalidateVisual();
         _fogBitmapController.IsGeneratingChanged += (_, isGenerating) => IsFogGenerating = isGenerating;
         ZoomInCommand = new RelayCommand(() => ZoomLevel *= 1.2);
@@ -662,7 +665,7 @@ public class MapCanvas : Control
         }
 
         if (IsDmMode && ActiveTool == ToolType.Stamp)
-            RenderStampEditorOverlay(context);
+            RenderStampTransformOverlay(context);
 
         if (IsDmMode && IsPointerOver && ActiveTool != ToolType.Cursor)
             RenderToolOverlay(context, zoom);
@@ -696,9 +699,9 @@ public class MapCanvas : Control
         }
     }
 
-    void RenderStampEditorOverlay(DrawingContext context)
+    void RenderStampTransformOverlay(DrawingContext context)
     {
-        var stamp = SelectedStamp;
+        var stamp = _stampLayer.SelectedStamp;
         if (stamp is null || MapImage is null)
             return;
 
@@ -924,7 +927,17 @@ public class MapCanvas : Control
         }
 
         if (change.Property == StampsProperty)
+        {
+            SyncStampLayer();
             SubscribeToStampsCollection();
+        }
+
+        if (change.Property == SelectedStampProperty
+            || change.Property == SelectedStampTemplateIdProperty
+            || change.Property == MapImageProperty)
+        {
+            SyncStampLayer();
+        }
 
         if (change.Property == MapImageProperty && MapImage is not null)
         {
@@ -968,7 +981,7 @@ public class MapCanvas : Control
 
     void OnStampsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        ApplyStampLayerEdit(_stampLayerEditor.ClearMissingSelection(Stamps, SelectedStamp));
+        EditStampLayer(_stampLayer.ClearMissingSelection);
 
         InvalidateVisual();
     }
@@ -1235,10 +1248,8 @@ public class MapCanvas : Control
 
         if (ActiveTool == ToolType.Stamp && _stampEditor.IsDragging)
         {
-            var stamp = SelectedStamp;
             _stampEditor.EndDrag();
-            if (stamp is not null)
-                StampChanged?.Invoke(this, new StampChangedEventArgs(stamp));
+            EditStampLayer(_stampLayer.NotifySelectedStampChanged);
             UpdateCursor();
             InvalidateVisual();
             e.Handled = true;
@@ -1288,7 +1299,7 @@ public class MapCanvas : Control
 
         if (ActiveTool == ToolType.Stamp && e.Key is Key.Delete or Key.Back)
         {
-            ApplyStampLayerEdit(_stampLayerEditor.DeleteSelected(Stamps, SelectedStamp));
+            EditStampLayer(_stampLayer.DeleteSelected);
             e.Handled = true;
             return;
         }
@@ -1296,7 +1307,7 @@ public class MapCanvas : Control
         if (ActiveTool == ToolType.Stamp && e.Key == Key.Escape)
         {
             CancelActiveInteraction();
-            SelectedStamp = null;
+            EditStampLayer(_stampLayer.ClearSelection);
             InvalidateVisual();
             e.Handled = true;
             return;
@@ -1379,23 +1390,18 @@ public class MapCanvas : Control
 
     void StartStampInteraction(Point screenPosition)
     {
-        if (MapImage is null || Stamps is null)
+        if (MapImage is null)
             return;
 
+        SyncStampLayer();
         var mapPosition = _viewport.ScreenToMap(screenPosition, MapImage.Size);
-        if (_stampEditor.TryBeginHandleDrag(SelectedStamp, mapPosition, ZoomLevel))
+        if (_stampEditor.TryBeginHandleDrag(_stampLayer.SelectedStamp, mapPosition, ZoomLevel))
             return;
 
-        var result = _stampLayerEditor.HandlePointerPress(
-            Stamps,
-            SelectedStamp,
-            SelectedStampTemplateId,
-            mapPosition,
-            MapImage.Size);
-        ApplyStampLayerEdit(result.Edit);
-
-        if (result.HitStamp is not null)
-            _stampEditor.BeginMoveDrag(result.HitStamp, mapPosition);
+        var hitStamp = _stampLayer.HandlePointerPress(mapPosition);
+        SelectedStamp = _stampLayer.SelectedStamp;
+        if (hitStamp is not null)
+            _stampEditor.BeginMoveDrag(hitStamp, mapPosition);
     }
 
     void ShowStampContextMenu(Point screenPosition)
@@ -1403,33 +1409,13 @@ public class MapCanvas : Control
         if (MapImage is null)
             return;
 
+        SyncStampLayer();
         var mapPosition = _viewport.ScreenToMap(screenPosition, MapImage.Size);
-        var result = _stampLayerEditor.SelectAt(Stamps, SelectedStamp, mapPosition);
-        if (result is null)
+        if (!_stampLayer.SelectAt(mapPosition))
             return;
 
-        ApplyStampLayerEdit(result);
+        SelectedStamp = _stampLayer.SelectedStamp;
         _stampContextMenu.Open(this);
-    }
-
-    void ReorderSelectedStampBy(int delta)
-    {
-        ApplyStampLayerEdit(_stampLayerEditor.ReorderSelectedBy(Stamps, SelectedStamp, delta));
-    }
-
-    void ReorderSelectedStampToFront()
-    {
-        ApplyStampLayerEdit(_stampLayerEditor.ReorderSelectedToFront(Stamps, SelectedStamp));
-    }
-
-    void ReorderSelectedStampToBack()
-    {
-        ApplyStampLayerEdit(_stampLayerEditor.ReorderSelectedToBack(Stamps, SelectedStamp));
-    }
-
-    void DuplicateSelectedStamp()
-    {
-        ApplyStampLayerEdit(_stampLayerEditor.DuplicateSelected(Stamps, SelectedStamp, MapImage?.Size));
     }
 
     void UpdateStampInteraction(Point screenPosition, bool preserveAspect)
@@ -1437,26 +1423,27 @@ public class MapCanvas : Control
         if (MapImage is null)
             return;
 
+        SyncStampLayer();
         var mapPosition = _viewport.ScreenToMap(screenPosition, MapImage.Size);
-        _stampEditor.UpdateDrag(SelectedStamp, mapPosition, MapImage.Size, preserveAspect);
+        _stampEditor.UpdateDrag(_stampLayer.SelectedStamp, mapPosition, MapImage.Size, preserveAspect);
     }
 
     Point GetStampHandlePoint(StampInstance stamp, StampHandle handle)
         => _stampEditor.GetHandlePoint(stamp, handle, ZoomLevel);
 
-    void ApplyStampLayerEdit(StampLayerEditResult? result)
+    void EditStampLayer(Action action)
     {
-        if (result is null)
-            return;
+        SyncStampLayer();
+        action();
+        SelectedStamp = _stampLayer.SelectedStamp;
+    }
 
-        if (result.SelectionChanged)
-            SelectedStamp = result.SelectedStamp;
-
-        if (result.ChangedStamp is not null)
-            StampChanged?.Invoke(this, new StampChangedEventArgs(result.ChangedStamp));
-
-        if (result.ShouldInvalidate)
-            InvalidateVisual();
+    void SyncStampLayer()
+    {
+        _stampLayer.Stamps = Stamps;
+        _stampLayer.SelectedStamp = SelectedStamp;
+        _stampLayer.SelectedTemplateId = SelectedStampTemplateId;
+        _stampLayer.MapSize = MapImage?.Size;
     }
 
     /// <summary>

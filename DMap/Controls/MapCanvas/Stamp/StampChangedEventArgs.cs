@@ -2,7 +2,7 @@ using System;
 
 using DMap.Models;
 
-namespace DMap.Controls.MapCanvas;
+namespace DMap.Controls.MapCanvas.Stamp;
 
 /// <summary>
 /// Event arguments for stamp-layer mutations produced by the canvas.

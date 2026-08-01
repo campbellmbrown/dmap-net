@@ -1,19 +1,19 @@
 using Avalonia;
 
-using DMap.Controls.MapCanvas;
+using DMap.Controls.MapCanvas.Stamp;
 using DMap.Models;
 
 using NUnit.Framework;
 
 namespace DMap.Tests.Controls;
 
-public class StampEditorTests
+public class StampTransformEditorTests
 {
     [Test]
     public void HitTest_ReturnsTopmostStampContainingPoint()
     {
         // Arrange
-        var editor = new StampEditor();
+        var editor = new StampTransformEditor();
         var bottom = CreateStamp(x: 0, y: 0, width: 20, height: 20);
         var top = CreateStamp(x: 5, y: 5, width: 20, height: 20);
 
@@ -28,7 +28,7 @@ public class StampEditorTests
     public void UpdateDrag_MovesStampByPointerDelta()
     {
         // Arrange
-        var editor = new StampEditor();
+        var editor = new StampTransformEditor();
         var stamp = CreateStamp(x: 10, y: 20, width: 30, height: 40);
 
         // Act
@@ -49,7 +49,7 @@ public class StampEditorTests
     public void UpdateDrag_ResizesStampFromRightHandle()
     {
         // Arrange
-        var editor = new StampEditor();
+        var editor = new StampTransformEditor();
         var stamp = CreateStamp(x: 10, y: 20, width: 30, height: 40);
 
         // Act
@@ -71,7 +71,7 @@ public class StampEditorTests
     public void UpdateDrag_RotatesStampFromRotateHandle()
     {
         // Arrange
-        var editor = new StampEditor();
+        var editor = new StampTransformEditor();
         var stamp = CreateStamp(x: 0, y: 0, width: 10, height: 10);
         var rotateHandle = editor.GetHandlePoint(stamp, StampHandle.Rotate, zoomLevel: 1);
 

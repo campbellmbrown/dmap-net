@@ -5,7 +5,7 @@ using Avalonia.Svg.Skia;
 
 using DMap.Commands;
 
-namespace DMap.Controls.MapCanvas;
+namespace DMap.Controls.MapCanvas.Stamp;
 
 public sealed class StampContextMenuBuilder
 {
