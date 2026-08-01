@@ -9,7 +9,6 @@ using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 
 using DMap.Controls;
-using DMap.Protocol;
 using DMap.ViewModels;
 
 using ReactiveUI;
@@ -38,7 +37,7 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
 
         var canvas = this.FindControl<MapCanvas>("MapCanvas")!;
         FogGenerationDialog? fogGenerationDialog = null;
-        canvas.ViewportChanged += (_, viewport) => ViewModel?.UpdateViewport(viewport);
+        canvas.PlayerViewportChanged += (_, viewport) => ViewModel?.UpdatePlayerViewport(viewport);
         canvas.CursorUpdated += (_, cursor) => ViewModel?.UpdateCursor(cursor);
         canvas.StampChanged += (_, _) => ViewModel?.OnStampChanged();
 
@@ -60,7 +59,6 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
                 return;
 
             var vm = ViewModel;
-            vm.UpdateViewport(canvas.GetViewport());
 
             _activationDisposables.Add(
                 vm.WhenAnyValue(x => x.IsFogGenerating)
@@ -73,10 +71,6 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
             vm.FogUpdated += OnFogUpdated;
             _activationDisposables.Add(
                 Disposable.Create(() => vm.FogUpdated -= OnFogUpdated));
-
-            vm.RestorePausedViewportRequested += OnRestorePausedViewportRequested;
-            _activationDisposables.Add(
-                Disposable.Create(() => vm.RestorePausedViewportRequested -= OnRestorePausedViewportRequested));
 
             _activationDisposables.Add(
                 vm.ShowOpenFileDialog.RegisterHandler(HandleOpenFileDialog));
@@ -130,15 +124,6 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
     {
         var canvas = this.FindControl<MapCanvas>("MapCanvas")!;
         canvas.InvalidateFogRegion(dirtyRect);
-    }
-
-    /// <summary>
-    /// Moves the DM canvas back to the viewport captured when player updates were paused.
-    /// </summary>
-    void OnRestorePausedViewportRequested(object? sender, ViewportPayload viewport)
-    {
-        var canvas = this.FindControl<MapCanvas>("MapCanvas")!;
-        canvas.ApplyViewport(viewport);
     }
 
     /// <summary>

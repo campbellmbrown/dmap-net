@@ -25,4 +25,7 @@ public enum ToolType
 
     /// <summary>Stamp image placement and editing tool.</summary>
     Stamp,
+
+    /// <summary>Player viewport placement, sizing, rotation, and padding tool.</summary>
+    PlayerView,
 }

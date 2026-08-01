@@ -91,6 +91,9 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// <summary>Settings for the Stamp tool.</summary>
     public StampToolSettingsViewModel StampSettings { get; }
 
+    /// <summary>Settings for the Player View tool.</summary>
+    public PlayerViewToolSettingsViewModel PlayerViewSettings { get; }
+
     /// <summary>Placed stamps in map-space coordinates.</summary>
     public ObservableCollection<StampInstance> Stamps { get; } = new();
 
@@ -150,6 +153,7 @@ public class DmViewModel : ViewModelBase, IDisposable
             this.RaisePropertyChanged(nameof(IsCursorSelected));
             this.RaisePropertyChanged(nameof(IsGridSelected));
             this.RaisePropertyChanged(nameof(IsStampSelected));
+            this.RaisePropertyChanged(nameof(IsPlayerViewSelected));
             CurrentToolSettings = GetCurrentToolSettings(value);
             this.RaisePropertyChanged(nameof(HasCurrentToolSettings));
             this.RaisePropertyChanged(nameof(ShowToolSettingsRailToggle));
@@ -176,6 +180,9 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     /// <summary><see langword="true"/> when the Stamp tool is active.</summary>
     public bool IsStampSelected => SelectedTool == ToolType.Stamp;
+
+    /// <summary><see langword="true"/> when the Player View tool is active.</summary>
+    public bool IsPlayerViewSelected => SelectedTool == ToolType.PlayerView;
 
     /// <summary>All available tool types, used to populate the toolbar's tool selector.</summary>
     public IReadOnlyList<ToolType> ToolTypes { get; } = Enum.GetValues<ToolType>();
@@ -248,6 +255,9 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// <summary>Activates the Stamp tool.</summary>
     public ReactiveCommand<Unit, Unit> SelectStampCommand { get; }
 
+    /// <summary>Activates the Player View tool.</summary>
+    public ReactiveCommand<Unit, Unit> SelectPlayerViewCommand { get; }
+
     /// <summary>Sets all fog mask pixels to 255 (fully revealed) and pushes an undo entry.</summary>
     public ReactiveCommand<Unit, Unit> RevealAllCommand { get; }
 
@@ -318,12 +328,9 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// <summary>Toggles whether fog and viewport updates are held locally or sent to connected players immediately.</summary>
     public ReactiveCommand<Unit, Unit> TogglePauseUpdatesCommand { get; }
 
-    /// <summary>Restores the DM canvas to the viewport that was active when player updates were paused.</summary>
-    public ReactiveCommand<Unit, Unit> RestorePausedViewportCommand { get; }
-
     /// <summary>
-    /// When <see langword="true"/>, fog and viewport changes are applied locally but not broadcast to players.
-    /// Resuming sends a single full-mask delta and latest viewport to bring all players up to date.
+    /// When <see langword="true"/>, fog and player-facing changes are applied locally but not broadcast to players.
+    /// Resuming sends a single full-mask delta and latest player viewport to bring all players up to date.
     /// </summary>
     public bool IsUpdatesPaused
     {
@@ -331,8 +338,8 @@ public class DmViewModel : ViewModelBase, IDisposable
         private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    /// <summary><see langword="true"/> when a pause-start viewport snapshot is available to restore.</summary>
-    public bool CanRestorePausedViewport
+    /// <summary>The map-space rectangle and display transform players should see.</summary>
+    public ViewportPayload? PlayerViewport
     {
         get;
         private set => this.RaiseAndSetIfChanged(ref field, value);
@@ -363,11 +370,6 @@ public class DmViewModel : ViewModelBase, IDisposable
     public Interaction<string, Unit> OpenDirectory { get; } = new();
 
     /// <summary>
-    /// Raised when the view should move the DM canvas back to the viewport captured when updates were paused.
-    /// </summary>
-    public event EventHandler<ViewportPayload>? RestorePausedViewportRequested;
-
-    /// <summary>
     /// Raised after any fog modification (brush, shape, undo, redo, reveal-all, refog-all).
     /// The event argument is the bounding rectangle of the changed region. The view uses
     /// this to update only the affected portion of the fog bitmap rather than rebuilding it entirely.
@@ -379,9 +381,10 @@ public class DmViewModel : ViewModelBase, IDisposable
     bool _hasPendingUpdates;
     bool _hasPendingViewportUpdate;
     bool _hasPendingCursorUpdate;
+    bool _hasPendingFogAppearanceUpdate;
+    bool _hasPendingGridUpdate;
     bool _hasPendingStampUpdate;
     ViewportPayload? _latestViewport;
-    ViewportPayload? _pausedViewport;
     CursorPayload? _latestCursor;
     bool _isViewportBroadcastQueued;
     bool _isCursorBroadcastQueued;
@@ -417,10 +420,12 @@ public class DmViewModel : ViewModelBase, IDisposable
             () => ReorderSelectedStampToBack(),
             DuplicateSelectedStamp,
             DeleteSelectedStamp);
+        PlayerViewSettings = new PlayerViewToolSettingsViewModel(RotatePlayerViewportClockwise);
         CurrentToolSettings = GetCurrentToolSettings(SelectedTool);
 
         FogSettings.PropertyChanged += OnFogSettingsPropertyChanged;
         GridSettings.PropertyChanged += OnGridSettingsPropertyChanged;
+        PlayerViewSettings.PropertyChanged += OnPlayerViewSettingsPropertyChanged;
 
         _hostService.PlayerCountChanged += (_, count) => ConnectedPlayers = count;
         _undoRedo.StateChanged += (_, _) => { CanUndo = _undoRedo.CanUndo; CanRedo = _undoRedo.CanRedo; };
@@ -437,6 +442,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         SelectCursorCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Cursor; });
         SelectGridCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Grid; });
         SelectStampCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Stamp; });
+        SelectPlayerViewCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.PlayerView; });
 
         var mapLoaded = this.WhenAnyValue(x => x.IsMapLoaded);
         RevealAllCommand = ReactiveCommand.Create(ExecuteRevealAll, mapLoaded);
@@ -457,25 +463,9 @@ public class DmViewModel : ViewModelBase, IDisposable
         ToggleMapVisibilityCommand = ReactiveCommand.Create(() => { IsMapVisible = !IsMapVisible; });
         ToggleOverlayVisibilityCommand = ReactiveCommand.Create(() => { IsOverlayVisible = !IsOverlayVisible; });
         ToggleToolSettingsPanelVisibilityCommand = ReactiveCommand.Create(() => { IsToolSettingsPanelVisible = !IsToolSettingsPanelVisible; });
-        var canRestorePausedViewport = this.WhenAnyValue(
-            x => x.IsUpdatesPaused,
-            x => x.CanRestorePausedViewport,
-            (isPaused, canRestore) => isPaused && canRestore);
-        RestorePausedViewportCommand = ReactiveCommand.Create(RestorePausedViewport, canRestorePausedViewport);
         TogglePauseUpdatesCommand = ReactiveCommand.Create(() =>
         {
-            if (IsUpdatesPaused)
-            {
-                IsUpdatesPaused = false;
-                _pausedViewport = null;
-                CanRestorePausedViewport = false;
-            }
-            else
-            {
-                _pausedViewport = _latestViewport;
-                CanRestorePausedViewport = _pausedViewport is not null;
-                IsUpdatesPaused = true;
-            }
+            IsUpdatesPaused = !IsUpdatesPaused;
 
             Log.Information("Player updates {State}.", IsUpdatesPaused ? "paused" : "resumed");
             if (!IsUpdatesPaused)
@@ -598,6 +588,7 @@ public class DmViewModel : ViewModelBase, IDisposable
             _undoRedo.Clear();
             SelectedStamp = null;
             Stamps.Clear();
+            SetPlayerViewport(CreateInitialPlayerViewport(pixelSize.Width, pixelSize.Height), queueBroadcast: false);
             IsMapLoaded = true;
 
             FogUpdated?.Invoke(this, new PixelRect(0, 0, pixelSize.Width, pixelSize.Height));
@@ -729,15 +720,12 @@ public class DmViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
-    /// Updates the authoritative DM viewport snapshot and queues a broadcast to players.
+    /// Updates the authoritative player viewport rectangle and queues a broadcast to players.
     /// Repeated updates within a single UI tick are coalesced into a single send using the
     /// most recent viewport values. When updates are paused, only the snapshot is retained.
     /// </summary>
-    public void UpdateViewport(ViewportPayload viewport)
-    {
-        _latestViewport = viewport;
-        QueueViewportBroadcast();
-    }
+    public void UpdatePlayerViewport(ViewportPayload viewport) =>
+        SetPlayerViewport(viewport, queueBroadcast: true);
 
     /// <summary>
     /// Updates the authoritative DM cursor snapshot and queues a broadcast to players.
@@ -841,20 +829,65 @@ public class DmViewModel : ViewModelBase, IDisposable
         BroadcastStamps();
     }
 
-    /// <summary>
-    /// Requests the view to move the local canvas back to the viewport captured at pause time.
-    /// The restored viewport is also retained as the pending player viewport for the next resume.
-    /// </summary>
-    void RestorePausedViewport()
+    ViewportPayload CreateInitialPlayerViewport(int mapWidth, int mapHeight) =>
+        new()
+        {
+            CenterMapX = mapWidth / 2.0,
+            CenterMapY = mapHeight / 2.0,
+            ZoomLevel = 1.0,
+            RotationQuarterTurns = 0,
+            WidthMap = mapWidth,
+            HeightMap = mapHeight,
+            PaddingPixels = PlayerViewSettings.Padding,
+        };
+
+    void RotatePlayerViewportClockwise()
     {
-        if (!IsUpdatesPaused || _pausedViewport is null)
+        if (PlayerViewport is null)
             return;
 
-        _latestViewport = _pausedViewport;
-        _hasPendingViewportUpdate = true;
-        RestorePausedViewportRequested?.Invoke(this, _pausedViewport);
-        Log.Information("Restoring DM view to paused viewport.");
+        SetPlayerViewport(CopyPlayerViewport(
+            PlayerViewport,
+            rotationQuarterTurns: PlayerViewport.RotationQuarterTurns + 1,
+            paddingPixels: PlayerViewSettings.Padding), queueBroadcast: true);
     }
+
+    void OnPlayerViewSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is not null
+            && e.PropertyName != nameof(PlayerViewToolSettingsViewModel.Padding))
+            return;
+
+        if (PlayerViewport is not null)
+            SetPlayerViewport(CopyPlayerViewport(PlayerViewport, paddingPixels: PlayerViewSettings.Padding), queueBroadcast: true);
+    }
+
+    void SetPlayerViewport(ViewportPayload viewport, bool queueBroadcast)
+    {
+        var normalized = CopyPlayerViewport(viewport, paddingPixels: Math.Max(0, viewport.PaddingPixels));
+        PlayerViewport = normalized;
+        _latestViewport = normalized;
+
+        if (queueBroadcast)
+            QueueViewportBroadcast();
+    }
+
+    static ViewportPayload CopyPlayerViewport(
+        ViewportPayload viewport,
+        int? rotationQuarterTurns = null,
+        double? paddingPixels = null) =>
+        new()
+        {
+            CenterMapX = viewport.CenterMapX,
+            CenterMapY = viewport.CenterMapY,
+            ZoomLevel = viewport.ZoomLevel,
+            RotationQuarterTurns = NormalizeRotation(rotationQuarterTurns ?? viewport.RotationQuarterTurns),
+            WidthMap = viewport.WidthMap,
+            HeightMap = viewport.HeightMap,
+            PaddingPixels = Math.Max(0, paddingPixels ?? viewport.PaddingPixels),
+        };
+
+    static int NormalizeRotation(int quarterTurns) => ((quarterTurns % 4) + 4) % 4;
 
     /// <summary>
     /// Extracts the fog delta for <paramref name="dirtyRect"/> from the current mask and
@@ -887,22 +920,12 @@ public class DmViewModel : ViewModelBase, IDisposable
     void BroadcastGridSettings()
     {
         if (IsUpdatesPaused)
-            return;
-
-        var payload = new GridSettingsPayload
         {
-            IsVisible = GridSettings.IsVisible,
-            SquareSize = GridSettings.SquareSize,
-            LineWidth = GridSettings.LineWidth,
-            Opacity = GridSettings.Opacity,
-            R = GridSettings.Color.R,
-            G = GridSettings.Color.G,
-            B = GridSettings.Color.B,
-            OffsetX = GridSettings.OffsetX,
-            OffsetY = GridSettings.OffsetY,
-        };
+            _hasPendingGridUpdate = true;
+            return;
+        }
 
-        _ = _hostService.SendGridSettingsAsync(payload, default);
+        _ = _hostService.SendGridSettingsAsync(CreateGridSettingsPayload(), default);
     }
 
     void BroadcastStamps()
@@ -929,7 +952,31 @@ public class DmViewModel : ViewModelBase, IDisposable
         if (_session is null)
             return;
 
-        var payload = new FogAppearancePayload
+        if (IsUpdatesPaused)
+        {
+            _hasPendingFogAppearanceUpdate = true;
+            return;
+        }
+
+        _ = _hostService.SendFogAppearanceAsync(CreateFogAppearancePayload(), default);
+    }
+
+    GridSettingsPayload CreateGridSettingsPayload() =>
+        new()
+        {
+            IsVisible = GridSettings.IsVisible,
+            SquareSize = GridSettings.SquareSize,
+            LineWidth = GridSettings.LineWidth,
+            Opacity = GridSettings.Opacity,
+            R = GridSettings.Color.R,
+            G = GridSettings.Color.G,
+            B = GridSettings.Color.B,
+            OffsetX = GridSettings.OffsetX,
+            OffsetY = GridSettings.OffsetY,
+        };
+
+    FogAppearancePayload CreateFogAppearancePayload() =>
+        new()
         {
             FogType = FogSettings.SelectedFogType,
             R = FogSettings.Color.R,
@@ -937,8 +984,6 @@ public class DmViewModel : ViewModelBase, IDisposable
             B = FogSettings.Color.B,
             Seed = FogSeed,
         };
-        _ = _hostService.SendFogAppearanceAsync(payload, default);
-    }
 
     void OnFogSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -970,6 +1015,7 @@ public class DmViewModel : ViewModelBase, IDisposable
             ToolType.Cursor => CursorSettings,
             ToolType.Grid => GridSettings,
             ToolType.Stamp => StampSettings,
+            ToolType.PlayerView => PlayerViewSettings,
             ToolType.Pan => PanSettings,
             _ => PanSettings
         };
@@ -1070,6 +1116,18 @@ public class DmViewModel : ViewModelBase, IDisposable
             _ = _hostService.SendCursorAsync(_latestCursor, default);
         }
 
+        if (_hasPendingFogAppearanceUpdate && _session is not null)
+        {
+            _hasPendingFogAppearanceUpdate = false;
+            _ = _hostService.SendFogAppearanceAsync(CreateFogAppearancePayload(), default);
+        }
+
+        if (_hasPendingGridUpdate && _session is not null)
+        {
+            _hasPendingGridUpdate = false;
+            _ = _hostService.SendGridSettingsAsync(CreateGridSettingsPayload(), default);
+        }
+
         if (_hasPendingStampUpdate && _session is not null)
         {
             _hasPendingStampUpdate = false;
@@ -1125,6 +1183,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         {
             FogSettings.PropertyChanged -= OnFogSettingsPropertyChanged;
             GridSettings.PropertyChanged -= OnGridSettingsPropertyChanged;
+            PlayerViewSettings.PropertyChanged -= OnPlayerViewSettingsPropertyChanged;
             _memoryTimer.Stop();
             (_hostService as IDisposable)?.Dispose();
             (_discoveryService as IDisposable)?.Dispose();

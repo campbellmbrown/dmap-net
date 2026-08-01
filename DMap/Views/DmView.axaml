@@ -133,6 +133,9 @@
         <DataTemplate DataType="toolVm:StampToolSettingsViewModel">
             <toolViews:StampToolSettingsView />
         </DataTemplate>
+        <DataTemplate DataType="toolVm:PlayerViewToolSettingsViewModel">
+            <toolViews:PlayerViewToolSettingsView />
+        </DataTemplate>
     </UserControl.DataTemplates>
 
     <UserControl.KeyBindings>
@@ -379,7 +382,8 @@
                             GridOffsetY="{Binding GridSettings.OffsetY}"
                             Stamps="{Binding Stamps}"
                             SelectedStamp="{Binding SelectedStamp, Mode=TwoWay}"
-                            SelectedStampTemplateId="{Binding StampSettings.SelectedTemplateId}">
+                            SelectedStampTemplateId="{Binding StampSettings.SelectedTemplateId}"
+                            PlayerViewport="{Binding PlayerViewport}">
             </controls:MapCanvas>
 
             <Panel IsVisible="{Binding IsOverlayVisible}">
@@ -396,26 +400,15 @@
                         HorizontalAlignment="Right"
                         VerticalAlignment="Bottom"
                         IsVisible="{Binding IsUpdatesPaused}">
-                    <StackPanel Orientation="Horizontal">
-                        <Button Background="Transparent"
-                                BorderThickness="0"
-                                Padding="10"
-                                Command="{Binding RestorePausedViewportCommand}"
-                                ToolTip.Tip="Return to Paused View">
-                            <Image Width="20"
-                                   Height="20"
-                                   Source="{SvgImage /Assets/Icons/scan-eye.svg}" />
-                        </Button>
-                        <Button Background="Transparent"
-                                BorderThickness="0"
-                                Padding="10"
-                                Command="{Binding TogglePauseUpdatesCommand}"
-                                ToolTip.Tip="Resume Player Updates">
-                            <Image Width="20"
-                                   Height="20"
-                                   Source="{SvgImage /Assets/Icons/radio-off.svg}" />
-                        </Button>
-                    </StackPanel>
+                    <Button Background="Transparent"
+                            BorderThickness="0"
+                            Padding="10"
+                            Command="{Binding TogglePauseUpdatesCommand}"
+                            ToolTip.Tip="Resume Player Updates">
+                        <Image Width="20"
+                               Height="20"
+                               Source="{SvgImage /Assets/Icons/radio-off.svg}" />
+                    </Button>
                 </Border>
             </Panel>
 
@@ -487,6 +480,13 @@
                                     Command="{Binding SelectPanCommand}"
                                     ToolTip.Tip="Pan">
                                 <Image Source="{SvgImage /Assets/Icons/hand.svg}" />
+                            </Button>
+
+                            <Button Classes="toolbox"
+                                    Classes.toolSelected="{Binding IsPlayerViewSelected}"
+                                    Command="{Binding SelectPlayerViewCommand}"
+                                    ToolTip.Tip="Player View">
+                                <Image Source="{SvgImage /Assets/Icons/rectangle-horizontal-dot.svg}" />
                             </Button>
 
                             <StackPanel IsVisible="{Binding ShowToolSettingsRailToggle}"

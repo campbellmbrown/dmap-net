@@ -73,7 +73,7 @@ Message type IDs
      - Fog rendering mode, colour, and texture seed.
    * - 6
      - Viewport
-     - Camera position, zoom, and map rotation.
+     - Player viewport rectangle, rotation, and padding.
    * - 7
      - Cursor
      - Cursor position, appearance, and visibility.
@@ -207,9 +207,12 @@ This payload controls how players render the fog overlay.
 Viewport payload
 ----------------
 
-This payload defines the camera state that players should apply to the map.
-Rotation is applied client-side and does not modify the transmitted map image,
-fog mask, grid settings, or cursor coordinates.
+This payload defines the map-space rectangle that players should see. Clients
+fit that rectangle inside the player window while preserving its aspect ratio.
+When the player window has a different aspect ratio, unused space remains black
+instead of revealing map outside the selected rectangle. Rotation and padding
+are applied client-side and do not modify the transmitted map image, fog mask,
+grid settings, or cursor coordinates.
 
 .. list-table:: Viewport payload fields
    :header-rows: 1
@@ -225,10 +228,19 @@ fog mask, grid settings, or cursor coordinates.
      - The map-space Y coordinate that should be centred in the viewport.
    * - Zoom level
      - 8 (float64)
-     - The zoom multiplier to apply around the centred map coordinate.
+     - Legacy camera zoom. New rectangle-based payloads keep this field for compatibility.
    * - Rotation quarter turns
      - 4 (int32)
-     - Clockwise map rotation in 90-degree increments, normalized to the range 0-3.
+     - Clockwise player view rotation in 90-degree increments, normalized to the range 0-3.
+   * - Width
+     - 8 (float64)
+     - Width of the selected player viewport rectangle in map pixels.
+   * - Height
+     - 8 (float64)
+     - Height of the selected player viewport rectangle in map pixels.
+   * - Padding
+     - 8 (float64)
+     - Screen-pixel padding to reserve around the fitted player viewport.
 
 Cursor payload
 --------------

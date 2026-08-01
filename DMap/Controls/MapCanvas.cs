@@ -189,6 +189,9 @@ public class MapCanvas : Control
     public static readonly StyledProperty<string?> SelectedStampTemplateIdProperty =
         AvaloniaProperty.Register<MapCanvas, string?>(nameof(SelectedStampTemplateId));
 
+    public static readonly StyledProperty<ViewportPayload?> PlayerViewportProperty =
+        AvaloniaProperty.Register<MapCanvas, ViewportPayload?>(nameof(PlayerViewport));
+
     /// <summary>The map background image, or <see langword="null"/> when no map is loaded.</summary>
     public Bitmap? MapImage
     {
@@ -412,6 +415,13 @@ public class MapCanvas : Control
         set => SetValue(SelectedStampTemplateIdProperty, value);
     }
 
+    /// <summary>The map-space rectangle and display transform that players should see.</summary>
+    public ViewportPayload? PlayerViewport
+    {
+        get => GetValue(PlayerViewportProperty);
+        set => SetValue(PlayerViewportProperty, value);
+    }
+
     /// <summary>Raised when the user presses the pointer to begin a brush stroke.</summary>
     public event EventHandler? BrushStrokeStarted;
 
@@ -433,9 +443,14 @@ public class MapCanvas : Control
     public event EventHandler<StampChangedEventArgs>? StampChanged;
 
     /// <summary>
-    /// Raised whenever the viewport camera changes, expressed as a map-space center coordinate plus zoom.
+    /// Raised whenever the DM camera changes, expressed as a map-space center coordinate plus zoom.
     /// </summary>
     public event EventHandler<ViewportPayload>? ViewportChanged;
+
+    /// <summary>
+    /// Raised whenever the DM changes the player viewport rectangle.
+    /// </summary>
+    public event EventHandler<ViewportPayload>? PlayerViewportChanged;
 
     /// <summary>
     /// Raised whenever the DM cursor state changes, expressed in map-space coordinates.
@@ -469,14 +484,19 @@ public class MapCanvas : Control
     bool _isDraggingShape;
     bool _isCursorPressed;
     bool _isDraggingStamp;
+    bool _isDraggingPlayerViewport;
     StampDragMode _stampDragMode;
     StampHandle _activeStampHandle;
+    PlayerViewportHandle _activePlayerViewportHandle;
     Point _stampDragStartMap;
     Rect _stampDragStartRect;
+    Point _playerViewportDragStartMap;
+    Rect _playerViewportDragStartRect;
     double _stampDragStartRotationDegrees;
     double _stampDragStartPointerAngleDegrees;
     Point _shapeDragStart;
     Point _lastMousePosition;
+    Rect _playerContentClip;
     decimal? _zoomPercent;
     INotifyCollectionChanged? _subscribedStampsCollection;
     static readonly Uri _iconBaseUri = new("avares://DMap/Assets/Icons/");
@@ -505,6 +525,20 @@ public class MapCanvas : Control
         Rotate,
     }
 
+    enum PlayerViewportHandle
+    {
+        None,
+        Move,
+        TopLeft,
+        Top,
+        TopRight,
+        Right,
+        BottomRight,
+        Bottom,
+        BottomLeft,
+        Left,
+    }
+
     static MapCanvas()
     {
         AffectsRender<MapCanvas>(
@@ -513,7 +547,7 @@ public class MapCanvas : Control
             ShapeTypeProperty, ShapeCornerRadiusProperty, CursorTypeProperty, CursorSizeProperty, CursorMapXProperty,
             CursorMapYProperty, IsCursorVisibleProperty, ShowMapProperty,
             IsGridVisibleProperty, GridSquareSizeProperty, GridLineWidthProperty, GridOpacityProperty, GridColorProperty, GridOffsetXProperty, GridOffsetYProperty,
-            FogTypeProperty, FogColorProperty, FogSeedProperty, StampsProperty, SelectedStampProperty);
+            FogTypeProperty, FogColorProperty, FogSeedProperty, StampsProperty, SelectedStampProperty, PlayerViewportProperty);
     }
 
     /// <summary>Initialises the control with clipping and keyboard focus enabled.</summary>
@@ -632,7 +666,14 @@ public class MapCanvas : Control
     /// </summary>
     public void ApplyViewport(ViewportPayload viewport)
     {
-        _viewport.ApplyViewport(viewport, Bounds.Size, MapImage?.Size);
+        if (!IsDmMode && viewport.HasMapRect)
+            _playerContentClip = _viewport.ApplyPlayerViewport(viewport, Bounds.Size, MapImage?.Size);
+        else
+        {
+            _viewport.ApplyViewport(viewport, Bounds.Size, MapImage?.Size);
+            _playerContentClip = new Rect(Bounds.Size);
+        }
+
         OnViewportStateChanged();
     }
 
@@ -642,12 +683,14 @@ public class MapCanvas : Control
     /// </summary>
     public void CancelActiveInteraction()
     {
-        var hadPreview = _isDraggingShape || _isDraggingStamp;
+        var hadPreview = _isDraggingShape || _isDraggingStamp || _isDraggingPlayerViewport;
 
         _isDraggingShape = false;
         _isDraggingStamp = false;
+        _isDraggingPlayerViewport = false;
         _stampDragMode = StampDragMode.None;
         _activeStampHandle = StampHandle.None;
+        _activePlayerViewportHandle = PlayerViewportHandle.None;
         _isPainting = false;
         _isPanning = false;
         UpdateCursor();
@@ -714,7 +757,7 @@ public class MapCanvas : Control
         var zoom = ZoomLevel;
         var transform = _viewport.GetMapToScreenTransform(mapImage.Size);
 
-        using (context.PushTransform(transform))
+        void RenderMapLayers()
         {
             var imageRect = new Rect(0, 0, mapImage.Size.Width, mapImage.Size.Height);
             if (ShowMap)
@@ -730,11 +773,37 @@ public class MapCanvas : Control
                 var fogRect = new Rect(0, 0, _fogBitmapController.Bitmap.Size.Width, _fogBitmapController.Bitmap.Size.Height);
                 context.DrawImage(_fogBitmapController.Bitmap, fogRect);
             }
-
         }
 
+        if (!IsDmMode && _playerContentClip.Width > 0 && _playerContentClip.Height > 0)
+        {
+            using (context.PushClip(_playerContentClip))
+            using (context.PushTransform(transform))
+            {
+                RenderMapLayers();
+            }
+        }
+        else
+        {
+            using (context.PushTransform(transform))
+            {
+                RenderMapLayers();
+            }
+        }
+
+        if (IsDmMode && MapImage is not null && PlayerViewport is not null)
+            RenderPlayerViewportOverlay(context, PlayerViewport);
+
         if (ShouldRenderCursor())
-            RenderCursor(context, CursorMapX, CursorMapY);
+        {
+            if (!IsDmMode && _playerContentClip.Width > 0 && _playerContentClip.Height > 0)
+            {
+                using (context.PushClip(_playerContentClip))
+                    RenderCursor(context, CursorMapX, CursorMapY);
+            }
+            else
+                RenderCursor(context, CursorMapX, CursorMapY);
+        }
 
         if (IsDmMode && ActiveTool == ToolType.Stamp)
             RenderStampEditorOverlay(context);
@@ -803,6 +872,43 @@ public class MapCanvas : Control
         DrawStampHandle(context, bottomLeft);
         DrawStampHandle(context, left);
         DrawStampHandle(context, rotate);
+    }
+
+    void RenderPlayerViewportOverlay(DrawingContext context, ViewportPayload viewport)
+    {
+        if (!viewport.HasMapRect || MapImage is null)
+            return;
+
+        var rect = GetPlayerViewportRect(viewport);
+        var topLeft = _viewport.MapToScreen(rect.TopLeft, MapImage.Size);
+        var topRight = _viewport.MapToScreen(rect.TopRight, MapImage.Size);
+        var bottomRight = _viewport.MapToScreen(rect.BottomRight, MapImage.Size);
+        var bottomLeft = _viewport.MapToScreen(rect.BottomLeft, MapImage.Size);
+        var brush = new SolidColorBrush(Color.FromRgb(0, 188, 212));
+        var pen = new Pen(brush, ActiveTool == ToolType.PlayerView ? 2.0 : 1.25);
+
+        context.DrawLine(pen, topLeft, topRight);
+        context.DrawLine(pen, topRight, bottomRight);
+        context.DrawLine(pen, bottomRight, bottomLeft);
+        context.DrawLine(pen, bottomLeft, topLeft);
+
+        if (ActiveTool != ToolType.PlayerView)
+            return;
+
+        DrawPlayerViewportHandle(context, topLeft, brush);
+        DrawPlayerViewportHandle(context, Midpoint(topLeft, topRight), brush);
+        DrawPlayerViewportHandle(context, topRight, brush);
+        DrawPlayerViewportHandle(context, Midpoint(topRight, bottomRight), brush);
+        DrawPlayerViewportHandle(context, bottomRight, brush);
+        DrawPlayerViewportHandle(context, Midpoint(bottomLeft, bottomRight), brush);
+        DrawPlayerViewportHandle(context, bottomLeft, brush);
+        DrawPlayerViewportHandle(context, Midpoint(topLeft, bottomLeft), brush);
+    }
+
+    static void DrawPlayerViewportHandle(DrawingContext context, Point center, IBrush brush)
+    {
+        const double radius = 4.5;
+        context.DrawEllipse(Brushes.Black, new Pen(brush, 1.5), center, radius, radius);
     }
 
     static void DrawStampHandle(DrawingContext context, Point center)
@@ -1041,6 +1147,15 @@ public class MapCanvas : Control
             return;
         }
 
+        if (ActiveTool == ToolType.PlayerView)
+        {
+            var handle = _isDraggingPlayerViewport
+                ? _activePlayerViewportHandle
+                : GetPlayerViewportHoverHandle(_lastMousePosition);
+            Cursor = GetPlayerViewportCursor(handle);
+            return;
+        }
+
         if (ActiveTool == ToolType.Fog)
         {
             Cursor = Cursor.Default;
@@ -1089,6 +1204,14 @@ public class MapCanvas : Control
             if (point.Properties.IsLeftButtonPressed)
                 _isCursorPressed = true;
             RaiseCursorUpdated();
+            UpdateCursor();
+            e.Handled = true;
+            return;
+        }
+
+        if (ActiveTool == ToolType.PlayerView && point.Properties.IsLeftButtonPressed)
+        {
+            StartPlayerViewportInteraction(point.Position);
             UpdateCursor();
             e.Handled = true;
             return;
@@ -1182,6 +1305,22 @@ public class MapCanvas : Control
             return;
         }
 
+        if (ActiveTool == ToolType.PlayerView && !_isDraggingPlayerViewport)
+        {
+            UpdateCursor();
+            InvalidateVisual();
+            e.Handled = true;
+            return;
+        }
+
+        if (ActiveTool == ToolType.PlayerView && _isDraggingPlayerViewport)
+        {
+            UpdatePlayerViewportInteraction(point.Position);
+            UpdateCursor();
+            e.Handled = true;
+            return;
+        }
+
         if (ActiveTool == ToolType.Stamp && _isDraggingStamp)
         {
             UpdateStampInteraction(point.Position, e.KeyModifiers.HasFlag(KeyModifiers.Shift));
@@ -1222,6 +1361,16 @@ public class MapCanvas : Control
             UpdateCursorMapPosition(point.Position);
             _isCursorPressed = point.Properties.IsLeftButtonPressed;
             RaiseCursorUpdated();
+            UpdateCursor();
+            InvalidateVisual();
+            e.Handled = true;
+            return;
+        }
+
+        if (ActiveTool == ToolType.PlayerView && _isDraggingPlayerViewport)
+        {
+            _isDraggingPlayerViewport = false;
+            _activePlayerViewportHandle = PlayerViewportHandle.None;
             UpdateCursor();
             InvalidateVisual();
             e.Handled = true;
@@ -1299,7 +1448,7 @@ public class MapCanvas : Control
             return;
         }
 
-        if (e.Key == Key.Escape && _isDraggingShape)
+        if (e.Key == Key.Escape && (_isDraggingShape || _isDraggingPlayerViewport))
         {
             CancelActiveInteraction();
             e.Handled = true;
@@ -1349,6 +1498,188 @@ public class MapCanvas : Control
         });
 
         InvalidateVisual();
+    }
+
+    void StartPlayerViewportInteraction(Point screenPosition)
+    {
+        if (MapImage is null || PlayerViewport is null || !PlayerViewport.HasMapRect)
+            return;
+
+        var mapPosition = _viewport.ScreenToMap(screenPosition, MapImage.Size);
+        var rect = GetPlayerViewportRect(PlayerViewport);
+        if (!TryHitPlayerViewportHandle(mapPosition, rect, out var handle))
+        {
+            if (rect.Contains(mapPosition))
+                handle = PlayerViewportHandle.Move;
+            else
+                return;
+        }
+
+        _isDraggingPlayerViewport = true;
+        _activePlayerViewportHandle = handle;
+        _playerViewportDragStartMap = mapPosition;
+        _playerViewportDragStartRect = rect;
+    }
+
+    PlayerViewportHandle GetPlayerViewportHoverHandle(Point screenPosition)
+    {
+        if (MapImage is null || PlayerViewport is null || !PlayerViewport.HasMapRect)
+            return PlayerViewportHandle.None;
+
+        var mapPosition = _viewport.ScreenToMap(screenPosition, MapImage.Size);
+        var rect = GetPlayerViewportRect(PlayerViewport);
+        if (TryHitPlayerViewportHandle(mapPosition, rect, out var handle))
+            return handle;
+
+        return rect.Contains(mapPosition)
+            ? PlayerViewportHandle.Move
+            : PlayerViewportHandle.None;
+    }
+
+    static Cursor GetPlayerViewportCursor(PlayerViewportHandle handle) =>
+        handle switch
+        {
+            PlayerViewportHandle.Move => new Cursor(StandardCursorType.SizeAll),
+            PlayerViewportHandle.Top or PlayerViewportHandle.Bottom => new Cursor(StandardCursorType.SizeNorthSouth),
+            PlayerViewportHandle.Left or PlayerViewportHandle.Right => new Cursor(StandardCursorType.SizeWestEast),
+            PlayerViewportHandle.TopLeft or PlayerViewportHandle.BottomRight => new Cursor(StandardCursorType.TopLeftCorner),
+            PlayerViewportHandle.TopRight or PlayerViewportHandle.BottomLeft => new Cursor(StandardCursorType.TopRightCorner),
+            _ => Cursor.Default,
+        };
+
+    void UpdatePlayerViewportInteraction(Point screenPosition)
+    {
+        if (MapImage is null || PlayerViewport is null)
+            return;
+
+        var mapPosition = _viewport.ScreenToMap(screenPosition, MapImage.Size);
+        var rect = _activePlayerViewportHandle == PlayerViewportHandle.Move
+            ? MovePlayerViewportRect(mapPosition)
+            : ResizePlayerViewportRect(mapPosition);
+
+        ApplyPlayerViewportRect(ClampPlayerViewportRect(rect));
+        InvalidateVisual();
+    }
+
+    Rect MovePlayerViewportRect(Point mapPosition)
+    {
+        var delta = mapPosition - _playerViewportDragStartMap;
+        return new Rect(
+            _playerViewportDragStartRect.X + delta.X,
+            _playerViewportDragStartRect.Y + delta.Y,
+            _playerViewportDragStartRect.Width,
+            _playerViewportDragStartRect.Height);
+    }
+
+    Rect ResizePlayerViewportRect(Point mapPosition)
+    {
+        const double minSize = 16;
+        var rect = _playerViewportDragStartRect;
+        var left = rect.Left;
+        var top = rect.Top;
+        var right = rect.Right;
+        var bottom = rect.Bottom;
+
+        switch (_activePlayerViewportHandle)
+        {
+            case PlayerViewportHandle.TopLeft:
+                left = Math.Min(mapPosition.X, right - minSize);
+                top = Math.Min(mapPosition.Y, bottom - minSize);
+                break;
+            case PlayerViewportHandle.Top:
+                top = Math.Min(mapPosition.Y, bottom - minSize);
+                break;
+            case PlayerViewportHandle.TopRight:
+                right = Math.Max(mapPosition.X, left + minSize);
+                top = Math.Min(mapPosition.Y, bottom - minSize);
+                break;
+            case PlayerViewportHandle.Right:
+                right = Math.Max(mapPosition.X, left + minSize);
+                break;
+            case PlayerViewportHandle.BottomRight:
+                right = Math.Max(mapPosition.X, left + minSize);
+                bottom = Math.Max(mapPosition.Y, top + minSize);
+                break;
+            case PlayerViewportHandle.Bottom:
+                bottom = Math.Max(mapPosition.Y, top + minSize);
+                break;
+            case PlayerViewportHandle.BottomLeft:
+                left = Math.Min(mapPosition.X, right - minSize);
+                bottom = Math.Max(mapPosition.Y, top + minSize);
+                break;
+            case PlayerViewportHandle.Left:
+                left = Math.Min(mapPosition.X, right - minSize);
+                break;
+        }
+
+        return new Rect(left, top, right - left, bottom - top);
+    }
+
+    bool TryHitPlayerViewportHandle(Point mapPosition, Rect rect, out PlayerViewportHandle handle)
+    {
+        var threshold = Math.Max(4, 10 / Math.Max(ZoomLevel, 0.01));
+
+        if (IsNear(mapPosition, rect.TopLeft, threshold))
+            return SetHandle(PlayerViewportHandle.TopLeft, out handle);
+        if (IsNear(mapPosition, new Point(rect.X + rect.Width / 2.0, rect.Y), threshold))
+            return SetHandle(PlayerViewportHandle.Top, out handle);
+        if (IsNear(mapPosition, rect.TopRight, threshold))
+            return SetHandle(PlayerViewportHandle.TopRight, out handle);
+        if (IsNear(mapPosition, new Point(rect.Right, rect.Y + rect.Height / 2.0), threshold))
+            return SetHandle(PlayerViewportHandle.Right, out handle);
+        if (IsNear(mapPosition, rect.BottomRight, threshold))
+            return SetHandle(PlayerViewportHandle.BottomRight, out handle);
+        if (IsNear(mapPosition, new Point(rect.X + rect.Width / 2.0, rect.Bottom), threshold))
+            return SetHandle(PlayerViewportHandle.Bottom, out handle);
+        if (IsNear(mapPosition, rect.BottomLeft, threshold))
+            return SetHandle(PlayerViewportHandle.BottomLeft, out handle);
+        if (IsNear(mapPosition, new Point(rect.X, rect.Y + rect.Height / 2.0), threshold))
+            return SetHandle(PlayerViewportHandle.Left, out handle);
+
+        var expanded = rect.Inflate(threshold);
+        if (expanded.Contains(mapPosition))
+        {
+            if (Math.Abs(mapPosition.Y - rect.Top) <= threshold)
+                return SetHandle(PlayerViewportHandle.Top, out handle);
+            if (Math.Abs(mapPosition.X - rect.Right) <= threshold)
+                return SetHandle(PlayerViewportHandle.Right, out handle);
+            if (Math.Abs(mapPosition.Y - rect.Bottom) <= threshold)
+                return SetHandle(PlayerViewportHandle.Bottom, out handle);
+            if (Math.Abs(mapPosition.X - rect.Left) <= threshold)
+                return SetHandle(PlayerViewportHandle.Left, out handle);
+        }
+
+        handle = PlayerViewportHandle.None;
+        return false;
+    }
+
+    static bool SetHandle(PlayerViewportHandle value, out PlayerViewportHandle handle)
+    {
+        handle = value;
+        return true;
+    }
+
+    void ApplyPlayerViewportRect(Rect rect)
+    {
+        if (PlayerViewport is null)
+            return;
+
+        var next = CreatePlayerViewportPayload(rect, PlayerViewport);
+        PlayerViewportChanged?.Invoke(this, next);
+    }
+
+    Rect ClampPlayerViewportRect(Rect rect)
+    {
+        const double minSize = 16;
+        var mapImage = MapImage;
+        if (mapImage is null)
+            return rect;
+
+        var width = Math.Clamp(rect.Width, Math.Min(minSize, mapImage.Size.Width), mapImage.Size.Width);
+        var height = Math.Clamp(rect.Height, Math.Min(minSize, mapImage.Size.Height), mapImage.Size.Height);
+        var x = Math.Clamp(rect.X, 0, Math.Max(0, mapImage.Size.Width - width));
+        var y = Math.Clamp(rect.Y, 0, Math.Max(0, mapImage.Size.Height - height));
+        return new Rect(x, y, width, height);
     }
 
     void StartStampInteraction(Point screenPosition)
@@ -1858,4 +2189,26 @@ public class MapCanvas : Control
     /// </summary>
     static Rect MakeRect(Point a, Point b) =>
         new(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y), Math.Abs(b.X - a.X), Math.Abs(b.Y - a.Y));
+
+    static Rect GetPlayerViewportRect(ViewportPayload viewport) =>
+        new(
+            viewport.CenterMapX - viewport.WidthMap / 2.0,
+            viewport.CenterMapY - viewport.HeightMap / 2.0,
+            viewport.WidthMap,
+            viewport.HeightMap);
+
+    static ViewportPayload CreatePlayerViewportPayload(Rect rect, ViewportPayload current) =>
+        new()
+        {
+            CenterMapX = rect.X + rect.Width / 2.0,
+            CenterMapY = rect.Y + rect.Height / 2.0,
+            ZoomLevel = current.ZoomLevel <= 0 ? 1.0 : current.ZoomLevel,
+            RotationQuarterTurns = current.RotationQuarterTurns,
+            WidthMap = rect.Width,
+            HeightMap = rect.Height,
+            PaddingPixels = Math.Max(0, current.PaddingPixels),
+        };
+
+    static Point Midpoint(Point a, Point b) =>
+        new((a.X + b.X) / 2.0, (a.Y + b.Y) / 2.0);
 }

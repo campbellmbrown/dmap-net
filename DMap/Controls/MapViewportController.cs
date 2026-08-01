@@ -99,6 +99,42 @@ public sealed class MapViewportController
         OffsetY = canvasSize.Height / 2.0 - rotatedCenter.Y * zoom;
     }
 
+    /// <summary>
+    /// Applies a player viewport rectangle by fitting it inside the current canvas, preserving its aspect ratio.
+    /// </summary>
+    public Rect ApplyPlayerViewport(ViewportPayload viewport, Size canvasSize, Size? mapSize)
+    {
+        if (!viewport.HasMapRect || mapSize is not { Width: > 0, Height: > 0 })
+        {
+            ApplyViewport(viewport, canvasSize, mapSize);
+            return new Rect(canvasSize);
+        }
+
+        RotationQuarterTurns = NormalizeRotation(viewport.RotationQuarterTurns);
+        var mapRect = ClampMapRect(GetMapRect(viewport), mapSize.Value);
+        var rotatedRect = GetRotatedBounds(mapRect, mapSize, RotationQuarterTurns);
+        var availableRect = GetAvailablePlayerRect(canvasSize, viewport.PaddingPixels);
+
+        if (rotatedRect.Width <= 0 || rotatedRect.Height <= 0 || availableRect.Width <= 0 || availableRect.Height <= 0)
+        {
+            ApplyViewport(viewport, canvasSize, mapSize);
+            return new Rect(canvasSize);
+        }
+
+        ZoomLevel = Math.Min(availableRect.Width / rotatedRect.Width, availableRect.Height / rotatedRect.Height);
+        var contentWidth = rotatedRect.Width * ZoomLevel;
+        var contentHeight = rotatedRect.Height * ZoomLevel;
+        var contentRect = new Rect(
+            availableRect.X + (availableRect.Width - contentWidth) / 2.0,
+            availableRect.Y + (availableRect.Height - contentHeight) / 2.0,
+            contentWidth,
+            contentHeight);
+
+        OffsetX = contentRect.X - rotatedRect.X * ZoomLevel;
+        OffsetY = contentRect.Y - rotatedRect.Y * ZoomLevel;
+        return contentRect;
+    }
+
     /// <summary>Rotates the map view while preserving the map point at the canvas center.</summary>
     public void RotateBy(int quarterTurns, Size canvasSize, Size? mapSize)
     {
@@ -172,6 +208,55 @@ public sealed class MapViewportController
         return NormalizeRotation(quarterTurns) % 2 == 0
             ? mapSize
             : new Size(mapSize.Value.Height, mapSize.Value.Width);
+    }
+
+    static Rect GetMapRect(ViewportPayload viewport) =>
+        new(
+            viewport.CenterMapX - viewport.WidthMap / 2.0,
+            viewport.CenterMapY - viewport.HeightMap / 2.0,
+            viewport.WidthMap,
+            viewport.HeightMap);
+
+    static Rect ClampMapRect(Rect rect, Size mapSize)
+    {
+        const double minSize = 1;
+        var width = Math.Clamp(rect.Width, minSize, Math.Max(minSize, mapSize.Width));
+        var height = Math.Clamp(rect.Height, minSize, Math.Max(minSize, mapSize.Height));
+        var x = Math.Clamp(rect.X, 0, Math.Max(0, mapSize.Width - width));
+        var y = Math.Clamp(rect.Y, 0, Math.Max(0, mapSize.Height - height));
+        return new Rect(x, y, width, height);
+    }
+
+    static Rect GetRotatedBounds(Rect mapRect, Size? mapSize, int quarterTurns)
+    {
+        var points = new[]
+        {
+            RotateMapPoint(mapRect.TopLeft, mapSize, quarterTurns),
+            RotateMapPoint(mapRect.TopRight, mapSize, quarterTurns),
+            RotateMapPoint(mapRect.BottomRight, mapSize, quarterTurns),
+            RotateMapPoint(mapRect.BottomLeft, mapSize, quarterTurns),
+        };
+        var minX = Math.Min(Math.Min(points[0].X, points[1].X), Math.Min(points[2].X, points[3].X));
+        var minY = Math.Min(Math.Min(points[0].Y, points[1].Y), Math.Min(points[2].Y, points[3].Y));
+        var maxX = Math.Max(Math.Max(points[0].X, points[1].X), Math.Max(points[2].X, points[3].X));
+        var maxY = Math.Max(Math.Max(points[0].Y, points[1].Y), Math.Max(points[2].Y, points[3].Y));
+        return new Rect(minX, minY, maxX - minX, maxY - minY);
+    }
+
+    static Rect GetAvailablePlayerRect(Size canvasSize, double padding)
+    {
+        if (canvasSize.Width <= 0 || canvasSize.Height <= 0)
+            return default;
+
+        var safePadding = !double.IsNaN(padding) && !double.IsInfinity(padding)
+            ? Math.Max(0, padding)
+            : 0;
+        safePadding = Math.Min(safePadding, Math.Min(canvasSize.Width, canvasSize.Height) / 2.0);
+        return new Rect(
+            safePadding,
+            safePadding,
+            Math.Max(0, canvasSize.Width - safePadding * 2.0),
+            Math.Max(0, canvasSize.Height - safePadding * 2.0));
     }
 
     static Point RotateMapPoint(Point point, Size? mapSize, int quarterTurns)
