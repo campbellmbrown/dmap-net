@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="using:DMap.Controls"
              xmlns:vm="using:DMap.ViewModels.ToolSettings"
              xmlns:converters="using:DMap.Converters"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -21,7 +22,7 @@
             <ComboBox.ItemTemplate>
                 <DataTemplate x:CompileBindings="False">
                     <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                        <Image Width="16" Height="16" Source="{Binding Converter={StaticResource ShapeTypeIconConverter}}" />
+                        <ui:Icon Width="16" Height="16" IconName="{Binding Converter={StaticResource ShapeTypeIconConverter}}" />
                         <TextBlock Text="{Binding Converter={StaticResource ShapeTypeDisplayNameConverter}}" VerticalAlignment="Center" />
                     </StackPanel>
                 </DataTemplate>

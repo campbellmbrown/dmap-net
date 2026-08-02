@@ -459,7 +459,7 @@ public class MapCanvas : Control
         _stampLayer = new StampLayerController(_stampEditor);
         _stampLayer.StampChanged += (_, stamp) => StampChanged?.Invoke(this, new StampChangedEventArgs(stamp));
         _stampLayer.Invalidated += (_, _) => InvalidateVisual();
-        _stampContextMenu = new StampContextMenuBuilder(_iconBaseUri).Build(
+        _stampContextMenu = new StampContextMenuBuilder().Build(
             () => EditStampLayer(_stampLayer.ReorderSelectedToFront),
             () => EditStampLayer(() => _stampLayer.ReorderSelectedBy(1)),
             () => EditStampLayer(() => _stampLayer.ReorderSelectedBy(-1)),

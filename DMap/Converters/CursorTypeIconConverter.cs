@@ -1,7 +1,5 @@
 using System.Collections.Generic;
 
-using Avalonia.Media;
-
 using DMap.Models;
 
 namespace DMap.Converters;
@@ -11,16 +9,16 @@ namespace DMap.Converters;
 /// </summary>
 public class CursorTypeIconConverter : EnumSvgConverter<CursorType>
 {
-    static readonly Dictionary<CursorType, IImage> _icons = CreateIcons();
+    static readonly Dictionary<CursorType, string> _icons = CreateIcons();
 
     /// <inheritdoc/>
-    protected override IReadOnlyDictionary<CursorType, IImage> Icons => _icons;
+    protected override IReadOnlyDictionary<CursorType, string> Icons => _icons;
 
-    static Dictionary<CursorType, IImage> CreateIcons()
+    static Dictionary<CursorType, string> CreateIcons()
     {
-        var icons = new Dictionary<CursorType, IImage>();
+        var icons = new Dictionary<CursorType, string>();
         foreach (var cursorType in System.Enum.GetValues<CursorType>())
-            icons[cursorType] = SvgIconLoader.Load(CursorTypeMetadata.GetIconFileName(cursorType));
+            icons[cursorType] = IconSource.NormalizeName(CursorTypeMetadata.GetIconFileName(cursorType));
 
         return icons;
     }

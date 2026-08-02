@@ -6,11 +6,13 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\avalonia-logo.ico</ApplicationIcon>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <PythonExe Condition="'$(PythonExe)' == ''">python</PythonExe>
+    <BuildAvaloniaResourcesDependsOn>GenerateColoredIcons;$(BuildAvaloniaResourcesDependsOn)</BuildAvaloniaResourcesDependsOn>
   </PropertyGroup>
 
   <ItemGroup>
     <Folder Include="Models\" />
-    <AvaloniaResource Include="Assets\**" />
+    <AvaloniaResource Include="Assets\**" Exclude="Assets\GeneratedIcons\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -30,4 +32,11 @@
     <PackageReference Include="Autofac" Version="8.1.0" />
     <PackageReference Include="Svg.Controls.Skia.Avalonia" Version="12.0.0" />
   </ItemGroup>
+
+  <Target Name="GenerateColoredIcons">
+    <Exec Command="&quot;$(PythonExe)&quot; &quot;$(MSBuildProjectDirectory)/../scripts/generate_colored_icons.py&quot;" />
+    <ItemGroup>
+      <AvaloniaResource Include="Assets\GeneratedIcons\**\*.svg" />
+    </ItemGroup>
+  </Target>
 </Project>

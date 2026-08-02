@@ -1,7 +1,5 @@
 using System.Collections.Generic;
 
-using Avalonia.Media;
-
 using DMap.Models;
 
 namespace DMap.Converters;
@@ -12,13 +10,13 @@ namespace DMap.Converters;
 /// </summary>
 public class BrushShapeIconConverter : EnumSvgConverter<BrushShape>
 {
-    static readonly Dictionary<BrushShape, IImage> _icons = new()
+    static readonly Dictionary<BrushShape, string> _icons = new()
     {
-        [BrushShape.Circle] = SvgIconLoader.Load("circle.svg"),
-        [BrushShape.Square] = SvgIconLoader.Load("square.svg"),
-        [BrushShape.Diamond] = SvgIconLoader.Load("diamond.svg"),
+        [BrushShape.Circle] = "circle",
+        [BrushShape.Square] = "square",
+        [BrushShape.Diamond] = "diamond",
     };
 
     /// <inheritdoc/>
-    protected override IReadOnlyDictionary<BrushShape, IImage> Icons => _icons;
+    protected override IReadOnlyDictionary<BrushShape, string> Icons => _icons;
 }

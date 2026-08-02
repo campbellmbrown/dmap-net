@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-using Avalonia.Media;
-
 using DMap.Models;
 
 namespace DMap.Converters;
@@ -14,11 +12,11 @@ namespace DMap.Converters;
 /// </summary>
 public class ShapeTypeIconConverter : EnumSvgConverter<ShapeType>
 {
-    static readonly Dictionary<ShapeType, IImage> _icons = Enum.GetValues<ShapeType>().ToDictionary(
+    static readonly Dictionary<ShapeType, string> _icons = Enum.GetValues<ShapeType>().ToDictionary(
         shapeType => shapeType,
-        shapeType => SvgIconLoader.Load(ShapeTypeMetadata.GetIconFileName(shapeType))
+        shapeType => IconSource.NormalizeName(ShapeTypeMetadata.GetIconFileName(shapeType))
     );
 
     /// <inheritdoc/>
-    protected override IReadOnlyDictionary<ShapeType, IImage> Icons => _icons;
+    protected override IReadOnlyDictionary<ShapeType, string> Icons => _icons;
 }

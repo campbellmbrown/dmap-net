@@ -1,6 +1,7 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:media="using:Avalonia.Media"
+             xmlns:controls="using:DMap.Controls"
              x:Class="DMap.App"
              RequestedThemeVariant="Light">
 
@@ -174,6 +175,25 @@
         <Style Selector="Separator">
             <Setter Property="Background" Value="{StaticResource DMapHighlight}" />
         </Style>
+        <Style Selector="controls|Icon">
+            <Setter Property="Variant" Value="Normal" />
+        </Style>
+        <Style Selector="Button:pointerover controls|Icon,
+                         ToggleButton:pointerover controls|Icon,
+                         MenuItem:pointerover controls|Icon">
+            <Setter Property="Variant" Value="Hover" />
+        </Style>
+        <Style Selector="ToggleButton:checked controls|Icon,
+                         Button.toolSelected controls|Icon,
+                         ComboBoxItem:selected controls|Icon,
+                         MenuItem:checked controls|Icon">
+            <Setter Property="Variant" Value="Selected" />
+        </Style>
+        <Style Selector="Button:disabled controls|Icon,
+                         ToggleButton:disabled controls|Icon,
+                         MenuItem:disabled controls|Icon">
+            <Setter Property="Variant" Value="Disabled" />
+        </Style>
         <Style Selector="Menu">
             <Setter Property="Background" Value="{StaticResource DMapBackground}" />
         </Style>
@@ -212,11 +232,9 @@
             <Setter Property="Background" Value="{StaticResource DMapBackground}" />
             <Setter Property="BorderBrush" Value="{StaticResource DMapHighlight}" />
             <Setter Property="Foreground" Value="{StaticResource DMapForeground}" />
-            <Setter Property="Opacity" Value="0.6" />
         </Style>
         <Style Selector="Button.text:disabled">
             <Setter Property="Foreground" Value="{StaticResource DMapForeground}" />
-            <Setter Property="Opacity" Value="0.75" />
         </Style>
 
         <!-- The NumericUpDown template renders its border and background through a TextBox's internal

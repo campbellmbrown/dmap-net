@@ -1,10 +1,10 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="using:DMap.Controls"
              xmlns:vm="using:DMap.ViewModels"
              xmlns:toolVm="using:DMap.ViewModels.ToolSettings"
              xmlns:toolViews="using:DMap.Views.ToolSettings"
              xmlns:controls="using:DMap.Controls.MapCanvas"
-             xmlns:svg="clr-namespace:Avalonia.Svg.Skia;assembly=Svg.Controls.Skia.Avalonia"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="1024" d:DesignHeight="768"
@@ -64,7 +64,7 @@
         <Style Selector="ToggleButton.toolbar:pressed /template/ ContentPresenter">
             <Setter Property="Background" Value="{StaticResource DMapSelected}" />
         </Style>
-        <Style Selector="Button.toolbar Image, ToggleButton.toolbar Image">
+        <Style Selector="Button.toolbar ui|Icon, ToggleButton.toolbar ui|Icon">
             <Setter Property="Width" Value="20" />
             <Setter Property="Height" Value="20" />
         </Style>
@@ -94,7 +94,7 @@
         <Style Selector="Button.toolbox.toolSelected:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="{StaticResource DMapHover}" />
         </Style>
-        <Style Selector="Button.toolbox Image">
+        <Style Selector="Button.toolbox ui|Icon">
             <Setter Property="Width" Value="20" />
             <Setter Property="Height" Value="20" />
         </Style>
@@ -108,7 +108,7 @@
             <Setter Property="ShowButtonSpinner" Value="False" />
         </Style>
 
-        <Style Selector="MenuItem Image">
+        <Style Selector="MenuItem ui|Icon">
             <Setter Property="Width" Value="16" />
             <Setter Property="Height" Value="16" />
         </Style>
@@ -159,60 +159,60 @@
             <MenuItem Header="File">
                 <MenuItem Header="Open Map..." Command="{Binding LoadMapCommand}" InputGesture="Ctrl+O">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/map.svg}" />
+                        <ui:Icon IconName="map" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator />
                 <MenuItem Header="Open Log Directory" Command="{Binding OpenLogDirectoryCommand}">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/folder-open.svg}" />
+                        <ui:Icon IconName="folder-open" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator />
                 <MenuItem Header="Exit" Command="{Binding ExitCommand}">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/door-open.svg}" />
+                        <ui:Icon IconName="door-open" />
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
             <MenuItem Header="View">
                 <MenuItem Header="Zoom In" Command="{Binding #MapCanvas.ZoomInCommand}" InputGesture="Ctrl+OemPlus">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/zoom-in.svg}" />
+                        <ui:Icon IconName="zoom-in" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <MenuItem Header="Zoom Out" Command="{Binding #MapCanvas.ZoomOutCommand}" InputGesture="Ctrl+OemMinus">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/zoom-out.svg}" />
+                        <ui:Icon IconName="zoom-out" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <MenuItem Header="Refit View" Command="{Binding #MapCanvas.RefitViewCommand}" InputGesture="Ctrl+D0">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/scan-eye.svg}" />
+                        <ui:Icon IconName="scan-eye" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator />
                 <MenuItem Header="Rotate Left" Command="{Binding #MapCanvas.RotateLeftCommand}">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/rotate-ccw-square.svg}" />
+                        <ui:Icon IconName="rotate-ccw-square" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <MenuItem Header="Rotate Right" Command="{Binding #MapCanvas.RotateRightCommand}">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/rotate-cw-square.svg}" />
+                        <ui:Icon IconName="rotate-cw-square" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator />
                 <MenuItem Header="Show Map" Command="{Binding ToggleMapVisibilityCommand}" InputGesture="Ctrl+M"
                           ToggleType="CheckBox" IsChecked="{Binding IsMapVisible, Mode=OneWay}">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/image.svg}" />
+                        <ui:Icon IconName="image" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <MenuItem Header="Show Tools" Command="{Binding ToggleOverlayVisibilityCommand}" InputGesture="F8"
                           ToggleType="CheckBox" IsChecked="{Binding IsOverlayVisible, Mode=OneWay}">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/toolbox.svg}" />
+                        <ui:Icon IconName="toolbox" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <MenuItem Header="Show Tool Settings"
@@ -221,51 +221,51 @@
                           IsChecked="{Binding IsToolSettingsPanelVisible, Mode=OneWay}"
                           IsEnabled="{Binding HasCurrentToolSettings}">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/palette.svg}" />
+                        <ui:Icon IconName="palette" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator />
                 <MenuItem Header="Send Updates" Command="{Binding TogglePauseUpdatesCommand}" InputGesture="Ctrl+P"
                           ToggleType="CheckBox" IsChecked="{Binding !IsUpdatesPaused, Mode=OneWay}">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/radio.svg}" />
+                        <ui:Icon IconName="radio" />
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
             <MenuItem Header="Edit">
                 <MenuItem Header="Undo" Command="{Binding UndoCommand}" InputGesture="Ctrl+Z">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/undo-2.svg}" />
+                        <ui:Icon IconName="undo-2" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <MenuItem Header="Redo" Command="{Binding RedoCommand}" InputGesture="Ctrl+Y">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/redo-2.svg}" />
+                        <ui:Icon IconName="redo-2" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator />
                 <MenuItem Header="Reveal All" Command="{Binding RevealAllCommand}" InputGesture="Ctrl+Shift+E">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/eye.svg}" />
+                        <ui:Icon IconName="eye" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <MenuItem Header="Refog All" Command="{Binding RefogAllCommand}" InputGesture="Ctrl+Shift+F">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/eye-off.svg}" />
+                        <ui:Icon IconName="eye-off" />
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
             <MenuItem Header="Window">
                 <MenuItem Header="Open Player Window" Command="{Binding OpenPlayerWindowCommand}">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/picture-in-picture.svg}" />
+                        <ui:Icon IconName="picture-in-picture" />
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
             <MenuItem Header="Help">
                 <MenuItem Header="About DMap" Command="{Binding ShowAboutCommand}">
                     <MenuItem.Icon>
-                        <Image Source="{SvgImage /Assets/Icons/info.svg}" />
+                        <ui:Icon IconName="info" />
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
@@ -278,35 +278,35 @@
                         Margin="4">
 
                 <Button Classes="toolbar" Command="{Binding UndoCommand}" ToolTip.Tip="Undo">
-                    <Image Source="{SvgImage /Assets/Icons/undo-2.svg}" />
+                    <ui:Icon IconName="undo-2" />
                 </Button>
                 <Button Classes="toolbar" Command="{Binding RedoCommand}" ToolTip.Tip="Redo">
-                    <Image Source="{SvgImage /Assets/Icons/redo-2.svg}" />
+                    <ui:Icon IconName="redo-2" />
                 </Button>
                 <Separator Classes="toolbar" />
                 <ToggleButton Classes="toolbar"
                               Command="{Binding ToggleMapVisibilityCommand}"
                               IsChecked="{Binding IsMapVisible, Mode=OneWay}"
                               ToolTip.Tip="Toggle Map">
-                    <Image Source="{SvgImage /Assets/Icons/image.svg}" />
+                    <ui:Icon IconName="image" />
                 </ToggleButton>
                 <Separator Classes="toolbar" />
                 <ToggleButton Classes="toolbar"
                               Command="{Binding ToggleOverlayVisibilityCommand}"
                               IsChecked="{Binding IsOverlayVisible, Mode=OneWay}"
                               ToolTip.Tip="Show/Hide Tools (F8)">
-                    <Image Source="{SvgImage /Assets/Icons/toolbox.svg}" />
+                    <ui:Icon IconName="toolbox" />
                 </ToggleButton>
                 <Separator Classes="toolbar" />
                 <ToggleButton Classes="toolbar"
                               Command="{Binding TogglePauseUpdatesCommand}"
                               IsChecked="{Binding !IsUpdatesPaused, Mode=OneWay}"
                               ToolTip.Tip="Pause/Resume Player Updates">
-                    <Image Source="{SvgImage /Assets/Icons/radio.svg}" />
+                    <ui:Icon IconName="radio" />
                 </ToggleButton>
                 <Separator Classes="toolbar" />
                 <Button Classes="toolbar" Command="{Binding #MapCanvas.ZoomOutCommand}" ToolTip.Tip="Zoom Out">
-                    <Image Source="{SvgImage /Assets/Icons/zoom-out.svg}" />
+                    <ui:Icon IconName="zoom-out" />
                 </Button>
                 <NumericUpDown Classes="toolbar"
                                Value="{Binding #MapCanvas.ZoomPercent, Mode=TwoWay}"
@@ -314,18 +314,18 @@
                                FormatString="0'%'"
                                ToolTip.Tip="Zoom level relative to fitted map height" />
                 <Button Classes="toolbar" Command="{Binding #MapCanvas.ZoomInCommand}" ToolTip.Tip="Zoom In">
-                    <Image Source="{SvgImage /Assets/Icons/zoom-in.svg}" />
+                    <ui:Icon IconName="zoom-in" />
                 </Button>
                 <Separator Classes="toolbar" />
                 <Button Classes="toolbar" Command="{Binding #MapCanvas.RefitViewCommand}" ToolTip.Tip="Refit View">
-                    <Image Source="{SvgImage /Assets/Icons/scan-eye.svg}" />
+                    <ui:Icon IconName="scan-eye" />
                 </Button>
                 <Separator Classes="toolbar" />
                 <Button Classes="toolbar" Command="{Binding #MapCanvas.RotateLeftCommand}" ToolTip.Tip="Rotate Left">
-                    <Image Source="{SvgImage /Assets/Icons/rotate-ccw-square.svg}" />
+                    <ui:Icon IconName="rotate-ccw-square" />
                 </Button>
                 <Button Classes="toolbar" Command="{Binding #MapCanvas.RotateRightCommand}" ToolTip.Tip="Rotate Right">
-                    <Image Source="{SvgImage /Assets/Icons/rotate-cw-square.svg}" />
+                    <ui:Icon IconName="rotate-cw-square" />
                 </Button>
 
             </StackPanel>
@@ -405,9 +405,7 @@
                             Padding="10"
                             Command="{Binding TogglePauseUpdatesCommand}"
                             ToolTip.Tip="Resume Player Updates">
-                        <Image Width="20"
-                               Height="20"
-                               Source="{SvgImage /Assets/Icons/radio-off.svg}" />
+                        <ui:Icon Width="20" Height="20" IconName="radio-off" />
                     </Button>
                 </Border>
             </Panel>
@@ -432,7 +430,7 @@
                                     Classes.toolSelected="{Binding IsBrushSelected}"
                                     Command="{Binding SelectBrushCommand}"
                                     ToolTip.Tip="Brush">
-                                <Image Source="{SvgImage /Assets/Icons/brush.svg}" />
+                                <ui:Icon IconName="brush" />
                             </Button>
 
                             <!-- Shape tools group -->
@@ -440,7 +438,7 @@
                                     Classes.toolSelected="{Binding IsShapeSelected}"
                                     Command="{Binding SelectShapeCommand}"
                                     ToolTip.Tip="Shape">
-                                <Image Source="{SvgImage /Assets/Icons/shapes.svg}" />
+                                <ui:Icon IconName="shapes" />
                             </Button>
 
                             <!-- Stamp tool -->
@@ -448,7 +446,7 @@
                                     Classes.toolSelected="{Binding IsStampSelected}"
                                     Command="{Binding SelectStampCommand}"
                                     ToolTip.Tip="Stamp">
-                                <Image Source="{SvgImage /Assets/Icons/stamp.svg}" />
+                                <ui:Icon IconName="stamp" />
                             </Button>
 
                             <!-- Fog tool -->
@@ -456,7 +454,7 @@
                                     Classes.toolSelected="{Binding IsFogSelected}"
                                     Command="{Binding SelectFogCommand}"
                                     ToolTip.Tip="Fog">
-                                <Image Source="{SvgImage /Assets/Icons/cloud-fog.svg}" />
+                                <ui:Icon IconName="cloud-fog" />
                             </Button>
 
                             <!-- Cursor tool -->
@@ -464,14 +462,14 @@
                                     Classes.toolSelected="{Binding IsCursorSelected}"
                                     Command="{Binding SelectCursorCommand}"
                                     ToolTip.Tip="Cursor">
-                                <Image Source="{SvgImage /Assets/Icons/crosshair.svg}" />
+                                <ui:Icon IconName="crosshair" />
                             </Button>
 
                             <Button Classes="toolbox"
                                     Classes.toolSelected="{Binding IsGridSelected}"
                                     Command="{Binding SelectGridCommand}"
                                     ToolTip.Tip="Grid">
-                                <Image Source="{SvgImage /Assets/Icons/grid-2x2.svg}" />
+                                <ui:Icon IconName="grid-2x2" />
                             </Button>
 
                             <!-- Pan tool -->
@@ -479,14 +477,14 @@
                                     Classes.toolSelected="{Binding IsPanSelected}"
                                     Command="{Binding SelectPanCommand}"
                                     ToolTip.Tip="Pan">
-                                <Image Source="{SvgImage /Assets/Icons/hand.svg}" />
+                                <ui:Icon IconName="hand" />
                             </Button>
 
                             <Button Classes="toolbox"
                                     Classes.toolSelected="{Binding IsPlayerViewSelected}"
                                     Command="{Binding SelectPlayerViewCommand}"
                                     ToolTip.Tip="Player View">
-                                <Image Source="{SvgImage /Assets/Icons/rectangle-horizontal-dot.svg}" />
+                                <ui:Icon IconName="rectangle-horizontal-dot" />
                             </Button>
 
                             <StackPanel IsVisible="{Binding ShowToolSettingsRailToggle}"
@@ -495,7 +493,7 @@
                                 <Button Classes="toolbox"
                                         Command="{Binding ToggleToolSettingsPanelVisibilityCommand}"
                                         ToolTip.Tip="Show Tool Settings">
-                                    <Image Source="{SvgImage /Assets/Icons/plus.svg}" />
+                                    <ui:Icon IconName="plus" />
                                 </Button>
                             </StackPanel>
                         </StackPanel>
@@ -520,7 +518,7 @@
                                         Classes="toolbar"
                                         Command="{Binding ToggleToolSettingsPanelVisibilityCommand}"
                                         ToolTip.Tip="Hide Tool Settings">
-                                    <Image Source="{SvgImage /Assets/Icons/minus.svg}" />
+                                    <ui:Icon IconName="minus" />
                                 </Button>
                             </Grid>
 

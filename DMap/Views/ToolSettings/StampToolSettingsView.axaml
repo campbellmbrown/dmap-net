@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="using:DMap.Controls"
              xmlns:converters="using:DMap.Converters"
              xmlns:models="using:DMap.Models"
              xmlns:vm="using:DMap.ViewModels.ToolSettings"
@@ -96,7 +97,7 @@
                 IsEnabled="{Binding HasSelectedStamp}"
                 ToolTip.Tip="Bring Selected Stamp to Front">
             <Grid ColumnDefinitions="20,*" ColumnSpacing="6" HorizontalAlignment="Stretch">
-                <Image Width="16" Height="16" Source="{SvgImage /Assets/Icons/bring-to-front.svg}" />
+                <ui:Icon Width="16" Height="16" IconName="bring-to-front" />
                 <TextBlock Grid.Column="1" Text="Bring to Front" VerticalAlignment="Center" />
             </Grid>
         </Button>
@@ -107,7 +108,7 @@
                 IsEnabled="{Binding HasSelectedStamp}"
                 ToolTip.Tip="Bring Selected Stamp Forward">
             <Grid ColumnDefinitions="20,*" ColumnSpacing="6" HorizontalAlignment="Stretch">
-                <Image Width="16" Height="16" Source="{SvgImage /Assets/Icons/move-up.svg}" />
+                <ui:Icon Width="16" Height="16" IconName="move-up" />
                 <TextBlock Grid.Column="1" Text="Bring Forward" VerticalAlignment="Center" />
             </Grid>
         </Button>
@@ -118,7 +119,7 @@
                 IsEnabled="{Binding HasSelectedStamp}"
                 ToolTip.Tip="Send Selected Stamp Backward">
             <Grid ColumnDefinitions="20,*" ColumnSpacing="6" HorizontalAlignment="Stretch">
-                <Image Width="16" Height="16" Source="{SvgImage /Assets/Icons/move-down.svg}" />
+                <ui:Icon Width="16" Height="16" IconName="move-down" />
                 <TextBlock Grid.Column="1" Text="Send Backward" VerticalAlignment="Center" />
             </Grid>
         </Button>
@@ -129,7 +130,7 @@
                 IsEnabled="{Binding HasSelectedStamp}"
                 ToolTip.Tip="Send Selected Stamp to Back">
             <Grid ColumnDefinitions="20,*" ColumnSpacing="6" HorizontalAlignment="Stretch">
-                <Image Width="16" Height="16" Source="{SvgImage /Assets/Icons/send-to-back.svg}" />
+                <ui:Icon Width="16" Height="16" IconName="send-to-back" />
                 <TextBlock Grid.Column="1" Text="Send to Back" VerticalAlignment="Center" />
             </Grid>
         </Button>
@@ -140,7 +141,7 @@
                 IsEnabled="{Binding HasSelectedStamp}"
                 ToolTip.Tip="Duplicate Selected Stamp">
             <Grid ColumnDefinitions="20,*" ColumnSpacing="6" HorizontalAlignment="Stretch">
-                <Image Width="16" Height="16" Source="{SvgImage /Assets/Icons/copy.svg}" />
+                <ui:Icon Width="16" Height="16" IconName="copy" />
                 <TextBlock Grid.Column="1" Text="Duplicate" VerticalAlignment="Center" />
             </Grid>
         </Button>
@@ -151,7 +152,7 @@
                 IsEnabled="{Binding HasSelectedStamp}"
                 ToolTip.Tip="Delete Selected Stamp">
             <Grid ColumnDefinitions="20,*" ColumnSpacing="6" HorizontalAlignment="Stretch">
-                <Image Width="16" Height="16" Source="{SvgImage /Assets/Icons/trash-2.svg}" />
+                <ui:Icon Width="16" Height="16" IconName="trash-2" />
                 <TextBlock Grid.Column="1" Text="Delete" VerticalAlignment="Center" />
             </Grid>
         </Button>
