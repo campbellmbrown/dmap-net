@@ -114,6 +114,9 @@ public class MapCanvas : Control
     public static readonly StyledProperty<bool> ShowMapProperty =
         AvaloniaProperty.Register<MapCanvas, bool>(nameof(ShowMap), true);
 
+    public static readonly StyledProperty<bool> IsPixelSharpnessEnabledProperty =
+        AvaloniaProperty.Register<MapCanvas, bool>(nameof(IsPixelSharpnessEnabled), false);
+
     public static readonly StyledProperty<bool> IsGridVisibleProperty = AvaloniaProperty.Register<MapCanvas, bool>(nameof(IsGridVisible));
     public static readonly StyledProperty<double> GridSquareSizeProperty = AvaloniaProperty.Register<MapCanvas, double>(nameof(GridSquareSize), 70);
     public static readonly StyledProperty<double> GridLineWidthProperty = AvaloniaProperty.Register<MapCanvas, double>(nameof(GridLineWidth), 1);
@@ -332,6 +335,15 @@ public class MapCanvas : Control
         set => SetValue(ShowMapProperty, value);
     }
 
+    /// <summary>
+    /// When <see langword="true"/>, scaled map and fog bitmaps render with nearest-neighbor interpolation.
+    /// </summary>
+    public bool IsPixelSharpnessEnabled
+    {
+        get => GetValue(IsPixelSharpnessEnabledProperty);
+        set => SetValue(IsPixelSharpnessEnabledProperty, value);
+    }
+
     public bool IsGridVisible { get => GetValue(IsGridVisibleProperty); set => SetValue(IsGridVisibleProperty, value); }
     public double GridSquareSize { get => GetValue(GridSquareSizeProperty); set => SetValue(GridSquareSizeProperty, value); }
     public double GridLineWidth { get => GetValue(GridLineWidthProperty); set => SetValue(GridLineWidthProperty, value); }
@@ -444,8 +456,11 @@ public class MapCanvas : Control
             BrushDiameterProperty, ActiveToolProperty, BrushShapeProperty,
             ShapeTypeProperty, ShapeCornerRadiusProperty, CursorTypeProperty, CursorSizeProperty, CursorMapXProperty,
             CursorMapYProperty, IsCursorVisibleProperty, ShowMapProperty,
+            IsPixelSharpnessEnabledProperty,
             IsGridVisibleProperty, GridSquareSizeProperty, GridLineWidthProperty, GridColorProperty, GridOffsetXProperty, GridOffsetYProperty,
             FogTypeProperty, FogColorProperty, FogSeedProperty, StampsProperty, SelectedStampProperty, PlayerViewportProperty);
+
+        IsPixelSharpnessEnabledProperty.Changed.AddClassHandler<MapCanvas>((canvas, _) => canvas.ApplyBitmapInterpolationMode());
     }
 
     /// <summary>Initialises the control with clipping and keyboard focus enabled.</summary>
@@ -453,6 +468,7 @@ public class MapCanvas : Control
     {
         ClipToBounds = true;
         Focusable = true;
+        ApplyBitmapInterpolationMode();
         _fogBitmapController = new FogBitmapController();
         _stampLayer = new StampLayerController(_stampEditor);
         _stampLayer.StampChanged += (_, stamp) => StampChanged?.Invoke(this, new StampChangedEventArgs(stamp));
@@ -472,6 +488,14 @@ public class MapCanvas : Control
         RefitViewCommand = new RelayCommand(RefitViewToMapHeight);
         RotateLeftCommand = new RelayCommand(() => RotateView(-1));
         RotateRightCommand = new RelayCommand(() => RotateView(1));
+    }
+
+    void ApplyBitmapInterpolationMode()
+    {
+        RenderOptions.SetBitmapInterpolationMode(
+            this,
+            IsPixelSharpnessEnabled ? BitmapInterpolationMode.None : BitmapInterpolationMode.HighQuality);
+        InvalidateVisual();
     }
 
     static Dictionary<CursorType, IImage> CreateCursorIcons()

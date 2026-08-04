@@ -14,8 +14,9 @@ public sealed class ViewportPayload : IPayload
     const int WidthMapByteLength = sizeof(double);
     const int HeightMapByteLength = sizeof(double);
     const int PaddingPixelsByteLength = sizeof(double);
+    const int PixelSharpnessEnabledByteLength = sizeof(byte);
     const int LegacyPayloadLength = CenterMapXByteLength + CenterMapYByteLength + ZoomLevelByteLength + RotationQuarterTurnsByteLength;
-    const int PayloadLength = LegacyPayloadLength + WidthMapByteLength + HeightMapByteLength + PaddingPixelsByteLength;
+    const int PayloadLength = LegacyPayloadLength + WidthMapByteLength + HeightMapByteLength + PaddingPixelsByteLength + PixelSharpnessEnabledByteLength;
 
     const int CenterMapXOffset = 0;
     const int CenterMapYOffset = CenterMapXOffset + CenterMapXByteLength;
@@ -24,6 +25,7 @@ public sealed class ViewportPayload : IPayload
     const int WidthMapOffset = RotationQuarterTurnsOffset + RotationQuarterTurnsByteLength;
     const int HeightMapOffset = WidthMapOffset + WidthMapByteLength;
     const int PaddingPixelsOffset = HeightMapOffset + HeightMapByteLength;
+    const int PixelSharpnessEnabledOffset = PaddingPixelsOffset + PaddingPixelsByteLength;
 
     /// <summary>
     /// Map-space X coordinate that should be centered in the viewport.
@@ -61,6 +63,11 @@ public sealed class ViewportPayload : IPayload
     public double PaddingPixels { get; init; }
 
     /// <summary>
+    /// When <see langword="true"/>, scaled map and fog bitmaps render with nearest-neighbor interpolation.
+    /// </summary>
+    public bool IsPixelSharpnessEnabled { get; init; }
+
+    /// <summary>
     /// <see langword="true"/> when this payload contains a valid map-space rectangle.
     /// </summary>
     public bool HasMapRect =>
@@ -78,6 +85,7 @@ public sealed class ViewportPayload : IPayload
         BitConverter.TryWriteBytes(bytes.AsSpan(WidthMapOffset, WidthMapByteLength), WidthMap);
         BitConverter.TryWriteBytes(bytes.AsSpan(HeightMapOffset, HeightMapByteLength), HeightMap);
         BitConverter.TryWriteBytes(bytes.AsSpan(PaddingPixelsOffset, PaddingPixelsByteLength), Math.Max(0, PaddingPixels));
+        bytes[PixelSharpnessEnabledOffset] = IsPixelSharpnessEnabled ? (byte)1 : (byte)0;
         return bytes;
     }
 
@@ -98,6 +106,9 @@ public sealed class ViewportPayload : IPayload
         var paddingPixels = bytes.Length >= PaddingPixelsOffset + PaddingPixelsByteLength
             ? BitConverter.ToDouble(bytes, PaddingPixelsOffset)
             : 0;
+        var isPixelSharpnessEnabled = bytes.Length >= PixelSharpnessEnabledOffset + PixelSharpnessEnabledByteLength
+            ? bytes[PixelSharpnessEnabledOffset] != 0
+            : false;
 
         return new ViewportPayload
         {
@@ -108,6 +119,7 @@ public sealed class ViewportPayload : IPayload
             WidthMap = IsValidPositive(widthMap) ? widthMap : 0,
             HeightMap = IsValidPositive(heightMap) ? heightMap : 0,
             PaddingPixels = IsValidNonNegative(paddingPixels) ? paddingPixels : 0,
+            IsPixelSharpnessEnabled = isPixelSharpnessEnabled,
         };
     }
 

@@ -28,6 +28,7 @@
         </DockPanel.ContextMenu>
 
         <controls:MapCanvas x:Name="MapCanvas"
+                            IsPixelSharpnessEnabled="{Binding IsPixelSharpnessEnabled}"
                             MapImage="{Binding MapImage}"
                             FogMask="{Binding FogMask}"
                             IsDmMode="False"

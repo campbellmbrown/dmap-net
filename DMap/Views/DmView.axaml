@@ -222,6 +222,19 @@
                         <ui:Icon IconName="palette" />
                     </MenuItem.Icon>
                 </MenuItem>
+                <MenuItem Header="Pixel Scaling">
+                    <MenuItem.Icon>
+                        <ui:Icon IconName="square-dot" />
+                    </MenuItem.Icon>
+                    <MenuItem Header="Sharp Pixels"
+                              Command="{Binding EnablePixelSharpnessCommand}"
+                              ToggleType="Radio"
+                              IsChecked="{Binding IsPixelSharpnessEnabled, Mode=OneWay}" />
+                    <MenuItem Header="Smooth Pixels"
+                              Command="{Binding DisablePixelSharpnessCommand}"
+                              ToggleType="Radio"
+                              IsChecked="{Binding !IsPixelSharpnessEnabled, Mode=OneWay}" />
+                </MenuItem>
                 <Separator />
                 <MenuItem Header="Send Updates" Command="{Binding TogglePauseUpdatesCommand}" InputGesture="Ctrl+P"
                           ToggleType="CheckBox" IsChecked="{Binding !IsUpdatesPaused, Mode=OneWay}">
@@ -354,6 +367,7 @@
         <!-- Map Canvas + floating toolbar overlay -->
         <Panel>
             <controls:MapCanvas x:Name="MapCanvas"
+                            IsPixelSharpnessEnabled="{Binding IsPixelSharpnessEnabled}"
                             MapImage="{Binding MapImage}"
                             FogMask="{Binding FogMask}"
                             IsDmMode="True"

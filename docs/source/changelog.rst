@@ -9,6 +9,7 @@ Unreleased
 * Change the app theme and font.
 * Combine opacity with the grid color picker in the grid settings panel.
 * Simplified player connection.
+* Added pixel sharpness toggle to the view menu.
 
 :release-link:`v1.4.0`
 ----------------------

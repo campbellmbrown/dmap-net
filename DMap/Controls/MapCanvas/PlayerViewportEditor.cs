@@ -158,6 +158,7 @@ public sealed class PlayerViewportEditor
             WidthMap = rect.Width,
             HeightMap = rect.Height,
             PaddingPixels = Math.Max(0, current.PaddingPixels),
+            IsPixelSharpnessEnabled = current.IsPixelSharpnessEnabled,
         };
 
     static Rect ClampRect(Rect rect, Size mapSize)

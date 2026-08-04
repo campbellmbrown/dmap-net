@@ -287,6 +287,12 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// <summary>Toggles whether the map image is rendered or replaced with a white background for fog inspection.</summary>
     public ReactiveCommand<Unit, Unit> ToggleMapVisibilityCommand { get; }
 
+    /// <summary>Enables nearest-neighbor bitmap scaling for map and fog pixels.</summary>
+    public ReactiveCommand<Unit, Unit> EnablePixelSharpnessCommand { get; }
+
+    /// <summary>Enables smoothed bitmap scaling for map and fog pixels.</summary>
+    public ReactiveCommand<Unit, Unit> DisablePixelSharpnessCommand { get; }
+
     /// <summary>
     /// <see langword="true"/> when the map image is rendered; <see langword="false"/> when the map is hidden
     /// and replaced with a white background so the fog mask is easier to inspect.
@@ -296,6 +302,13 @@ public class DmViewModel : ViewModelBase, IDisposable
         get;
         private set => this.RaiseAndSetIfChanged(ref field, value);
     } = true;
+
+    /// <summary><see langword="true"/> when scaled map and fog pixels render without smoothing.</summary>
+    public bool IsPixelSharpnessEnabled
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    }
 
     /// <summary>Toggles whether the floating tool/settings overlay is shown over the map.</summary>
     public ReactiveCommand<Unit, Unit> ToggleOverlayVisibilityCommand { get; }
@@ -465,6 +478,8 @@ public class DmViewModel : ViewModelBase, IDisposable
         OpenPlayerWindowCommand = ReactiveCommand.CreateFromTask(OpenPlayerWindowAsync);
         ShowAboutCommand = ReactiveCommand.CreateFromTask(async () => await ShowAboutDialog.Handle(Unit.Default));
         ToggleMapVisibilityCommand = ReactiveCommand.Create(() => { IsMapVisible = !IsMapVisible; });
+        EnablePixelSharpnessCommand = ReactiveCommand.Create(() => SetPixelSharpness(true));
+        DisablePixelSharpnessCommand = ReactiveCommand.Create(() => SetPixelSharpness(false));
         ToggleOverlayVisibilityCommand = ReactiveCommand.Create(() => { IsOverlayVisible = !IsOverlayVisible; });
         ToggleToolSettingsPanelVisibilityCommand = ReactiveCommand.Create(() => { IsToolSettingsPanelVisible = !IsToolSettingsPanelVisible; });
         TogglePauseUpdatesCommand = ReactiveCommand.Create(() =>
@@ -490,6 +505,16 @@ public class DmViewModel : ViewModelBase, IDisposable
         await playerVm.ConnectAsync(new IPEndPoint(IPAddress.Loopback, _hostService.Port));
 
         await ShowPlayerWindow.Handle(playerVm);
+    }
+
+    void SetPixelSharpness(bool isEnabled)
+    {
+        if (IsPixelSharpnessEnabled == isEnabled)
+            return;
+
+        IsPixelSharpnessEnabled = isEnabled;
+        if (PlayerViewport is not null)
+            SetPlayerViewport(CopyPlayerViewport(PlayerViewport, pixelSharpnessEnabled: IsPixelSharpnessEnabled), queueBroadcast: true);
     }
 
     /// <summary>Opens the shared application log directory using the view-layer shell interaction.</summary>
@@ -872,6 +897,7 @@ public class DmViewModel : ViewModelBase, IDisposable
             WidthMap = mapWidth,
             HeightMap = mapHeight,
             PaddingPixels = PlayerViewSettings.Padding,
+            IsPixelSharpnessEnabled = this.IsPixelSharpnessEnabled,
         };
 
     void RotatePlayerViewportClockwise()
@@ -963,13 +989,15 @@ public class DmViewModel : ViewModelBase, IDisposable
             WidthMap = width,
             HeightMap = height,
             PaddingPixels = Math.Max(0, PlayerViewSettings.Padding),
+            IsPixelSharpnessEnabled = this.IsPixelSharpnessEnabled,
         };
     }
 
     static ViewportPayload CopyPlayerViewport(
         ViewportPayload viewport,
         int? rotationQuarterTurns = null,
-        double? paddingPixels = null) =>
+        double? paddingPixels = null,
+        bool? pixelSharpnessEnabled = null) =>
         new()
         {
             CenterMapX = viewport.CenterMapX,
@@ -979,6 +1007,7 @@ public class DmViewModel : ViewModelBase, IDisposable
             WidthMap = viewport.WidthMap,
             HeightMap = viewport.HeightMap,
             PaddingPixels = Math.Max(0, paddingPixels ?? viewport.PaddingPixels),
+            IsPixelSharpnessEnabled = pixelSharpnessEnabled ?? viewport.IsPixelSharpnessEnabled,
         };
 
     static int NormalizeRotation(int quarterTurns) => ((quarterTurns % 4) + 4) % 4;

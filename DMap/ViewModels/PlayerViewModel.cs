@@ -91,6 +91,13 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    /// <summary><see langword="true"/> when scaled map and fog pixels render without smoothing.</summary>
+    public bool IsPixelSharpnessEnabled
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    } = false;
+
     /// <summary>Latest DM cursor icon type received from the network.</summary>
     public CursorType CursorType
     {
@@ -273,7 +280,11 @@ public class PlayerViewModel : ViewModelBase, IDisposable
     /// <summary>Stores the latest DM viewport so the player view can apply it to the local canvas.</summary>
     void OnViewportReceived(object? sender, ViewportPayload viewport)
     {
-        Dispatcher.UIThread.Post(() => Viewport = viewport);
+        Dispatcher.UIThread.Post(() =>
+        {
+            Viewport = viewport;
+            IsPixelSharpnessEnabled = viewport.IsPixelSharpnessEnabled;
+        });
     }
 
     /// <summary>Stores the latest DM cursor state so the player canvas can render it.</summary>
