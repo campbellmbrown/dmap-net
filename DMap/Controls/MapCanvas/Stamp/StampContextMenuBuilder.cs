@@ -14,6 +14,7 @@ public sealed class StampContextMenuBuilder
         Action sendBackward,
         Action sendToBack,
         Action duplicate,
+        Action resetAngle,
         Action delete)
     {
         ArgumentNullException.ThrowIfNull(bringToFront);
@@ -21,6 +22,7 @@ public sealed class StampContextMenuBuilder
         ArgumentNullException.ThrowIfNull(sendBackward);
         ArgumentNullException.ThrowIfNull(sendToBack);
         ArgumentNullException.ThrowIfNull(duplicate);
+        ArgumentNullException.ThrowIfNull(resetAngle);
         ArgumentNullException.ThrowIfNull(delete);
 
         return new ContextMenu
@@ -33,6 +35,8 @@ public sealed class StampContextMenuBuilder
                 new Separator(),
                 CreateMenuItem("Bring to Front", "bring-to-front", bringToFront),
                 CreateMenuItem("Send to Back", "send-to-back", sendToBack),
+                new Separator(),
+                CreateMenuItem("Reset Angle", "rotate-ccw-square", resetAngle),
                 new Separator(),
                 CreateMenuItem("Duplicate", "copy", duplicate),
                 new Separator(),

@@ -105,6 +105,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         {
             this.RaiseAndSetIfChanged(ref field, value);
             StampSettings.HasSelectedStamp = value is not null;
+            StampSettings.ApplySelectedStamp(value);
         }
     }
 
@@ -419,8 +420,9 @@ public class DmViewModel : ViewModelBase, IDisposable
             () => ReorderSelectedStampBy(-1),
             () => ReorderSelectedStampToBack(),
             DuplicateSelectedStamp,
-            DeleteSelectedStamp);
-        PlayerViewSettings = new PlayerViewToolSettingsViewModel(RotatePlayerViewportClockwise);
+            DeleteSelectedStamp,
+            SetSelectedStampAngle);
+        PlayerViewSettings = new PlayerViewToolSettingsViewModel(RotatePlayerViewportClockwise, ResetPlayerViewportRotation);
         CurrentToolSettings = GetCurrentToolSettings(SelectedTool);
 
         FogSettings.PropertyChanged += OnFogSettingsPropertyChanged;
@@ -741,7 +743,33 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// <summary>Broadcasts the current stamp layer after the canvas changes it.</summary>
     public void OnStampChanged()
     {
+        StampSettings.ApplySelectedStamp(SelectedStamp);
         BroadcastStamps();
+    }
+
+    void SetSelectedStampAngle(double angle)
+    {
+        var stamp = SelectedStamp;
+        if (stamp is null)
+            return;
+
+        stamp.RotationDegrees = NormalizeDegrees(angle);
+        StampSettings.ApplySelectedStamp(stamp);
+        RefreshSelectedStamp();
+        BroadcastStamps();
+    }
+
+    void RefreshSelectedStamp()
+    {
+        var stamp = SelectedStamp;
+        if (stamp is null)
+            return;
+
+        var index = Stamps.IndexOf(stamp);
+        if (index >= 0)
+            Stamps[index] = stamp;
+
+        this.RaisePropertyChanged(nameof(SelectedStamp));
     }
 
     void DeleteSelectedStamp()
@@ -852,14 +880,32 @@ public class DmViewModel : ViewModelBase, IDisposable
             paddingPixels: PlayerViewSettings.Padding), queueBroadcast: true);
     }
 
+    void ResetPlayerViewportRotation()
+    {
+        if (PlayerViewport is null)
+            return;
+
+        SetPlayerViewport(CopyPlayerViewport(
+            PlayerViewport,
+            rotationQuarterTurns: 0,
+            paddingPixels: PlayerViewSettings.Padding), queueBroadcast: true);
+    }
+
     void OnPlayerViewSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (PlayerViewSettings.IsApplyingViewport)
+            return;
+
         if (e.PropertyName is not null
+            and not (nameof(PlayerViewToolSettingsViewModel.OffsetX))
+            and not (nameof(PlayerViewToolSettingsViewModel.OffsetY))
+            and not (nameof(PlayerViewToolSettingsViewModel.Width))
+            and not (nameof(PlayerViewToolSettingsViewModel.Height))
             and not (nameof(PlayerViewToolSettingsViewModel.Padding)))
             return;
 
         if (PlayerViewport is not null)
-            SetPlayerViewport(CopyPlayerViewport(PlayerViewport, paddingPixels: PlayerViewSettings.Padding), queueBroadcast: true);
+            SetPlayerViewport(CreatePlayerViewportFromSettings(PlayerViewport), queueBroadcast: true);
     }
 
     void SetPlayerViewport(ViewportPayload viewport, bool queueBroadcast)
@@ -867,9 +913,52 @@ public class DmViewModel : ViewModelBase, IDisposable
         var normalized = CopyPlayerViewport(viewport, paddingPixels: Math.Max(0, viewport.PaddingPixels));
         PlayerViewport = normalized;
         _latestViewport = normalized;
+        ApplyPlayerViewportSettings(normalized);
 
         if (queueBroadcast)
             QueueViewportBroadcast();
+    }
+
+    void ApplyPlayerViewportSettings(ViewportPayload viewport)
+    {
+        var mapWidth = Math.Max(1, MapImage?.Size.Width ?? viewport.WidthMap);
+        var mapHeight = Math.Max(1, MapImage?.Size.Height ?? viewport.HeightMap);
+
+        PlayerViewSettings.ApplyViewport(
+            viewport.CenterMapX - viewport.WidthMap / 2.0,
+            viewport.CenterMapY - viewport.HeightMap / 2.0,
+            viewport.WidthMap,
+            viewport.HeightMap,
+            viewport.PaddingPixels,
+            mapWidth,
+            mapHeight);
+    }
+
+    ViewportPayload CreatePlayerViewportFromSettings(ViewportPayload current)
+    {
+        var width = Math.Max(1, PlayerViewSettings.Width);
+        var height = Math.Max(1, PlayerViewSettings.Height);
+        var x = Math.Max(0, PlayerViewSettings.OffsetX);
+        var y = Math.Max(0, PlayerViewSettings.OffsetY);
+
+        if (MapImage is not null)
+        {
+            width = Math.Min(width, MapImage.Size.Width);
+            height = Math.Min(height, MapImage.Size.Height);
+            x = Math.Clamp(x, 0, Math.Max(0, MapImage.Size.Width - width));
+            y = Math.Clamp(y, 0, Math.Max(0, MapImage.Size.Height - height));
+        }
+
+        return new ViewportPayload
+        {
+            CenterMapX = x + width / 2.0,
+            CenterMapY = y + height / 2.0,
+            ZoomLevel = current.ZoomLevel <= 0 ? 1.0 : current.ZoomLevel,
+            RotationQuarterTurns = current.RotationQuarterTurns,
+            WidthMap = width,
+            HeightMap = height,
+            PaddingPixels = Math.Max(0, PlayerViewSettings.Padding),
+        };
     }
 
     static ViewportPayload CopyPlayerViewport(
@@ -888,6 +977,12 @@ public class DmViewModel : ViewModelBase, IDisposable
         };
 
     static int NormalizeRotation(int quarterTurns) => ((quarterTurns % 4) + 4) % 4;
+
+    static double NormalizeDegrees(double degrees)
+    {
+        var normalized = degrees % 360;
+        return normalized < 0 ? normalized + 360 : normalized;
+    }
 
     /// <summary>
     /// Extracts the fog delta for <paramref name="dirtyRect"/> from the current mask and

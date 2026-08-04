@@ -9,15 +9,71 @@
              x:DataType="vm:PlayerViewToolSettingsViewModel">
 
     <StackPanel Spacing="8" MinWidth="200">
-        <Button Classes="text"
-                Command="{Binding RotateClockwiseCommand}"
-                HorizontalAlignment="Stretch"
-                ToolTip.Tip="Rotate Player View">
-            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                <ui:Icon Width="16" Height="16" IconName="rotate-cw-square" />
-                <TextBlock Text="Rotate View" />
-            </StackPanel>
-        </Button>
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+            <Button Classes="text"
+                    Command="{Binding RotateClockwiseCommand}"
+                    HorizontalAlignment="Stretch"
+                    ToolTip.Tip="Rotate Player View">
+                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                    <ui:Icon Width="16" Height="16" IconName="rotate-cw-square" />
+                    <TextBlock Text="Rotate" />
+                </StackPanel>
+            </Button>
+            <Button Classes="text"
+                    Grid.Column="1"
+                    Command="{Binding ResetRotationCommand}"
+                    HorizontalAlignment="Stretch"
+                    ToolTip.Tip="Reset Player View Rotation">
+                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                    <ui:Icon Width="16" Height="16" IconName="rotate-ccw-square" />
+                    <TextBlock Text="Reset" />
+                </StackPanel>
+            </Button>
+        </Grid>
+
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="toolSetting" Text="Offset X" VerticalAlignment="Center" />
+            <NumericUpDown Classes="toolSetting"
+                           Grid.Column="1"
+                           Value="{Binding OffsetX}"
+                           Minimum="0"
+                           Maximum="{Binding MaxOffsetX}"
+                           Increment="1"
+                           FormatString="0" />
+        </Grid>
+
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="toolSetting" Text="Offset Y" VerticalAlignment="Center" />
+            <NumericUpDown Classes="toolSetting"
+                           Grid.Column="1"
+                           Value="{Binding OffsetY}"
+                           Minimum="0"
+                           Maximum="{Binding MaxOffsetY}"
+                           Increment="1"
+                           FormatString="0" />
+        </Grid>
+
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="toolSetting" Text="Width" VerticalAlignment="Center" />
+            <NumericUpDown Classes="toolSetting"
+                           Grid.Column="1"
+                           Value="{Binding Width}"
+                           Minimum="{Binding MinSize}"
+                           Maximum="{Binding MaxWidth}"
+                           Increment="1"
+                           FormatString="0" />
+        </Grid>
+
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="toolSetting" Text="Height" VerticalAlignment="Center" />
+            <NumericUpDown Classes="toolSetting"
+                           Grid.Column="1"
+                           Value="{Binding Height}"
+                           Minimum="{Binding MinSize}"
+                           Maximum="{Binding MaxHeight}"
+                           Increment="1"
+                           FormatString="0" />
+        </Grid>
 
         <Grid ColumnDefinitions="*,Auto">
             <TextBlock Classes="toolSetting" Text="Padding" VerticalAlignment="Center" />

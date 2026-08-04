@@ -14,20 +14,26 @@ namespace DMap.ViewModels.ToolSettings;
 /// </summary>
 public sealed class StampToolSettingsViewModel : ToolSettingsViewModelBase
 {
+    bool _isApplyingSelectedStamp;
+
     public StampToolSettingsViewModel(
         Action bringSelectedStampToFront,
         Action bringSelectedStampForward,
         Action sendSelectedStampBackward,
         Action sendSelectedStampToBack,
         Action duplicateSelectedStamp,
-        Action deleteSelectedStamp)
+        Action deleteSelectedStamp,
+        Action<double> setSelectedStampAngle)
     {
+        ArgumentNullException.ThrowIfNull(setSelectedStampAngle);
+
         BringSelectedStampToFrontCommand = new RelayCommand(bringSelectedStampToFront);
         BringSelectedStampForwardCommand = new RelayCommand(bringSelectedStampForward);
         SendSelectedStampBackwardCommand = new RelayCommand(sendSelectedStampBackward);
         SendSelectedStampToBackCommand = new RelayCommand(sendSelectedStampToBack);
         DuplicateSelectedStampCommand = new RelayCommand(duplicateSelectedStamp);
         DeleteSelectedStampCommand = new RelayCommand(deleteSelectedStamp);
+        SetSelectedStampAngle = setSelectedStampAngle;
         SelectedTemplate = Templates[0];
     }
 
@@ -53,6 +59,36 @@ public sealed class StampToolSettingsViewModel : ToolSettingsViewModelBase
         set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
+    public double Angle
+    {
+        get;
+        set
+        {
+            var normalized = NormalizeDegrees(value);
+            if (field == normalized)
+                return;
+
+            this.RaiseAndSetIfChanged(ref field, normalized);
+            if (!_isApplyingSelectedStamp)
+                SetSelectedStampAngle(normalized);
+        }
+    }
+
+    Action<double> SetSelectedStampAngle { get; }
+
+    public void ApplySelectedStamp(StampInstance? stamp)
+    {
+        _isApplyingSelectedStamp = true;
+        try
+        {
+            Angle = stamp is null ? 0 : stamp.RotationDegrees;
+        }
+        finally
+        {
+            _isApplyingSelectedStamp = false;
+        }
+    }
+
     public ICommand BringSelectedStampToFrontCommand { get; }
 
     public ICommand BringSelectedStampForwardCommand { get; }
@@ -64,4 +100,10 @@ public sealed class StampToolSettingsViewModel : ToolSettingsViewModelBase
     public ICommand DuplicateSelectedStampCommand { get; }
 
     public ICommand DeleteSelectedStampCommand { get; }
+
+    static double NormalizeDegrees(double degrees)
+    {
+        var normalized = degrees % 360;
+        return normalized < 0 ? normalized + 360 : normalized;
+    }
 }

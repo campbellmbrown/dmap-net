@@ -422,6 +422,14 @@
                                   VerticalScrollBarVisibility="Auto">
                         <StackPanel Spacing="4">
 
+                            <!-- Fog tool -->
+                            <Button Classes="toolbox"
+                                    Classes.toolSelected="{Binding IsFogSelected}"
+                                    Command="{Binding SelectFogCommand}"
+                                    ToolTip.Tip="Fog">
+                                <ui:Icon IconName="cloud-fog" />
+                            </Button>
+
                             <!-- Brush tool -->
                             <Button Classes="toolbox"
                                     Classes.toolSelected="{Binding IsBrushSelected}"
@@ -438,6 +446,8 @@
                                 <ui:Icon IconName="shapes" />
                             </Button>
 
+                            <Separator Classes="toolbox" />
+
                             <!-- Stamp tool -->
                             <Button Classes="toolbox"
                                     Classes.toolSelected="{Binding IsStampSelected}"
@@ -446,20 +456,21 @@
                                 <ui:Icon IconName="stamp" />
                             </Button>
 
-                            <!-- Fog tool -->
-                            <Button Classes="toolbox"
-                                    Classes.toolSelected="{Binding IsFogSelected}"
-                                    Command="{Binding SelectFogCommand}"
-                                    ToolTip.Tip="Fog">
-                                <ui:Icon IconName="cloud-fog" />
-                            </Button>
-
                             <!-- Cursor tool -->
                             <Button Classes="toolbox"
                                     Classes.toolSelected="{Binding IsCursorSelected}"
                                     Command="{Binding SelectCursorCommand}"
                                     ToolTip.Tip="Cursor">
                                 <ui:Icon IconName="crosshair" />
+                            </Button>
+
+                            <Separator Classes="toolbox" />
+
+                            <Button Classes="toolbox"
+                                    Classes.toolSelected="{Binding IsPlayerViewSelected}"
+                                    Command="{Binding SelectPlayerViewCommand}"
+                                    ToolTip.Tip="Player View">
+                                <ui:Icon IconName="scan" />
                             </Button>
 
                             <Button Classes="toolbox"
@@ -475,13 +486,6 @@
                                     Command="{Binding SelectPanCommand}"
                                     ToolTip.Tip="Pan">
                                 <ui:Icon IconName="hand" />
-                            </Button>
-
-                            <Button Classes="toolbox"
-                                    Classes.toolSelected="{Binding IsPlayerViewSelected}"
-                                    Command="{Binding SelectPlayerViewCommand}"
-                                    ToolTip.Tip="Player View">
-                                <ui:Icon IconName="scan" />
                             </Button>
 
                             <StackPanel IsVisible="{Binding ShowToolSettingsRailToggle}"

@@ -89,6 +89,24 @@
                 </Flyout>
             </Button.Flyout>
         </Button>
+        <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="toolSetting" Text="Angle" VerticalAlignment="Center" />
+            <NumericUpDown Classes="toolSetting"
+                           Grid.Column="1"
+                           Value="{Binding Angle}"
+                           Minimum="0"
+                           Maximum="359"
+                           Increment="1"
+                           FormatString="0"
+                           IsEnabled="{Binding HasSelectedStamp}" />
+        </Grid>
+        <Slider Minimum="0"
+                Maximum="359"
+                Value="{Binding Angle}"
+                TickFrequency="1"
+                IsSnapToTickEnabled="True"
+                HorizontalAlignment="Stretch"
+                IsEnabled="{Binding HasSelectedStamp}" />
         <TextBlock Classes="toolSetting" Text="Controls" Margin="0,4,0,0" />
         <Button Classes="text"
                 HorizontalAlignment="Stretch"

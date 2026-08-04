@@ -140,6 +140,16 @@ public sealed class StampLayerController
             NotifyStampChanged(selectedStamp);
     }
 
+    public void ResetSelectedRotation()
+    {
+        if (SelectedStamp is null)
+            return;
+
+        SelectedStamp.RotationDegrees = 0;
+        NotifyStampChanged(SelectedStamp);
+        Invalidate();
+    }
+
     void Select(StampInstance stamp)
     {
         if (SelectedStamp == stamp)
