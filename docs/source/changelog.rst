@@ -9,6 +9,7 @@ Unreleased
 * Add a Player View tool so the DM can control the player-visible map rectangle independently from the DM pan, zoom, and rotation view.
 * Add player-view rotation and padding settings, synchronized to connected and late-joining players.
 * Remove the paused-view restore button now that the player view is controlled by its own rectangle.
+* Change the app theme.
 
 :release-link:`v1.4.0`
 ----------------------

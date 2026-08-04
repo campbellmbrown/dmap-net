@@ -7,10 +7,10 @@
 
     <Application.Resources>
         <!-- Palette -->
-        <Color x:Key="DMapBackground">#0B0B2C</Color> <!-- "#0B0B2C" -->
-        <Color x:Key="DMapHover">#20205c</Color> <!-- "#20205c" -->
-        <Color x:Key="DMapSelected">#343475</Color> <!-- "#343475" -->
-        <Color x:Key="DMapHighlight">#444499</Color> <!-- "#444499" -->
+        <Color x:Key="DMapBackground">#222226</Color> <!-- "#222226" -->
+        <Color x:Key="DMapHover">#35353D</Color> <!-- "#35353D" -->
+        <Color x:Key="DMapSelected">#454550</Color> <!-- "#454550" -->
+        <Color x:Key="DMapHighlight">#404045</Color> <!-- "#404045" -->
         <!-- <Color x:Key="DMapForeground">#A1A1E8</Color> "#A1A1E8" -->
         <Color x:Key="DMapForeground">#FFFFFF</Color> <!-- "#FFFFFF" -->
         <media:FontFamily x:Key="DMapFontFamily">avares://DMap/Assets/Fonts#Pixelify Sans</media:FontFamily>
@@ -98,7 +98,7 @@
         <SolidColorBrush x:Key="SliderTrackValueFillPointerOver" Color="{StaticResource DMapHighlight}" />
         <SolidColorBrush x:Key="SliderTrackValueFillPressed" Color="{StaticResource DMapHighlight}" />
         <SolidColorBrush x:Key="SliderTrackValueFillDisabled" Color="{StaticResource DMapSelected}" Opacity="0.6" />
-        <SolidColorBrush x:Key="SliderThumbBackground" Color="{StaticResource DMapSelected}" />
+        <SolidColorBrush x:Key="SliderThumbBackground" Color="{StaticResource DMapForeground}" />
         <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver" Color="{StaticResource DMapHighlight}" />
         <SolidColorBrush x:Key="SliderThumbBackgroundPressed" Color="{StaticResource DMapForeground}" />
         <SolidColorBrush x:Key="SliderThumbBackgroundDisabled" Color="{StaticResource DMapSelected}" Opacity="0.6" />

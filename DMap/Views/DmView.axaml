@@ -24,8 +24,6 @@
         </Style>
         <Style Selector="Border.overlay">
             <Setter Property="Background" Value="{StaticResource DMapBackground}" />
-            <Setter Property="BorderBrush" Value="{StaticResource DMapHighlight}" />
-            <Setter Property="BorderThickness" Value="2" />
             <Setter Property="CornerRadius" Value="8" />
             <Setter Property="BoxShadow" Value="0 2 8 0 #40000000" />
         </Style>
@@ -272,7 +270,7 @@
         </Menu>
 
         <!-- Toolbar -->
-        <Border DockPanel.Dock="Top" Background="{StaticResource DMapBackground}" BorderBrush="{StaticResource DMapHighlight}" BorderThickness="0,2,0,2">
+        <Border DockPanel.Dock="Top" Background="{StaticResource DMapBackground}">
             <StackPanel Orientation="Horizontal"
                         Spacing="4"
                         Margin="4">
