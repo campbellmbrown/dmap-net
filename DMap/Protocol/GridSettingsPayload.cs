@@ -12,14 +12,14 @@ public sealed class GridSettingsPayload : IPayload
     public bool IsVisible { get; init; }
     public double SquareSize { get; init; }
     public double LineWidth { get; init; }
-    public double Opacity { get; init; }
     public byte R { get; init; }
     public byte G { get; init; }
     public byte B { get; init; }
+    public byte A { get; init; } = byte.MaxValue;
     public double OffsetX { get; init; }
     public double OffsetY { get; init; }
 
-    public Color Color => Color.FromRgb(R, G, B);
+    public Color Color => Color.FromArgb(A, R, G, B);
 
     public byte[] Serialize()
     {
@@ -28,10 +28,10 @@ public sealed class GridSettingsPayload : IPayload
         writer.Write(IsVisible);
         writer.Write(SquareSize);
         writer.Write(LineWidth);
-        writer.Write(Opacity);
         writer.Write(R);
         writer.Write(G);
         writer.Write(B);
+        writer.Write(A);
         writer.Write(OffsetX);
         writer.Write(OffsetY);
         return ms.ToArray();
@@ -46,10 +46,10 @@ public sealed class GridSettingsPayload : IPayload
             IsVisible = reader.ReadBoolean(),
             SquareSize = reader.ReadDouble(),
             LineWidth = reader.ReadDouble(),
-            Opacity = reader.ReadDouble(),
             R = reader.ReadByte(),
             G = reader.ReadByte(),
             B = reader.ReadByte(),
+            A = reader.ReadByte(),
             OffsetX = reader.ReadDouble(),
             OffsetY = reader.ReadDouble(),
         };

@@ -25,19 +25,13 @@
         </Grid>
         <Slider Minimum="0.25" Maximum="10" Value="{Binding LineWidth}" />
         <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Classes="toolSetting" Text="Opacity" VerticalAlignment="Center" />
-            <NumericUpDown Classes="toolSetting" Grid.Column="1" Value="{Binding Opacity}"
-                           Minimum="0" Maximum="1" Increment="0.01" FormatString="0.00" />
-        </Grid>
-        <Slider Minimum="0" Maximum="1" Value="{Binding Opacity}" />
-        <Grid ColumnDefinitions="*,Auto">
             <TextBlock Classes="toolSetting" Text="Grid Color" VerticalAlignment="Center" />
             <Border Grid.Column="1"
                     BorderThickness="2"
                     BorderBrush="{StaticResource DMapHighlight}"
                     CornerRadius="4"
                     Padding="0">
-                <ColorPicker Color="{Binding Color}" IsAlphaVisible="False" IsAlphaEnabled="False" IsColorPreviewVisible="False" />
+                <ColorPicker Color="{Binding Color}" />
             </Border>
         </Grid>
         <Grid ColumnDefinitions="*,Auto">

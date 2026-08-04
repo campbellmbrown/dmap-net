@@ -10,6 +10,7 @@ Unreleased
 * Add player-view rotation and padding settings, synchronized to connected and late-joining players.
 * Remove the paused-view restore button now that the player view is controlled by its own rectangle.
 * Change the app theme and font.
+* Combine opacity with the grid color picker in the grid settings panel.
 
 :release-link:`v1.4.0`
 ----------------------

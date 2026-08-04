@@ -9,6 +9,8 @@ namespace DMap.ViewModels.ToolSettings;
 /// </summary>
 public sealed class GridToolSettingsViewModel : ToolSettingsViewModelBase
 {
+    const byte DefaultAlpha = 166;
+
     /// <inheritdoc />
     public override string Name => "Grid Settings";
 
@@ -33,19 +35,12 @@ public sealed class GridToolSettingsViewModel : ToolSettingsViewModelBase
         set => this.RaiseAndSetIfChanged(ref field, value);
     } = 1;
 
-    /// <summary>Grid opacity in [0, 1].</summary>
-    public double Opacity
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    } = 0.65;
-
     /// <summary>Grid line colour.</summary>
     public Color Color
     {
         get;
         set => this.RaiseAndSetIfChanged(ref field, value);
-    } = Colors.White;
+    } = Color.FromArgb(DefaultAlpha, 255, 255, 255);
 
     /// <summary>Horizontal grid offset relative to the square size.</summary>
     public double OffsetX

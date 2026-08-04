@@ -374,7 +374,6 @@
                             IsGridVisible="{Binding GridSettings.IsVisible}"
                             GridSquareSize="{Binding GridSettings.SquareSize}"
                             GridLineWidth="{Binding GridSettings.LineWidth}"
-                            GridOpacity="{Binding GridSettings.Opacity}"
                             GridColor="{Binding GridSettings.Color}"
                             GridOffsetX="{Binding GridSettings.OffsetX}"
                             GridOffsetY="{Binding GridSettings.OffsetY}"

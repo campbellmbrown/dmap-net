@@ -157,8 +157,7 @@ public class PlayerViewModel : ViewModelBase, IDisposable
     public bool IsGridVisible { get; private set => this.RaiseAndSetIfChanged(ref field, value); }
     public double GridSquareSize { get; private set => this.RaiseAndSetIfChanged(ref field, value); } = 70;
     public double GridLineWidth { get; private set => this.RaiseAndSetIfChanged(ref field, value); } = 1;
-    public double GridOpacity { get; private set => this.RaiseAndSetIfChanged(ref field, value); } = 0.65;
-    public Color GridColor { get; private set => this.RaiseAndSetIfChanged(ref field, value); } = Colors.White;
+    public Color GridColor { get; private set => this.RaiseAndSetIfChanged(ref field, value); } = Color.FromArgb(166, 255, 255, 255);
     public double GridOffsetX { get; private set => this.RaiseAndSetIfChanged(ref field, value); }
     public double GridOffsetY { get; private set => this.RaiseAndSetIfChanged(ref field, value); }
 
@@ -385,7 +384,6 @@ public class PlayerViewModel : ViewModelBase, IDisposable
             IsGridVisible = settings.IsVisible;
             GridSquareSize = settings.SquareSize;
             GridLineWidth = settings.LineWidth;
-            GridOpacity = settings.Opacity;
             GridColor = settings.Color;
             GridOffsetX = settings.OffsetX;
             GridOffsetY = settings.OffsetY;

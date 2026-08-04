@@ -967,10 +967,10 @@ public class DmViewModel : ViewModelBase, IDisposable
             IsVisible = GridSettings.IsVisible,
             SquareSize = GridSettings.SquareSize,
             LineWidth = GridSettings.LineWidth,
-            Opacity = GridSettings.Opacity,
             R = GridSettings.Color.R,
             G = GridSettings.Color.G,
             B = GridSettings.Color.B,
+            A = GridSettings.Color.A,
             OffsetX = GridSettings.OffsetX,
             OffsetY = GridSettings.OffsetY,
         };
@@ -999,7 +999,6 @@ public class DmViewModel : ViewModelBase, IDisposable
             or (nameof(GridToolSettingsViewModel.IsVisible))
             or (nameof(GridToolSettingsViewModel.SquareSize))
             or (nameof(GridToolSettingsViewModel.LineWidth))
-            or (nameof(GridToolSettingsViewModel.Opacity))
             or (nameof(GridToolSettingsViewModel.Color))
             or (nameof(GridToolSettingsViewModel.OffsetX))
             or (nameof(GridToolSettingsViewModel.OffsetY)))

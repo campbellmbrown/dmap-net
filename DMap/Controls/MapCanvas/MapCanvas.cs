@@ -117,8 +117,7 @@ public class MapCanvas : Control
     public static readonly StyledProperty<bool> IsGridVisibleProperty = AvaloniaProperty.Register<MapCanvas, bool>(nameof(IsGridVisible));
     public static readonly StyledProperty<double> GridSquareSizeProperty = AvaloniaProperty.Register<MapCanvas, double>(nameof(GridSquareSize), 70);
     public static readonly StyledProperty<double> GridLineWidthProperty = AvaloniaProperty.Register<MapCanvas, double>(nameof(GridLineWidth), 1);
-    public static readonly StyledProperty<double> GridOpacityProperty = AvaloniaProperty.Register<MapCanvas, double>(nameof(GridOpacity), 0.65);
-    public static readonly StyledProperty<Color> GridColorProperty = AvaloniaProperty.Register<MapCanvas, Color>(nameof(GridColor), Colors.White);
+    public static readonly StyledProperty<Color> GridColorProperty = AvaloniaProperty.Register<MapCanvas, Color>(nameof(GridColor), Color.FromArgb(166, 255, 255, 255));
     public static readonly StyledProperty<double> GridOffsetXProperty = AvaloniaProperty.Register<MapCanvas, double>(nameof(GridOffsetX));
     public static readonly StyledProperty<double> GridOffsetYProperty = AvaloniaProperty.Register<MapCanvas, double>(nameof(GridOffsetY));
 
@@ -336,7 +335,6 @@ public class MapCanvas : Control
     public bool IsGridVisible { get => GetValue(IsGridVisibleProperty); set => SetValue(IsGridVisibleProperty, value); }
     public double GridSquareSize { get => GetValue(GridSquareSizeProperty); set => SetValue(GridSquareSizeProperty, value); }
     public double GridLineWidth { get => GetValue(GridLineWidthProperty); set => SetValue(GridLineWidthProperty, value); }
-    public double GridOpacity { get => GetValue(GridOpacityProperty); set => SetValue(GridOpacityProperty, value); }
     public Color GridColor { get => GetValue(GridColorProperty); set => SetValue(GridColorProperty, value); }
     public double GridOffsetX { get => GetValue(GridOffsetXProperty); set => SetValue(GridOffsetXProperty, value); }
     public double GridOffsetY { get => GetValue(GridOffsetYProperty); set => SetValue(GridOffsetYProperty, value); }
@@ -446,7 +444,7 @@ public class MapCanvas : Control
             BrushDiameterProperty, ActiveToolProperty, BrushShapeProperty,
             ShapeTypeProperty, ShapeCornerRadiusProperty, CursorTypeProperty, CursorSizeProperty, CursorMapXProperty,
             CursorMapYProperty, IsCursorVisibleProperty, ShowMapProperty,
-            IsGridVisibleProperty, GridSquareSizeProperty, GridLineWidthProperty, GridOpacityProperty, GridColorProperty, GridOffsetXProperty, GridOffsetYProperty,
+            IsGridVisibleProperty, GridSquareSizeProperty, GridLineWidthProperty, GridColorProperty, GridOffsetXProperty, GridOffsetYProperty,
             FogTypeProperty, FogColorProperty, FogSeedProperty, StampsProperty, SelectedStampProperty, PlayerViewportProperty);
     }
 
@@ -796,10 +794,10 @@ public class MapCanvas : Control
 
     void RenderGrid(DrawingContext context, Rect imageRect)
     {
-        if (!IsGridVisible || GridSquareSize <= 1 || GridOpacity <= 0 || GridLineWidth <= 0)
+        if (!IsGridVisible || GridSquareSize <= 1 || GridColor.A == 0 || GridLineWidth <= 0)
             return;
 
-        var lineBrush = new SolidColorBrush(GridColor, Math.Clamp(GridOpacity, 0, 1));
+        var lineBrush = new SolidColorBrush(GridColor);
         var pen = new Pen(lineBrush, Math.Max(0.1, GridLineWidth));
         var square = GridSquareSize;
         var ox = GridOffsetX * square;
