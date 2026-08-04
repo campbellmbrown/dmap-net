@@ -480,6 +480,7 @@ public class MapCanvas : Control
             () => EditStampLayer(_stampLayer.ReorderSelectedToBack),
             () => EditStampLayer(_stampLayer.DuplicateSelected),
             () => EditStampLayer(_stampLayer.ResetSelectedRotation),
+            () => EditStampLayer(_stampLayer.ResetSelectedSize),
             () => EditStampLayer(_stampLayer.DeleteSelected));
         _fogBitmapController.Invalidated += (_, _) => InvalidateVisual();
         _fogBitmapController.IsGeneratingChanged += (_, isGenerating) => IsFogGenerating = isGenerating;

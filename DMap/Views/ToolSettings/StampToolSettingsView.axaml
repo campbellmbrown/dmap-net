@@ -107,6 +107,17 @@
                 IsSnapToTickEnabled="True"
                 HorizontalAlignment="Stretch"
                 IsEnabled="{Binding HasSelectedStamp}" />
+        <Button Classes="text"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Stretch"
+                Command="{Binding ResetSelectedStampAngleCommand}"
+                IsEnabled="{Binding HasSelectedStamp}"
+                ToolTip.Tip="Reset Selected Stamp Angle">
+            <Grid ColumnDefinitions="20,*" ColumnSpacing="6" HorizontalAlignment="Stretch">
+                <ui:Icon Width="16" Height="16" IconName="rotate-ccw-square" />
+                <TextBlock Grid.Column="1" Text="Reset Angle" VerticalAlignment="Center" />
+            </Grid>
+        </Button>
         <TextBlock Classes="toolSetting" Text="Controls" Margin="0,4,0,0" />
         <Button Classes="text"
                 HorizontalAlignment="Stretch"
@@ -161,6 +172,17 @@
             <Grid ColumnDefinitions="20,*" ColumnSpacing="6" HorizontalAlignment="Stretch">
                 <ui:Icon Width="16" Height="16" IconName="copy" />
                 <TextBlock Grid.Column="1" Text="Duplicate" VerticalAlignment="Center" />
+            </Grid>
+        </Button>
+        <Button Classes="text"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Stretch"
+                Command="{Binding ResetSelectedStampSizeCommand}"
+                IsEnabled="{Binding HasSelectedStamp}"
+                ToolTip.Tip="Reset Selected Stamp Size">
+            <Grid ColumnDefinitions="20,*" ColumnSpacing="6" HorizontalAlignment="Stretch">
+                <ui:Icon Width="16" Height="16" IconName="scaling" />
+                <TextBlock Grid.Column="1" Text="Reset Size" VerticalAlignment="Center" />
             </Grid>
         </Button>
         <Button Classes="text"

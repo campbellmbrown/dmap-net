@@ -150,6 +150,32 @@ public sealed class StampLayerController
         Invalidate();
     }
 
+    public void ResetSelectedSize()
+    {
+        if (SelectedStamp is null)
+            return;
+
+        var template = StampCatalog.Find(SelectedStamp.TemplateId);
+        if (template is null)
+            return;
+
+        var center = _transformEditor.GetCenter(SelectedStamp);
+        var rect = _transformEditor.ClampRect(
+            new Rect(
+                center.X - template.DefaultWidth / 2.0,
+                center.Y - template.DefaultHeight / 2.0,
+                template.DefaultWidth,
+                template.DefaultHeight),
+            MapSize);
+
+        SelectedStamp.X = rect.X;
+        SelectedStamp.Y = rect.Y;
+        SelectedStamp.Width = rect.Width;
+        SelectedStamp.Height = rect.Height;
+        NotifyStampChanged(SelectedStamp);
+        Invalidate();
+    }
+
     void Select(StampInstance stamp)
     {
         if (SelectedStamp == stamp)

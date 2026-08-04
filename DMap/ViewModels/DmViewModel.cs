@@ -435,6 +435,7 @@ public class DmViewModel : ViewModelBase, IDisposable
             () => ReorderSelectedStampBy(-1),
             () => ReorderSelectedStampToBack(),
             DuplicateSelectedStamp,
+            ResetSelectedStampSize,
             DeleteSelectedStamp,
             SetSelectedStampAngle);
         PlayerViewSettings = new PlayerViewToolSettingsViewModel(RotatePlayerViewportClockwise, ResetPlayerViewportRotation);
@@ -785,6 +786,39 @@ public class DmViewModel : ViewModelBase, IDisposable
 
         stamp.RotationDegrees = NormalizeDegrees(angle);
         StampSettings.ApplySelectedStamp(stamp);
+        RefreshSelectedStamp();
+        BroadcastStamps();
+    }
+
+    void ResetSelectedStampSize()
+    {
+        var stamp = SelectedStamp;
+        if (stamp is null)
+            return;
+
+        var template = StampCatalog.Find(stamp.TemplateId);
+        if (template is null)
+            return;
+
+        var centerX = stamp.X + stamp.Width / 2.0;
+        var centerY = stamp.Y + stamp.Height / 2.0;
+        var width = template.DefaultWidth;
+        var height = template.DefaultHeight;
+        var x = centerX - width / 2.0;
+        var y = centerY - height / 2.0;
+
+        if (MapImage is not null)
+        {
+            width = Math.Min(width, MapImage.Size.Width);
+            height = Math.Min(height, MapImage.Size.Height);
+            x = Math.Clamp(x, 0, Math.Max(0, MapImage.Size.Width - width));
+            y = Math.Clamp(y, 0, Math.Max(0, MapImage.Size.Height - height));
+        }
+
+        stamp.X = x;
+        stamp.Y = y;
+        stamp.Width = width;
+        stamp.Height = height;
         RefreshSelectedStamp();
         BroadcastStamps();
     }

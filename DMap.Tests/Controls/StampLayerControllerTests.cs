@@ -164,6 +164,29 @@ public class StampLayerControllerTests
         });
     }
 
+    [Test]
+    public void ResetSelectedSize_RestoresTemplateSizeAroundCenter()
+    {
+        // Arrange
+        var selected = CreateStamp(x: 60, y: 70, width: 40, height: 20);
+        var state = new StampLayerState([selected], selected);
+        var controller = CreateController(state);
+
+        // Act
+        controller.ResetSelectedSize();
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(selected.Width, Is.EqualTo(180));
+            Assert.That(selected.Height, Is.EqualTo(100));
+            Assert.That(selected.X, Is.EqualTo(0));
+            Assert.That(selected.Y, Is.EqualTo(30));
+            Assert.That(state.ChangedStamps, Is.EqualTo(new[] { selected }));
+            Assert.That(state.InvalidateCount, Is.EqualTo(1));
+        });
+    }
+
     static StampLayerController CreateController(StampLayerState state) =>
         CreateControllerWithState(state);
 

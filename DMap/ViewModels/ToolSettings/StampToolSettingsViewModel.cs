@@ -22,9 +22,11 @@ public sealed class StampToolSettingsViewModel : ToolSettingsViewModelBase
         Action sendSelectedStampBackward,
         Action sendSelectedStampToBack,
         Action duplicateSelectedStamp,
+        Action resetSelectedStampSize,
         Action deleteSelectedStamp,
         Action<double> setSelectedStampAngle)
     {
+        ArgumentNullException.ThrowIfNull(resetSelectedStampSize);
         ArgumentNullException.ThrowIfNull(setSelectedStampAngle);
 
         BringSelectedStampToFrontCommand = new RelayCommand(bringSelectedStampToFront);
@@ -32,8 +34,10 @@ public sealed class StampToolSettingsViewModel : ToolSettingsViewModelBase
         SendSelectedStampBackwardCommand = new RelayCommand(sendSelectedStampBackward);
         SendSelectedStampToBackCommand = new RelayCommand(sendSelectedStampToBack);
         DuplicateSelectedStampCommand = new RelayCommand(duplicateSelectedStamp);
+        ResetSelectedStampSizeCommand = new RelayCommand(resetSelectedStampSize);
         DeleteSelectedStampCommand = new RelayCommand(deleteSelectedStamp);
         SetSelectedStampAngle = setSelectedStampAngle;
+        ResetSelectedStampAngleCommand = new RelayCommand(() => Angle = 0);
         SelectedTemplate = Templates[0];
     }
 
@@ -98,6 +102,10 @@ public sealed class StampToolSettingsViewModel : ToolSettingsViewModelBase
     public ICommand SendSelectedStampToBackCommand { get; }
 
     public ICommand DuplicateSelectedStampCommand { get; }
+
+    public ICommand ResetSelectedStampSizeCommand { get; }
+
+    public ICommand ResetSelectedStampAngleCommand { get; }
 
     public ICommand DeleteSelectedStampCommand { get; }
 
