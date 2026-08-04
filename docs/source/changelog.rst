@@ -4,13 +4,11 @@ Changelog
 Unreleased
 ----------
 
-* Add a Stamp tool for placing, selecting, moving, resizing, rotating, reordering, duplicating, and deleting PNG stamps above the map image and below fog.
-* Synchronize the full stamp layer to player clients, including paused-update catch-up and late joiners.
-* Add a Player View tool so the DM can control the player-visible map rectangle independently from the DM pan, zoom, and rotation view.
-* Add player-view rotation and padding settings, synchronized to connected and late-joining players.
-* Remove the paused-view restore button now that the player view is controlled by its own rectangle.
+* Add a Stamp tool.
+* Add a Player View tool.
 * Change the app theme and font.
 * Combine opacity with the grid color picker in the grid settings panel.
+* Simplified player connection.
 
 :release-link:`v1.4.0`
 ----------------------

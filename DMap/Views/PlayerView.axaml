@@ -10,146 +10,44 @@
              x:DataType="vm:PlayerViewModel">
 
     <UserControl.Styles>
-        <Style Selector="TextBlock.playerTitle">
-            <Setter Property="FontSize" Value="32" />
-            <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="Foreground" Value="{StaticResource DMapForeground}" />
-            <Setter Property="HorizontalAlignment" Value="Center" />
-        </Style>
-        <Style Selector="TextBlock.playerSubtitle">
-            <Setter Property="Foreground" Value="{StaticResource DMapForeground}" />
-            <Setter Property="Opacity" Value="0.8" />
-            <Setter Property="HorizontalAlignment" Value="Center" />
-        </Style>
-        <Style Selector="Border.playerCard">
-            <Setter Property="Background" Value="#CC0B0B2C" />
-            <Setter Property="BorderBrush" Value="{StaticResource DMapHighlight}" />
-            <Setter Property="BorderThickness" Value="2" />
-            <Setter Property="CornerRadius" Value="18" />
-            <Setter Property="BoxShadow" Value="0 14 40 0 #50000000" />
-        </Style>
-        <Style Selector="Button ui|Icon">
-            <Setter Property="Width" Value="16" />
-            <Setter Property="Height" Value="16" />
-        </Style>
         <Style Selector="MenuItem ui|Icon">
             <Setter Property="Width" Value="16" />
             <Setter Property="Height" Value="16" />
         </Style>
-        <Style Selector="ListBox.playerDiscovery">
-            <Setter Property="Background" Value="#550B0B2C" />
-            <Setter Property="BorderBrush" Value="{StaticResource DMapHighlight}" />
-            <Setter Property="BorderThickness" Value="2" />
-        </Style>
-        <Style Selector="ListBox.playerDiscovery TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource DMapForeground}" />
-        </Style>
-        <Style Selector="ListBox.playerDiscovery ListBoxItem">
-            <Setter Property="Padding" Value="8,6" />
-            <Setter Property="Margin" Value="4" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="Transparent" />
-            <Setter Property="CornerRadius" Value="8" />
-        </Style>
-        <Style Selector="ListBox.playerDiscovery ListBoxItem:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="{StaticResource DMapHover}" />
-        </Style>
-        <Style Selector="ListBox.playerDiscovery ListBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="{StaticResource DMapSelected}" />
-        </Style>
-        <Style Selector="ListBox.playerDiscovery ListBoxItem:selected:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="{StaticResource DMapHighlight}" />
-        </Style>
     </UserControl.Styles>
 
-    <Grid>
-        <Border IsVisible="{Binding !IsConnected}">
-            <Border.Background>
-                <RadialGradientBrush Center="50%,50%"
-                                     GradientOrigin="50%,50%"
-                                     RadiusX="75%"
-                                     RadiusY="75%">
-                    <GradientStop Color="{StaticResource DMapSelected}" Offset="0" />
-                    <GradientStop Color="{StaticResource DMapBackground}" Offset="1" />
-                </RadialGradientBrush>
-            </Border.Background>
+    <DockPanel>
+        <DockPanel.ContextMenu>
+            <ContextMenu>
+                <MenuItem Header="Disconnect" Command="{Binding DisconnectCommand}">
+                    <MenuItem.Icon>
+                        <ui:Icon IconName="unplug" />
+                    </MenuItem.Icon>
+                </MenuItem>
+            </ContextMenu>
+        </DockPanel.ContextMenu>
 
-            <!-- Discovery / Connection Panel (shown when not connected) -->
-            <Border Classes="playerCard"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    MaxWidth="460"
-                    Margin="24"
-                    Padding="24">
-                <StackPanel Spacing="16">
-                    <TextBlock Classes="playerTitle" Text="DMap Player" />
-                    <TextBlock Classes="playerSubtitle"
-                               Text="{Binding StatusText}"
-                               TextAlignment="Center"
-                               TextWrapping="Wrap" />
-
-                    <ListBox Classes="playerDiscovery"
-                             ItemsSource="{Binding DiscoveredDms}"
-                             SelectedItem="{Binding SelectedDm}"
-                             MinHeight="120"
-                             MaxHeight="300">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                                    <TextBlock Text="{Binding TcpEndPoint}" Opacity="0.65" />
-                                </StackPanel>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-
-                    <Button Classes="text"
-                            Command="{Binding ConnectCommand}"
-                            Width="132"
-                            HorizontalAlignment="Center">
-                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                            <ui:Icon IconName="plug-zap" />
-                            <TextBlock Text="Connect" />
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
-            </Border>
-        </Border>
-
-        <!-- Map Display (shown when connected) -->
-        <DockPanel IsVisible="{Binding IsConnected}">
-            <DockPanel.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Header="Disconnect" Command="{Binding DisconnectCommand}">
-                        <MenuItem.Icon>
-                            <ui:Icon IconName="unplug" />
-                        </MenuItem.Icon>
-                    </MenuItem>
-                </ContextMenu>
-            </DockPanel.ContextMenu>
-
-            <controls:MapCanvas x:Name="MapCanvas"
-                                MapImage="{Binding MapImage}"
-                                FogMask="{Binding FogMask}"
-                                IsDmMode="False"
-                                FogOpacity="1.0"
-                                FogType="{Binding FogType}"
-                                FogColor="{Binding FogColor}"
-                                FogSeed="{Binding FogSeed}"
-                                CursorType="{Binding CursorType}"
-                                CursorSize="{Binding CursorSize}"
-                                CursorMapX="{Binding CursorMapX}"
-                                CursorMapY="{Binding CursorMapY}"
-                                IsCursorVisible="{Binding IsCursorVisible}"
-                                IsFogGenerating="{Binding IsFogGenerating, Mode=OneWayToSource}"
-                                IsGridVisible="{Binding IsGridVisible}"
-                                GridSquareSize="{Binding GridSquareSize}"
-                                GridLineWidth="{Binding GridLineWidth}"
-                                GridColor="{Binding GridColor}"
-                                GridOffsetX="{Binding GridOffsetX}"
-                                GridOffsetY="{Binding GridOffsetY}"
-                                Stamps="{Binding Stamps}" />
-        </DockPanel>
-    </Grid>
+        <controls:MapCanvas x:Name="MapCanvas"
+                            MapImage="{Binding MapImage}"
+                            FogMask="{Binding FogMask}"
+                            IsDmMode="False"
+                            FogOpacity="1.0"
+                            FogType="{Binding FogType}"
+                            FogColor="{Binding FogColor}"
+                            FogSeed="{Binding FogSeed}"
+                            CursorType="{Binding CursorType}"
+                            CursorSize="{Binding CursorSize}"
+                            CursorMapX="{Binding CursorMapX}"
+                            CursorMapY="{Binding CursorMapY}"
+                            IsCursorVisible="{Binding IsCursorVisible}"
+                            IsFogGenerating="{Binding IsFogGenerating, Mode=OneWayToSource}"
+                            IsGridVisible="{Binding IsGridVisible}"
+                            GridSquareSize="{Binding GridSquareSize}"
+                            GridLineWidth="{Binding GridLineWidth}"
+                            GridColor="{Binding GridColor}"
+                            GridOffsetX="{Binding GridOffsetX}"
+                            GridOffsetY="{Binding GridOffsetY}"
+                            Stamps="{Binding Stamps}" />
+    </DockPanel>
 
 </UserControl>

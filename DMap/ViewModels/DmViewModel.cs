@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Net;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
@@ -385,6 +386,7 @@ public class DmViewModel : ViewModelBase, IDisposable
     bool _hasPendingFogAppearanceUpdate;
     bool _hasPendingGridUpdate;
     bool _hasPendingStampUpdate;
+    bool _isHostStarted;
     ViewportPayload? _latestViewport;
     CursorPayload? _latestCursor;
     bool _isViewportBroadcastQueued;
@@ -476,14 +478,17 @@ public class DmViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
-    /// Creates a <see cref="PlayerViewModel"/>, starts discovery listening, and triggers the
+    /// Creates a <see cref="PlayerViewModel"/>, connects it to this DM host, and triggers the
     /// <see cref="ShowPlayerWindow"/> interaction so the view can open the player window.
     /// </summary>
     async Task OpenPlayerWindowAsync()
     {
         Log.Information("Opening player window.");
+        await EnsureHostStartedAsync();
+
         var playerVm = _createPlayer();
-        await playerVm.StartDiscoveryAsync();
+        await playerVm.ConnectAsync(new IPEndPoint(IPAddress.Loopback, _hostService.Port));
+
         await ShowPlayerWindow.Handle(playerVm);
     }
 
@@ -1238,7 +1243,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         if (_session is null)
             return;
 
-        await _hostService.StartAsync(default);
+        await EnsureHostStartedAsync();
 
         if (_fogService.Mask != null)
             await _hostService.SendSessionInfoAsync(_session, _fogService.Mask, default);
@@ -1261,6 +1266,19 @@ public class DmViewModel : ViewModelBase, IDisposable
             "Hosting session {SessionId} on TCP port {Port} and broadcasting discovery.",
             _session.SessionId,
             _hostService.Port);
+    }
+
+    /// <summary>Starts the TCP host once, even before a map/session exists.</summary>
+    async Task EnsureHostStartedAsync()
+    {
+        if (_isHostStarted)
+            return;
+
+        await _hostService.StartAsync(default);
+        _isHostStarted = true;
+        ConnectedPlayers = _hostService.ConnectedPlayerCount;
+
+        Log.Information("Player host listening on TCP port {Port}.", _hostService.Port);
     }
 
     /// <inheritdoc/>

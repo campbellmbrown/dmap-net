@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Net;
 using System.Reactive;
 using System.Threading.Tasks;
 
@@ -20,28 +21,13 @@ using ReactiveUI;
 namespace DMap.ViewModels;
 
 /// <summary>
-/// ViewModel for the player view. Manages DM discovery, connection state, and incoming
-/// map and fog updates from the DM host. All network callbacks are marshalled to the UI
-/// thread via <see cref="Dispatcher.UIThread"/>.
+/// ViewModel for the player view. Manages the DM connection and incoming map and fog updates.
+/// All network callbacks are marshalled to the UI thread via <see cref="Dispatcher.UIThread"/>.
 /// </summary>
 public class PlayerViewModel : ViewModelBase, IDisposable
 {
     readonly IFogMaskService _fogService;
-    readonly IDiscoveryService _discoveryService;
     readonly IPlayerClientService _clientService;
-
-    /// <summary>
-    /// Live collection of DM sessions discovered via UDP broadcast.
-    /// De-duplicated by <see cref="DiscoveredDm.SessionId"/> before adding.
-    /// </summary>
-    public ObservableCollection<DiscoveredDm> DiscoveredDms { get; } = new();
-
-    /// <summary>The DM session selected in the discovery list, or <see langword="null"/> if none is selected.</summary>
-    public DiscoveredDm? SelectedDm
-    {
-        get;
-        set => this.RaiseAndSetIfChanged(ref field, value);
-    }
 
     /// <summary><see langword="true"/> when a TCP connection to the DM is open.</summary>
     public bool IsConnected
@@ -49,20 +35,6 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         get;
         private set => this.RaiseAndSetIfChanged(ref field, value);
     }
-
-    /// <summary><see langword="true"/> while a connection attempt is in progress.</summary>
-    public bool IsConnecting
-    {
-        get;
-        private set => this.RaiseAndSetIfChanged(ref field, value);
-    }
-
-    /// <summary>Human-readable status message shown in the player window (e.g. discovery state, connection result).</summary>
-    public string StatusText
-    {
-        get;
-        private set => this.RaiseAndSetIfChanged(ref field, value);
-    } = "Searching for DM sessions...";
 
     /// <summary>The decoded map background image received from the DM, or <see langword="null"/> before the first map arrives.</summary>
     public Bitmap? MapImage
@@ -172,12 +144,6 @@ public class PlayerViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
-    /// Initiates a connection to <see cref="SelectedDm"/>.
-    /// Enabled only when a DM is selected and no connection is active or pending.
-    /// </summary>
-    public ReactiveCommand<Unit, Unit> ConnectCommand { get; }
-
-    /// <summary>
     /// Closes the current connection to the DM.
     /// Enabled only when <see cref="IsConnected"/> is <see langword="true"/>.
     /// </summary>
@@ -193,15 +159,13 @@ public class PlayerViewModel : ViewModelBase, IDisposable
     public event EventHandler<PixelRect>? FogUpdated;
 
     /// <summary>
-    /// Constructs the ViewModel and subscribes to all discovery and client service events.
+    /// Constructs the ViewModel and subscribes to all client service events.
     /// </summary>
-    public PlayerViewModel(IFogMaskService fogService, IDiscoveryService discoveryService, IPlayerClientService clientService)
+    public PlayerViewModel(IFogMaskService fogService, IPlayerClientService clientService)
     {
         _fogService = fogService;
-        _discoveryService = discoveryService;
         _clientService = clientService;
 
-        _discoveryService.DmDiscovered += OnDmDiscovered;
         _clientService.SessionInfoReceived += OnSessionInfoReceived;
         _clientService.MapImageReceived += OnMapImageReceived;
         _clientService.FogDeltaReceived += OnFogDeltaReceived;
@@ -212,12 +176,6 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         _clientService.GridSettingsReceived += OnGridSettingsReceived;
         _clientService.StampsReceived += OnStampsReceived;
         _clientService.Disconnected += OnDisconnected;
-
-        var canConnect = this.WhenAnyValue(
-            x => x.SelectedDm, x => x.IsConnected, x => x.IsConnecting,
-            (dm, connected, connecting) => dm is not null && !connected && !connecting);
-
-        ConnectCommand = ReactiveCommand.CreateFromTask(ConnectAsync, canConnect);
 
         var canDisconnect = this.WhenAnyValue(x => x.IsConnected);
         DisconnectCommand = ReactiveCommand.CreateFromTask(DisconnectAsync, canDisconnect);
@@ -231,60 +189,16 @@ public class PlayerViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
-    /// Starts listening for DM UDP broadcast packets. Should be called before showing the player window.
+    /// Connects to the DM TCP endpoint.
     /// </summary>
-    public async Task StartDiscoveryAsync()
+    public async Task ConnectAsync(IPEndPoint endpoint)
     {
-        await _discoveryService.StartListeningAsync(default);
+        await _clientService.ConnectAsync(endpoint, default);
+        IsConnected = true;
     }
 
     /// <summary>
-    /// Adds the discovered DM to <see cref="DiscoveredDms"/> if its session ID has not already been seen.
-    /// Marshalled to the UI thread because the discovery service fires on a background thread.
-    /// </summary>
-    void OnDmDiscovered(object? sender, DiscoveredDm dm)
-    {
-        Dispatcher.UIThread.Post(() =>
-        {
-            foreach (var existing in DiscoveredDms)
-            {
-                if (existing.SessionId == dm.SessionId)
-                    return;
-            }
-
-            DiscoveredDms.Add(dm);
-        });
-    }
-
-    /// <summary>
-    /// Connects to <see cref="SelectedDm"/> and updates connection state and status text.
-    /// </summary>
-    async Task ConnectAsync()
-    {
-        if (SelectedDm is null)
-            return;
-
-        IsConnecting = true;
-        StatusText = $"Connecting to {SelectedDm.Name}...";
-
-        try
-        {
-            await _clientService.ConnectAsync(SelectedDm.TcpEndPoint, default);
-            IsConnected = true;
-            StatusText = $"Connected to {SelectedDm.Name}";
-        }
-        catch (Exception ex)
-        {
-            StatusText = $"Connection failed: {ex.Message}";
-        }
-        finally
-        {
-            IsConnecting = false;
-        }
-    }
-
-    /// <summary>
-    /// Disconnects from the DM, clears the map and fog, and updates status text.
+    /// Disconnects from the DM and clears the map and fog.
     /// </summary>
     async Task DisconnectAsync()
     {
@@ -295,7 +209,6 @@ public class PlayerViewModel : ViewModelBase, IDisposable
         Viewport = null;
         IsCursorVisible = false;
         Stamps.Clear();
-        StatusText = "Disconnected. Searching for DM sessions...";
     }
 
     /// <summary>
@@ -408,14 +321,12 @@ public class PlayerViewModel : ViewModelBase, IDisposable
             Viewport = null;
             IsCursorVisible = false;
             Stamps.Clear();
-            StatusText = "Disconnected from DM. Searching for sessions...";
         });
     }
 
     /// <inheritdoc/>
     public void Dispose()
     {
-        (_discoveryService as IDisposable)?.Dispose();
         (_clientService as IDisposable)?.Dispose();
     }
 }

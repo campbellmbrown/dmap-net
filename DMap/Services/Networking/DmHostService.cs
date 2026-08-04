@@ -149,6 +149,9 @@ public sealed class DmHostService : IDmHostService
     /// <inheritdoc/>
     public Task StartAsync(CancellationToken ct)
     {
+        if (_listener is not null)
+            return Task.CompletedTask;
+
         _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         _listener = new TcpListener(IPAddress.Any, 0);
         _listener.Start();
