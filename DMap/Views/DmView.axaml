@@ -25,7 +25,7 @@
         <Style Selector="Border.overlay">
             <Setter Property="Background" Value="{StaticResource DMapBackground}" />
             <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="BoxShadow" Value="0 2 8 0 #40000000" />
+            <Setter Property="BoxShadow" Value="0 6 18 0 #70000000" />
         </Style>
         <Style Selector="Separator.toolbar">
             <Setter Property="Width" Value="2" />

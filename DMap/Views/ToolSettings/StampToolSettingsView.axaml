@@ -45,7 +45,7 @@
         </Style>
     </UserControl.Styles>
 
-    <StackPanel Spacing="8" Width="220">
+    <StackPanel Spacing="8" MinWidth="200">
         <TextBlock Classes="toolSetting" Text="Selected Stamp" />
         <Button x:Name="StampCatalogButton"
                 Classes="text"
