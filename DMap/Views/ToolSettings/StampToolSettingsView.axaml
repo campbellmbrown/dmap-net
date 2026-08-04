@@ -93,17 +93,6 @@
         <Button Classes="text"
                 HorizontalAlignment="Stretch"
                 HorizontalContentAlignment="Stretch"
-                Command="{Binding BringSelectedStampToFrontCommand}"
-                IsEnabled="{Binding HasSelectedStamp}"
-                ToolTip.Tip="Bring Selected Stamp to Front">
-            <Grid ColumnDefinitions="20,*" ColumnSpacing="6" HorizontalAlignment="Stretch">
-                <ui:Icon Width="16" Height="16" IconName="bring-to-front" />
-                <TextBlock Grid.Column="1" Text="Bring to Front" VerticalAlignment="Center" />
-            </Grid>
-        </Button>
-        <Button Classes="text"
-                HorizontalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch"
                 Command="{Binding BringSelectedStampForwardCommand}"
                 IsEnabled="{Binding HasSelectedStamp}"
                 ToolTip.Tip="Bring Selected Stamp Forward">
@@ -121,6 +110,17 @@
             <Grid ColumnDefinitions="20,*" ColumnSpacing="6" HorizontalAlignment="Stretch">
                 <ui:Icon Width="16" Height="16" IconName="move-down" />
                 <TextBlock Grid.Column="1" Text="Send Backward" VerticalAlignment="Center" />
+            </Grid>
+        </Button>
+        <Button Classes="text"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Stretch"
+                Command="{Binding BringSelectedStampToFrontCommand}"
+                IsEnabled="{Binding HasSelectedStamp}"
+                ToolTip.Tip="Bring Selected Stamp to Front">
+            <Grid ColumnDefinitions="20,*" ColumnSpacing="6" HorizontalAlignment="Stretch">
+                <ui:Icon Width="16" Height="16" IconName="bring-to-front" />
+                <TextBlock Grid.Column="1" Text="Bring to Front" VerticalAlignment="Center" />
             </Grid>
         </Button>
         <Button Classes="text"

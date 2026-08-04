@@ -482,7 +482,7 @@
                                     Classes.toolSelected="{Binding IsPlayerViewSelected}"
                                     Command="{Binding SelectPlayerViewCommand}"
                                     ToolTip.Tip="Player View">
-                                <ui:Icon IconName="rectangle-horizontal-dot" />
+                                <ui:Icon IconName="scan" />
                             </Button>
 
                             <StackPanel IsVisible="{Binding ShowToolSettingsRailToggle}"
