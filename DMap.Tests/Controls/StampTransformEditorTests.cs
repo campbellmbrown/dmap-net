@@ -68,6 +68,68 @@ public class StampTransformEditorTests
     }
 
     [Test]
+    public void TryBeginHandleDrag_SetsActiveResizeHandle()
+    {
+        // Arrange
+        var editor = new StampTransformEditor();
+        var stamp = CreateStamp(x: 10, y: 20, width: 30, height: 40);
+
+        // Act
+        var began = editor.TryBeginHandleDrag(stamp, new Point(40, 40), zoomLevel: 1);
+
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(began, Is.True);
+            Assert.That(editor.ActiveHandle, Is.EqualTo(StampHandle.Right));
+        });
+    }
+
+    [Test]
+    public void GetHoverHandle_ReturnsHandleUnderPointer()
+    {
+        // Arrange
+        var editor = new StampTransformEditor();
+        var stamp = CreateStamp(x: 10, y: 20, width: 30, height: 40);
+        stamp.RotationDegrees = 90;
+        var rightHandle = editor.GetHandlePoint(stamp, StampHandle.Right, zoomLevel: 1);
+
+        // Act
+        var handle = editor.GetHoverHandle(stamp, rightHandle, zoomLevel: 1);
+
+        // Assert
+        Assert.That(handle, Is.EqualTo(StampHandle.Right));
+    }
+
+    [Test]
+    public void GetHoverHandle_ReturnsNoneWithoutSelectedStamp()
+    {
+        // Arrange
+        var editor = new StampTransformEditor();
+
+        // Act
+        var handle = editor.GetHoverHandle(selectedStamp: null, new Point(40, 40), zoomLevel: 1);
+
+        // Assert
+        Assert.That(handle, Is.EqualTo(StampHandle.None));
+    }
+
+    [Test]
+    public void GetHoverHandle_ReturnsRotateHandleUnderPointer()
+    {
+        // Arrange
+        var editor = new StampTransformEditor();
+        var stamp = CreateStamp(x: 10, y: 20, width: 30, height: 40);
+        var rotateHandle = editor.GetHandlePoint(stamp, StampHandle.Rotate, zoomLevel: 1);
+
+        // Act
+        var handle = editor.GetHoverHandle(stamp, rotateHandle, zoomLevel: 1);
+
+        // Assert
+        Assert.That(handle, Is.EqualTo(StampHandle.Rotate));
+    }
+
+    [Test]
     public void UpdateDrag_RotatesStampFromRotateHandle()
     {
         // Arrange

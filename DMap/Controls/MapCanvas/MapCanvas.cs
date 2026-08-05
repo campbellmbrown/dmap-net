@@ -1032,9 +1032,14 @@ public class MapCanvas : Control
 
         if (ActiveTool == ToolType.Stamp)
         {
-            Cursor = _stampEditor.IsDragging && _stampEditor.DragMode == StampDragMode.Move
-                ? new Cursor(StandardCursorType.SizeAll)
-                : Cursor.Default;
+            if (MapImage is null)
+            {
+                Cursor = Cursor.Default;
+                return;
+            }
+
+            var mapPosition = _viewport.ScreenToMap(_lastMousePosition, MapImage.Size);
+            Cursor = _stampEditor.GetCursor(mapPosition, SelectedStamp, ZoomLevel);
             return;
         }
 
@@ -1219,6 +1224,14 @@ public class MapCanvas : Control
         if (ActiveTool == ToolType.Stamp && _stampEditor.IsDragging)
         {
             UpdateStampInteraction(point.Position, e.KeyModifiers.HasFlag(KeyModifiers.Shift));
+            UpdateCursor();
+            InvalidateVisual();
+            e.Handled = true;
+            return;
+        }
+
+        if (ActiveTool == ToolType.Stamp)
+        {
             UpdateCursor();
             InvalidateVisual();
             e.Handled = true;

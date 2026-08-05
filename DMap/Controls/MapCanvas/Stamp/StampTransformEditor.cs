@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 
 using Avalonia;
+using Avalonia.Input;
 
 using DMap.Models;
 
@@ -22,6 +23,8 @@ public sealed class StampTransformEditor
     public bool IsDragging { get; private set; }
 
     public StampDragMode DragMode => _dragMode;
+
+    public StampHandle ActiveHandle => _activeHandle;
 
     public Rect GetRect(StampInstance stamp) =>
         new(stamp.X, stamp.Y, stamp.Width, stamp.Height);
@@ -79,6 +82,29 @@ public sealed class StampTransformEditor
             handle == StampHandle.Rotate ? StampDragMode.Rotate : StampDragMode.Resize,
             handle);
         return true;
+    }
+
+    public StampHandle GetHoverHandle(StampInstance? selectedStamp, Point mapPosition, double zoomLevel)
+    {
+        if (selectedStamp is null)
+            return StampHandle.None;
+
+        return TryHitHandle(selectedStamp, mapPosition, zoomLevel, out var handle)
+            ? handle
+            : StampHandle.None;
+    }
+
+    public Cursor GetCursor(Point mapPosition, StampInstance? selectedStamp, double zoomLevel)
+    {
+        var handle = IsDragging ? _activeHandle : GetHoverHandle(selectedStamp, mapPosition, zoomLevel);
+        return handle switch
+        {
+            StampHandle.Rotate => new Cursor(StandardCursorType.Cross),
+            StampHandle.None => IsDragging && _dragMode == StampDragMode.Move
+                ? new Cursor(StandardCursorType.SizeAll)
+                : Cursor.Default,
+            _ => GetResizeCursor(handle, selectedStamp?.RotationDegrees ?? _dragStartRotationDegrees),
+        };
     }
 
     public void BeginMoveDrag(StampInstance stamp, Point mapPosition) =>
@@ -250,6 +276,34 @@ public sealed class StampTransformEditor
             StampHandle.BottomLeft => (-1, 1),
             StampHandle.Left => (-1, 0),
             _ => (1, 1),
+        };
+
+    static Cursor GetResizeCursor(StampHandle handle, double rotationDegrees)
+    {
+        var angle = NormalizeDegrees(GetHandleAngleDegrees(handle) + rotationDegrees);
+        var octant = (int)Math.Round(angle / 45.0) % 8;
+        return octant switch
+        {
+            0 or 4 => new Cursor(StandardCursorType.SizeWestEast),
+            1 or 5 => new Cursor(StandardCursorType.TopLeftCorner),
+            2 or 6 => new Cursor(StandardCursorType.SizeNorthSouth),
+            3 or 7 => new Cursor(StandardCursorType.TopRightCorner),
+            _ => Cursor.Default,
+        };
+    }
+
+    static double GetHandleAngleDegrees(StampHandle handle) =>
+        handle switch
+        {
+            StampHandle.Right => 0,
+            StampHandle.BottomRight => 45,
+            StampHandle.Bottom => 90,
+            StampHandle.BottomLeft => 135,
+            StampHandle.Left => 180,
+            StampHandle.TopLeft => 225,
+            StampHandle.Top => 270,
+            StampHandle.TopRight => 315,
+            _ => 0,
         };
 
     static double GetAngleDegrees(Point center, Point point) =>
