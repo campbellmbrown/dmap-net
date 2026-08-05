@@ -17,6 +17,14 @@ public static class StampCatalog
             DefaultWidth = 180,
             DefaultHeight = 100,
         },
+        new StampTemplate
+        {
+            Id = "spirit-guardians",
+            DisplayName = "Spirit Guardians",
+            AssetPath = "avares://DMap/Assets/Stamps/spirit-guardians.png",
+            DefaultWidth = 100,
+            DefaultHeight = 100,
+        },
     ];
 
     public static StampTemplate? Find(string id)

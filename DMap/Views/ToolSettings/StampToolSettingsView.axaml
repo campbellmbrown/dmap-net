@@ -46,7 +46,7 @@
     </UserControl.Styles>
 
     <StackPanel Spacing="8" MinWidth="200">
-        <TextBlock Classes="toolSetting" Text="Selected Stamp" />
+        <TextBlock Classes="toolSetting" Text="Stamp" />
         <Button x:Name="StampCatalogButton"
                 Classes="text"
                 HorizontalAlignment="Stretch"
@@ -89,6 +89,8 @@
                 </Flyout>
             </Button.Flyout>
         </Button>
+
+        <TextBlock Classes="toolSetting" Text="Transform" Margin="0,4,0,0" />
         <Grid ColumnDefinitions="*,Auto">
             <TextBlock Classes="toolSetting" Text="Angle" VerticalAlignment="Center" />
             <NumericUpDown Classes="toolSetting"
@@ -118,7 +120,19 @@
                 <TextBlock Grid.Column="1" Text="Reset Angle" VerticalAlignment="Center" />
             </Grid>
         </Button>
-        <TextBlock Classes="toolSetting" Text="Controls" Margin="0,4,0,0" />
+        <Button Classes="text"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Stretch"
+                Command="{Binding ResetSelectedStampSizeCommand}"
+                IsEnabled="{Binding HasSelectedStamp}"
+                ToolTip.Tip="Reset Selected Stamp Size">
+            <Grid ColumnDefinitions="20,*" ColumnSpacing="6" HorizontalAlignment="Stretch">
+                <ui:Icon Width="16" Height="16" IconName="scaling" />
+                <TextBlock Grid.Column="1" Text="Reset Size" VerticalAlignment="Center" />
+            </Grid>
+        </Button>
+
+        <TextBlock Classes="toolSetting" Text="Layer" Margin="0,4,0,0" />
         <Button Classes="text"
                 HorizontalAlignment="Stretch"
                 HorizontalContentAlignment="Stretch"
@@ -163,6 +177,8 @@
                 <TextBlock Grid.Column="1" Text="Send to Back" VerticalAlignment="Center" />
             </Grid>
         </Button>
+
+        <TextBlock Classes="toolSetting" Text="Actions" Margin="0,4,0,0" />
         <Button Classes="text"
                 HorizontalAlignment="Stretch"
                 HorizontalContentAlignment="Stretch"
@@ -172,17 +188,6 @@
             <Grid ColumnDefinitions="20,*" ColumnSpacing="6" HorizontalAlignment="Stretch">
                 <ui:Icon Width="16" Height="16" IconName="copy" />
                 <TextBlock Grid.Column="1" Text="Duplicate" VerticalAlignment="Center" />
-            </Grid>
-        </Button>
-        <Button Classes="text"
-                HorizontalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch"
-                Command="{Binding ResetSelectedStampSizeCommand}"
-                IsEnabled="{Binding HasSelectedStamp}"
-                ToolTip.Tip="Reset Selected Stamp Size">
-            <Grid ColumnDefinitions="20,*" ColumnSpacing="6" HorizontalAlignment="Stretch">
-                <ui:Icon Width="16" Height="16" IconName="scaling" />
-                <TextBlock Grid.Column="1" Text="Reset Size" VerticalAlignment="Center" />
             </Grid>
         </Button>
         <Button Classes="text"
