@@ -224,7 +224,7 @@
                 </MenuItem>
                 <MenuItem Header="Pixel Scaling">
                     <MenuItem.Icon>
-                        <ui:Icon IconName="square-dot" />
+                        <ui:Icon IconName="gem" />
                     </MenuItem.Icon>
                     <MenuItem Header="Sharp Pixels"
                               Command="{Binding EnablePixelSharpnessCommand}"
