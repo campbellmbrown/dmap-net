@@ -30,6 +30,11 @@
         <SolidColorBrush x:Key="MenuFlyoutItemBackgroundDisabled" Color="{StaticResource DMapBackground}" />
         <SolidColorBrush x:Key="MenuFlyoutItemForegroundDisabled" Color="{StaticResource DMapForeground}" Opacity="0.6" />
         <SolidColorBrush x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundDisabled" Color="{StaticResource DMapForeground}" Opacity="0.6" />
+        <SolidColorBrush x:Key="MenuFlyoutSubItemChevron" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="MenuFlyoutSubItemChevronPointerOver" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="MenuFlyoutSubItemChevronPressed" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="MenuFlyoutSubItemChevronSubMenuOpened" Color="{StaticResource DMapForeground}" />
+        <SolidColorBrush x:Key="MenuFlyoutSubItemChevronDisabled" Color="{StaticResource DMapForeground}" Opacity="0.6" />
         <Thickness x:Key="MenuFlyoutPresenterBorderThemeThickness">2</Thickness>
         <x:Double x:Key="MenuFlyoutSeparatorThemeHeight">2</x:Double>
 
