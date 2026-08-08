@@ -179,9 +179,9 @@ public class StampLayerControllerTests
         Assert.Multiple(() =>
         {
             Assert.That(selected.Width, Is.EqualTo(180));
-            Assert.That(selected.Height, Is.EqualTo(100));
+            Assert.That(selected.Height, Is.EqualTo(180));
             Assert.That(selected.X, Is.EqualTo(0));
-            Assert.That(selected.Y, Is.EqualTo(30));
+            Assert.That(selected.Y, Is.EqualTo(0));
             Assert.That(state.ChangedStamps, Is.EqualTo(new[] { selected }));
             Assert.That(state.InvalidateCount, Is.EqualTo(1));
         });
@@ -210,7 +210,7 @@ public class StampLayerControllerTests
         double height = 10) =>
         new()
         {
-            TemplateId = "blue-rectangle",
+            TemplateId = "circle",
             X = x,
             Y = y,
             Width = width,
