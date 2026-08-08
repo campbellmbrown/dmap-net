@@ -1,8 +1,11 @@
 Changelog
 =========
 
-Unreleased
-----------
+.. Unreleased
+.. ----------
+
+:release-link:`v1.5.0`
+----------------------
 
 * Add a Stamp tool.
 * Add a Player View tool.
