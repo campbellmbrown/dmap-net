@@ -1,0 +1,78 @@
+Changelog
+=========
+
+.. Unreleased
+.. ----------
+
+:release-link:`v1.5.0`
+----------------------
+
+* Add a Stamp tool.
+* Add a Player View tool.
+* Change the app theme and font.
+* Combine opacity with the grid color picker in the grid settings panel.
+* Simplified player connection.
+* Added pixel sharpness toggle to the view menu.
+
+:release-link:`v1.4.0`
+----------------------
+
+* Change the default font.
+* Allow opening PDF maps.
+* Add the map size to the status bar.
+
+:release-link:`v1.3.0`
+----------------------
+
+* Add 90-degree map rotation controls, synchronized with player views.
+* Add file logging and a File menu action to open the log directory.
+* Add the app version to the title bar.
+* Split the semantic version and revision into separate lines in the About dialog.
+* Hide the tool settings panel when the pan tool is active, because it has no settings.
+* Allow collapsing the tool settings panel.
+* Add vertical scrolling to the toolbox and tool settings panel when they overflow.
+* Fix foreground of the status bar.
+
+:release-link:`v1.2.1`
+----------------------
+
+* Add headers on tool setting panels.
+* Add numerical inputs alongside slider settings.
+* Rearrange parts of the tool setting panels.
+
+:release-link:`v1.2.0`
+----------------------
+
+* Overhaul app design.
+
+:release-link:`v1.1.0`
+----------------------
+
+* Add a player-visible Cursor tool.
+* Add icon to the "About DMap" menu item in the Help menu.
+* Update the “Reset View” action: renamed to “Refit View”, updated icon, and now fits the map to the window.
+* Make Linux release builds single-file executables.
+* Allow canceling shape drawing with the Escape key.
+* Improve constrained square and circle sizing so shallow drags use a 45 degree sizing rule instead of collapsing to the smaller axis delta.
+* Add centered shape variants and a fixed corner-radius setting for rectangle and square shape tools.
+* Toggle the tool overlay with F8, the "View > Show Tools" menu item, or the "Show/Hide Tools" button.
+* Add an overlay and icon when player updates are paused.
+* Fix the entire map being briefly revealed to the player when swapping maps.
+
+:release-link:`v1.0.0`
+----------------------
+
+* Load common image formats for battle maps (PNG, JPG, JPEG, BMP, GIF, WebP).
+* Reveal or hide fog of war with a freehand circle, square, or diamond brush tool with configurable diameter, edge softness, and opacity.
+* Reveal or hide fog of war with a rectangle, square, ellipse, or circle shape tool with configurable edge softness and opacity.
+* Reveal the entire map or refog the entire map in one action.
+* Undo and redo up to 10 brush strokes, shape edits, reveal-all, or refog-all operations.
+* Inspect fog coverage by toggling the map image on or off while keeping the fog overlay visible.
+* Pause live player updates while editing, then resume with a catch-up sync.
+* Track connected player count and current memory usage from the status bar.
+* Pan and zoom with mouse, keyboard, and a dedicated pan tool.
+* Choose from multiple fog themes, including colour and textured styles.
+* Open a synced player view that follows DM panning, zooming, and fog edits in real time.
+* Discover DM sessions over LAN and host reliable player connections over TCP.
+
+* Added DM-configurable map grid overlay (visibility, size, line style, opacity, color, and offsets) synchronized to players.
