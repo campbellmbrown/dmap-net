@@ -13,6 +13,9 @@ Changelog
 * Combine opacity with the grid color picker in the grid settings panel.
 * Simplified player connection.
 * Added pixel sharpness toggle to the view menu.
+* Add project files (``.dmap``) with File > New, Open, Save and Save As. Projects store the map, fog, stamps, grid, fog appearance and player view.
+* Replace File > Open Map with File > New.
+* Prompt to save unsaved changes before starting a new project, opening another, or exiting.
 
 :release-link:`v1.4.0`
 ----------------------

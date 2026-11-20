@@ -14,7 +14,12 @@ namespace DMap.ViewModels;
 /// </summary>
 public class MainWindowViewModel : ViewModelBase
 {
-    public string Title { get; } = $"DMap {AppVersion.Version}";
+    /// <summary>Window title, kept in sync with the hosted view's project name.</summary>
+    public string Title
+    {
+        get;
+        set => this.RaiseAndSetIfChanged(ref field, value);
+    } = $"DMap {AppVersion.Version}";
 
     /// <summary>
     /// The control currently displayed inside the main window.

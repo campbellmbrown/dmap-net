@@ -1,0 +1,47 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="DMap.Views.UnsavedChangesDialog"
+        Classes="unsavedChangesDialog"
+        Title="Unsaved Changes"
+        SizeToContent="WidthAndHeight"
+        CanResize="False"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Icon="/Assets/avalonia-logo.ico"
+        Background="{StaticResource DMapBackground}">
+
+    <Window.Styles>
+        <Style Selector="Window.unsavedChangesDialog">
+            <Setter Property="TransparencyLevelHint" Value="None" />
+        </Style>
+        <Style Selector="Window.unsavedChangesDialog TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource DMapForeground}" />
+        </Style>
+    </Window.Styles>
+
+    <Border Padding="24"
+            Background="{StaticResource DMapBackground}"
+            BorderBrush="{StaticResource DMapHighlight}"
+            BorderThickness="2">
+        <StackPanel Spacing="16">
+            <TextBlock x:Name="MessageText"
+                       MaxWidth="360"
+                       TextWrapping="Wrap" />
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Right"
+                        Spacing="8">
+                <Button Classes="text"
+                        Content="Save"
+                        IsDefault="True"
+                        Click="SaveButton_Click" />
+                <Button Classes="text"
+                        Content="Don't Save"
+                        Click="DiscardButton_Click" />
+                <Button Classes="text"
+                        Content="Cancel"
+                        IsCancel="True"
+                        Click="CancelButton_Click" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>

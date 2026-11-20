@@ -22,6 +22,12 @@ public sealed class MapLoader : IMapLoader
             ? await RenderPdfFirstPageAsync(path)
             : await File.ReadAllBytesAsync(path);
 
+        return Decode(encodedBytes);
+    }
+
+    /// <inheritdoc/>
+    public LoadedMap Decode(byte[] encodedBytes)
+    {
         using var stream = new MemoryStream(encodedBytes);
         var image = new Bitmap(stream);
         return new LoadedMap(image, encodedBytes, image.PixelSize);

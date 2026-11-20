@@ -137,7 +137,10 @@
     </UserControl.DataTemplates>
 
     <UserControl.KeyBindings>
-        <KeyBinding Gesture="Ctrl+O" Command="{Binding LoadMapCommand}" />
+        <KeyBinding Gesture="Ctrl+N" Command="{Binding NewProjectCommand}" />
+        <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenProjectCommand}" />
+        <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveProjectCommand}" />
+        <KeyBinding Gesture="Ctrl+Shift+S" Command="{Binding SaveProjectAsCommand}" />
         <KeyBinding Gesture="Ctrl+Z" Command="{Binding UndoCommand}" />
         <KeyBinding Gesture="Ctrl+Y" Command="{Binding RedoCommand}" />
         <KeyBinding Gesture="Ctrl+Shift+Z" Command="{Binding RedoCommand}" />
@@ -155,9 +158,24 @@
         <!-- Menu bar -->
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="File">
-                <MenuItem Header="Open Map..." Command="{Binding LoadMapCommand}" InputGesture="Ctrl+O">
+                <MenuItem Header="New..." Command="{Binding NewProjectCommand}" InputGesture="Ctrl+N">
                     <MenuItem.Icon>
                         <ui:Icon IconName="map" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Open..." Command="{Binding OpenProjectCommand}" InputGesture="Ctrl+O">
+                    <MenuItem.Icon>
+                        <ui:Icon IconName="folder-open" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Save" Command="{Binding SaveProjectCommand}" InputGesture="Ctrl+S">
+                    <MenuItem.Icon>
+                        <ui:Icon IconName="save" />
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Save As..." Command="{Binding SaveProjectAsCommand}" InputGesture="Ctrl+Shift+S">
+                    <MenuItem.Icon>
+                        <ui:Icon IconName="save-plus" />
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator />

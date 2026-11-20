@@ -15,6 +15,12 @@ public interface IMapLoader
     /// </summary>
     /// <param name="path">Local path to the map file.</param>
     Task<LoadedMap> LoadAsync(string path);
+
+    /// <summary>
+    /// Decodes previously encoded map image bytes, such as those embedded in a project file.
+    /// </summary>
+    /// <param name="encodedBytes">Encoded image bytes.</param>
+    LoadedMap Decode(byte[] encodedBytes);
 }
 
 /// <summary>

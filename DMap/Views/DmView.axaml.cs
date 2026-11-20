@@ -25,6 +25,18 @@ namespace DMap.Views;
 /// </summary>
 public partial class DmView : ReactiveUserControl<DmViewModel>
 {
+    const string ProjectFileExtension = "dmap";
+
+    static readonly FilePickerFileType _mapFileType = new("Map files")
+    {
+        Patterns = ["*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif", "*.webp", "*.pdf"],
+    };
+
+    static readonly FilePickerFileType _projectFileType = new("DMap projects")
+    {
+        Patterns = [$"*.{ProjectFileExtension}"],
+    };
+
     CompositeDisposable? _activationDisposables;
 
     /// <summary>
@@ -73,7 +85,23 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
                 Disposable.Create(() => vm.FogUpdated -= OnFogUpdated));
 
             _activationDisposables.Add(
-                vm.ShowOpenFileDialog.RegisterHandler(HandleOpenFileDialog));
+                vm.ShowOpenMapDialog.RegisterHandler(HandleOpenMapDialog));
+
+            _activationDisposables.Add(
+                vm.ShowOpenProjectDialog.RegisterHandler(HandleOpenProjectDialog));
+
+            _activationDisposables.Add(
+                vm.ShowSaveProjectDialog.RegisterHandler(HandleSaveProjectDialog));
+
+            _activationDisposables.Add(
+                vm.ConfirmUnsavedChanges.RegisterHandler(HandleConfirmUnsavedChanges));
+
+            if (TopLevel.GetTopLevel(this) is Window window)
+            {
+                window.Closing += OnWindowClosing;
+                _activationDisposables.Add(
+                    Disposable.Create(() => window.Closing -= OnWindowClosing));
+            }
 
             _activationDisposables.Add(
                 vm.ShowPlayerWindow.RegisterHandler(HandleShowPlayerWindow));
@@ -163,31 +191,81 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
     }
 
     /// <summary>
-    /// Handles the <see cref="DmViewModel.ShowOpenFileDialog"/> interaction by opening the
-    /// platform file picker filtered to supported map formats, returning the chosen local path
-    /// or <see langword="null"/> if the dialog was cancelled.
+    /// Handles the <see cref="DmViewModel.ShowOpenMapDialog"/> interaction by picking a map image or PDF.
     /// </summary>
-    async Task HandleOpenFileDialog(IInteractionContext<Unit, string?> context)
+    async Task HandleOpenMapDialog(IInteractionContext<Unit, string?> context) =>
+        context.SetOutput(await PickFileToOpenAsync("New Project From Map", _mapFileType));
+
+    /// <summary>
+    /// Handles the <see cref="DmViewModel.ShowOpenProjectDialog"/> interaction by picking a project file.
+    /// </summary>
+    async Task HandleOpenProjectDialog(IInteractionContext<Unit, string?> context) =>
+        context.SetOutput(await PickFileToOpenAsync("Open Project", _projectFileType));
+
+    /// <summary>
+    /// Handles the <see cref="DmViewModel.ShowSaveProjectDialog"/> interaction by opening the platform
+    /// save picker, returning the chosen local path or <see langword="null"/> if cancelled.
+    /// </summary>
+    async Task HandleSaveProjectDialog(IInteractionContext<string, string?> context)
+    {
+        var topLevel = TopLevel.GetTopLevel(this);
+        var file = topLevel is null
+            ? null
+            : await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = "Save Project",
+                SuggestedFileName = context.Input,
+                DefaultExtension = ProjectFileExtension,
+                FileTypeChoices = [_projectFileType],
+            });
+
+        context.SetOutput(file?.Path.LocalPath);
+    }
+
+    /// <summary>
+    /// Opens the platform file picker for a single file of <paramref name="fileType"/>, returning the
+    /// chosen local path or <see langword="null"/> if cancelled.
+    /// </summary>
+    async Task<string?> PickFileToOpenAsync(string title, FilePickerFileType fileType)
     {
         var topLevel = TopLevel.GetTopLevel(this);
         if (topLevel is null)
-        {
-            context.SetOutput(null);
-            return;
-        }
+            return null;
 
         var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Open Map",
+            Title = title,
             AllowMultiple = false,
-            FileTypeFilter =
-            [
-                new FilePickerFileType("Map files") { Patterns = ["*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif", "*.webp", "*.pdf"] },
-                FilePickerFileTypes.All
-            ]
+            FileTypeFilter = [fileType, FilePickerFileTypes.All],
         });
 
-        context.SetOutput(files.Count > 0 ? files[0].Path.LocalPath : null);
+        return files.Count > 0 ? files[0].Path.LocalPath : null;
+    }
+
+    /// <summary>
+    /// Handles the <see cref="DmViewModel.ConfirmUnsavedChanges"/> interaction by showing a modal
+    /// Save / Don't Save / Cancel dialog.
+    /// </summary>
+    async Task HandleConfirmUnsavedChanges(IInteractionContext<string, UnsavedChangesChoice> context)
+    {
+        var choice = TopLevel.GetTopLevel(this) is Window owner
+            ? await new UnsavedChangesDialog(context.Input).ShowDialog<UnsavedChangesChoice?>(owner)
+            : null;
+
+        context.SetOutput(choice ?? UnsavedChangesChoice.Cancel);
+    }
+
+    /// <summary>
+    /// Cancels closing the main window while there are unsaved changes and routes the request through
+    /// <see cref="DmViewModel.ExitCommand"/>, which prompts before shutting down.
+    /// </summary>
+    void OnWindowClosing(object? sender, WindowClosingEventArgs e)
+    {
+        if (ViewModel is not { HasUnsavedChanges: true } vm)
+            return;
+
+        e.Cancel = true;
+        vm.ExitCommand.Execute().Subscribe();
     }
 
     /// <summary>

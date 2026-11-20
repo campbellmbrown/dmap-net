@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 
@@ -20,6 +21,7 @@ using DMap.Services.Fog;
 using DMap.Services.History;
 using DMap.Services.Maps;
 using DMap.Services.Networking;
+using DMap.Services.Projects;
 using DMap.ViewModels.ToolSettings;
 
 using ReactiveUI;
@@ -45,7 +47,32 @@ public class DmViewModel : ViewModelBase, IDisposable
     readonly IDmHostService _hostService;
     readonly IDiscoveryService _discoveryService;
     readonly IMapLoader _mapLoader;
+    readonly IProjectSerializer _projectSerializer;
     readonly Func<PlayerViewModel> _createPlayer;
+    readonly ObservableAsPropertyHelper<string> _windowTitle;
+
+    /// <summary>File name (without extension) of the current project, or of its map before the first save.</summary>
+    public string ProjectName
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    } = string.Empty;
+
+    /// <summary>
+    /// <see langword="true"/> when project state has changed since the last new, open or save.
+    /// Set wherever player-visible state is broadcast, plus DM-only fog opacity.
+    /// </summary>
+    public bool IsDirty
+    {
+        get;
+        private set => this.RaiseAndSetIfChanged(ref field, value);
+    }
+
+    /// <summary><see langword="true"/> when closing would lose unsaved project changes.</summary>
+    public bool HasUnsavedChanges => IsMapLoaded && IsDirty;
+
+    /// <summary>Main window title showing the project name and unsaved-changes marker.</summary>
+    public string WindowTitle => _windowTitle.Value;
 
     /// <summary>The decoded map background image, or <see langword="null"/> before a map is loaded.</summary>
     public Bitmap? MapImage
@@ -233,8 +260,17 @@ public class DmViewModel : ViewModelBase, IDisposable
         private set => this.RaiseAndSetIfChanged(ref field, value);
     }
 
-    /// <summary>Opens a file picker and loads the selected image or PDF as the map background.</summary>
-    public ReactiveCommand<Unit, Unit> LoadMapCommand { get; }
+    /// <summary>Starts a new project from an image or PDF chosen in a file picker.</summary>
+    public ReactiveCommand<Unit, Unit> NewProjectCommand { get; }
+
+    /// <summary>Opens a <c>.dmap</c> project chosen in a file picker.</summary>
+    public ReactiveCommand<Unit, Unit> OpenProjectCommand { get; }
+
+    /// <summary>Saves the project to its current file, prompting for a path if it has never been saved.</summary>
+    public ReactiveCommand<Unit, bool> SaveProjectCommand { get; }
+
+    /// <summary>Saves the project to a new file chosen in a file picker.</summary>
+    public ReactiveCommand<Unit, bool> SaveProjectAsCommand { get; }
 
     /// <summary>Activates the Brush tool.</summary>
     public ReactiveCommand<Unit, Unit> SelectBrushCommand { get; }
@@ -361,10 +397,28 @@ public class DmViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
-    /// Interaction that requests the view to display a file picker and return the chosen path.
+    /// Interaction that requests the view to pick a map image or PDF and return its path.
     /// Handled in <see cref="Views.DmView"/>.
     /// </summary>
-    public Interaction<Unit, string?> ShowOpenFileDialog { get; } = new();
+    public Interaction<Unit, string?> ShowOpenMapDialog { get; } = new();
+
+    /// <summary>
+    /// Interaction that requests the view to pick a project file to open and return its path.
+    /// Handled in <see cref="Views.DmView"/>.
+    /// </summary>
+    public Interaction<Unit, string?> ShowOpenProjectDialog { get; } = new();
+
+    /// <summary>
+    /// Interaction that requests the view to pick a save path for the project, given a suggested
+    /// file name. Handled in <see cref="Views.DmView"/>.
+    /// </summary>
+    public Interaction<string, string?> ShowSaveProjectDialog { get; } = new();
+
+    /// <summary>
+    /// Interaction that asks the user what to do with unsaved changes to the named project.
+    /// Handled in <see cref="Views.DmView"/>.
+    /// </summary>
+    public Interaction<string, UnsavedChangesChoice> ConfirmUnsavedChanges { get; } = new();
 
     /// <summary>
     /// Interaction that requests the view to display the player window for the given ViewModel.
@@ -392,6 +446,7 @@ public class DmViewModel : ViewModelBase, IDisposable
     public event EventHandler<PixelRect>? FogUpdated;
 
     byte[]? _mapImageBytes;
+    string? _projectPath;
     MapSession? _session;
     bool _hasPendingUpdates;
     bool _hasPendingViewportUpdate;
@@ -411,7 +466,7 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// <summary>
     /// Constructs the ViewModel and wires up all reactive commands and service event handlers.
     /// </summary>
-    public DmViewModel(IFogMaskService fogService, IUndoRedoService undoRedo, IDmHostService hostService, IDiscoveryService discoveryService, IMapLoader mapLoader, Func<PlayerViewModel> createPlayer)
+    public DmViewModel(IFogMaskService fogService, IUndoRedoService undoRedo, IDmHostService hostService, IDiscoveryService discoveryService, IMapLoader mapLoader, IProjectSerializer projectSerializer, Func<PlayerViewModel> createPlayer)
     {
         _fogService = fogService;
         _undoRedo = undoRedo;
@@ -421,7 +476,11 @@ public class DmViewModel : ViewModelBase, IDisposable
         _hostService = hostService;
         _discoveryService = discoveryService;
         _mapLoader = mapLoader;
+        _projectSerializer = projectSerializer;
         _createPlayer = createPlayer;
+
+        _windowTitle = this.WhenAnyValue(x => x.IsMapLoaded, x => x.ProjectName, x => x.IsDirty, FormatWindowTitle)
+            .ToProperty(this, x => x.WindowTitle);
 
         BrushSettings = new BrushToolSettingsViewModel();
         ShapeSettings = new ShapeToolSettingsViewModel();
@@ -452,7 +511,6 @@ public class DmViewModel : ViewModelBase, IDisposable
         _memoryTimer = new DispatcherTimer(TimeSpan.FromSeconds(2), DispatcherPriority.Background, (_, _) => MemoryUsage = FormatMemoryUsage());
         _memoryTimer.Start();
 
-        LoadMapCommand = ReactiveCommand.CreateFromTask(LoadMapAsync);
         SelectBrushCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Brush; });
         SelectShapeCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Shape; });
         SelectPanCommand = ReactiveCommand.Create(() => { SelectedTool = ToolType.Pan; });
@@ -465,11 +523,11 @@ public class DmViewModel : ViewModelBase, IDisposable
         var mapLoaded = this.WhenAnyValue(x => x.IsMapLoaded);
         RevealAllCommand = ReactiveCommand.Create(ExecuteRevealAll, mapLoaded);
         RefogAllCommand = ReactiveCommand.Create(ExecuteRefogAll, mapLoaded);
-        ExitCommand = ReactiveCommand.Create(() =>
-        {
-            if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-                desktop.Shutdown();
-        });
+        NewProjectCommand = ReactiveCommand.CreateFromTask(NewProjectAsync);
+        OpenProjectCommand = ReactiveCommand.CreateFromTask(OpenProjectAsync);
+        SaveProjectCommand = ReactiveCommand.CreateFromTask(() => SaveProjectAsync(saveAs: false), mapLoaded);
+        SaveProjectAsCommand = ReactiveCommand.CreateFromTask(() => SaveProjectAsync(saveAs: true), mapLoaded);
+        ExitCommand = ReactiveCommand.CreateFromTask(ExitAsync);
         OpenLogDirectoryCommand = ReactiveCommand.CreateFromTask(OpenLogDirectoryAsync);
 
         var canUndo = this.WhenAnyValue(x => x.CanUndo);
@@ -594,56 +652,182 @@ public class DmViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
-    /// Opens the file picker via <see cref="ShowOpenFileDialog"/>, loads the chosen image as the
-    /// map background, initialises the fog mask, and starts hosting.
+    /// Asks the user to pick a map image or PDF and starts a new, unsaved project from it with a fully fogged mask.
     /// </summary>
-    async Task LoadMapAsync()
+    async Task NewProjectAsync()
     {
-        var path = await ShowOpenFileDialog.Handle(Unit.Default);
+        if (!await ConfirmDiscardChangesAsync())
+            return;
+
+        var path = await ShowOpenMapDialog.Handle(Unit.Default);
         if (string.IsNullOrEmpty(path))
             return;
 
-        Log.Information("Loading map from {MapPath}.", path);
-
-        try
-        {
-            var loadedMap = await _mapLoader.LoadAsync(path);
-            _mapImageBytes = loadedMap.EncodedBytes;
-            MapImage = loadedMap.Image;
-
-            var pixelSize = loadedMap.PixelSize;
-            MapSize = $"Map: {pixelSize.Width} x {pixelSize.Height}";
-            _fogService.Initialize(pixelSize.Width, pixelSize.Height);
-            FogMask = _fogService.Mask;
-
-            _session = new MapSession(Guid.NewGuid(), pixelSize.Width, pixelSize.Height);
-            FogSeed = _session.SessionId;
-            _undoRedo.Clear();
-            SelectedStamp = null;
-            Stamps.Clear();
-            SetPlayerViewport(CreateInitialPlayerViewport(pixelSize.Width, pixelSize.Height), queueBroadcast: false);
-            IsMapLoaded = true;
-
-            FogUpdated?.Invoke(this, new PixelRect(0, 0, pixelSize.Width, pixelSize.Height));
-
-            await StartHostingAsync();
-            BroadcastFogAppearance();
-            BroadcastGridSettings();
-            BroadcastStamps();
-            QueueViewportBroadcast();
-
-            Log.Information(
-                "Loaded map {MapFileName} with dimensions {Width}x{Height}.",
-                Path.GetFileName(path),
-                pixelSize.Width,
-                pixelSize.Height);
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Failed to load map from {MapPath}.", path);
-            throw;
-        }
+        Log.Information("Creating project from map {MapPath}.", path);
+        var map = await _mapLoader.LoadAsync(path);
+        var mask = new FogMask(map.PixelSize.Width, map.PixelSize.Height);
+        await StartSessionAsync(map, mask, manifest: null, projectPath: null, Path.GetFileNameWithoutExtension(path));
     }
+
+    /// <summary>
+    /// Asks the user to pick a <c>.dmap</c> file and restores the map, fog and settings it contains.
+    /// </summary>
+    async Task OpenProjectAsync()
+    {
+        if (!await ConfirmDiscardChangesAsync())
+            return;
+
+        var path = await ShowOpenProjectDialog.Handle(Unit.Default);
+        if (string.IsNullOrEmpty(path))
+            return;
+
+        Log.Information("Opening project {ProjectPath}.", path);
+        var project = await _projectSerializer.LoadAsync(path);
+        var map = _mapLoader.Decode(project.MapBytes);
+        if (map.PixelSize.Width != project.FogMask.Width || map.PixelSize.Height != project.FogMask.Height)
+            throw new InvalidDataException("Project map dimensions do not match its fog mask.");
+
+        await StartSessionAsync(map, project.FogMask, project.Manifest, path, Path.GetFileNameWithoutExtension(path));
+    }
+
+    /// <summary>
+    /// Saves the project to its current path, or to a path chosen by the user when <paramref name="saveAs"/>
+    /// is set or the project has never been saved.
+    /// </summary>
+    /// <returns><see langword="true"/> if the project was saved; <see langword="false"/> if cancelled.</returns>
+    async Task<bool> SaveProjectAsync(bool saveAs)
+    {
+        if (_fogService.Mask is not { } mask || _mapImageBytes is null || PlayerViewport is not { } playerViewport)
+            return false;
+
+        var path = saveAs ? null : _projectPath;
+        path ??= await ShowSaveProjectDialog.Handle(ProjectName);
+        if (string.IsNullOrEmpty(path))
+            return false;
+
+        Log.Information("Saving project to {ProjectPath}.", path);
+        var project = new ProjectFile(CreateProjectManifest(mask, playerViewport), _mapImageBytes, mask.Clone());
+
+        // Clear before awaiting so edits made while the file is being written mark the project dirty again.
+        _projectPath = path;
+        ProjectName = Path.GetFileNameWithoutExtension(path);
+        IsDirty = false;
+
+        await _projectSerializer.SaveAsync(path, project);
+        return true;
+    }
+
+    /// <summary>Prompts to save unsaved changes, then shuts the application down unless the user cancels.</summary>
+    async Task ExitAsync()
+    {
+        if (!await ConfirmDiscardChangesAsync())
+            return;
+
+        // Changes were saved or deliberately discarded, so closing the window must not prompt again.
+        IsDirty = false;
+
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            desktop.Shutdown();
+    }
+
+    /// <summary>
+    /// Asks the user whether to save unsaved changes before they are replaced.
+    /// </summary>
+    /// <returns><see langword="true"/> if it is safe to continue; <see langword="false"/> if the user cancelled.</returns>
+    async Task<bool> ConfirmDiscardChangesAsync()
+    {
+        if (!HasUnsavedChanges)
+            return true;
+
+        return await ConfirmUnsavedChanges.Handle(ProjectName) switch
+        {
+            UnsavedChangesChoice.Save => await SaveProjectAsync(saveAs: false),
+            UnsavedChangesChoice.Discard => true,
+            _ => false,
+        };
+    }
+
+    /// <summary>
+    /// Replaces the current map, fog mask, stamps and player viewport, then (re)starts hosting.
+    /// When <paramref name="manifest"/> is provided its saved settings are restored; otherwise the
+    /// current tool settings are kept and the player viewport covers the whole map.
+    /// </summary>
+    async Task StartSessionAsync(LoadedMap map, FogMask mask, ProjectManifest? manifest, string? projectPath, string projectName)
+    {
+        // Clearing the session suppresses player broadcasts while the previous state is replaced.
+        _session = null;
+        if (manifest is not null)
+            ApplyProjectSettings(manifest);
+
+        _mapImageBytes = map.EncodedBytes;
+        MapImage = map.Image;
+
+        var width = map.PixelSize.Width;
+        var height = map.PixelSize.Height;
+        MapSize = $"Map: {width} x {height}";
+        _fogService.Replace(mask);
+        FogMask = _fogService.Mask;
+
+        _session = new MapSession(Guid.NewGuid(), width, height);
+        FogSeed = manifest?.Fog.Seed ?? _session.SessionId;
+        _undoRedo.Clear();
+        SelectedStamp = null;
+        Stamps.Clear();
+        foreach (var stamp in manifest?.Stamps ?? [])
+            Stamps.Add(stamp);
+
+        SetPlayerViewport(manifest?.PlayerViewport ?? CreateInitialPlayerViewport(width, height), queueBroadcast: false);
+        IsMapLoaded = true;
+
+        FogUpdated?.Invoke(this, new PixelRect(0, 0, width, height));
+
+        await StartHostingAsync();
+        BroadcastFogAppearance();
+        BroadcastGridSettings();
+        BroadcastStamps();
+        QueueViewportBroadcast();
+
+        _projectPath = projectPath;
+        ProjectName = projectName;
+        IsDirty = false;
+
+        Log.Information("Started session for {ProjectName} with dimensions {Width}x{Height}.", projectName, width, height);
+    }
+
+    /// <summary>Restores the fog, grid and pixel scaling settings saved in a project.</summary>
+    void ApplyProjectSettings(ProjectManifest manifest)
+    {
+        FogSettings.SelectedFogType = manifest.Fog.FogType;
+        FogSettings.Color = Color.FromRgb(manifest.Fog.R, manifest.Fog.G, manifest.Fog.B);
+        FogSettings.Opacity = manifest.FogOpacity;
+
+        GridSettings.IsVisible = manifest.Grid.IsVisible;
+        GridSettings.SquareSize = manifest.Grid.SquareSize;
+        GridSettings.LineWidth = manifest.Grid.LineWidth;
+        GridSettings.Color = manifest.Grid.Color;
+        GridSettings.OffsetX = manifest.Grid.OffsetX;
+        GridSettings.OffsetY = manifest.Grid.OffsetY;
+
+        IsPixelSharpnessEnabled = manifest.PlayerViewport.IsPixelSharpnessEnabled;
+    }
+
+    ProjectManifest CreateProjectManifest(FogMask mask, ViewportPayload playerViewport) =>
+        new()
+        {
+            AppVersion = AppVersion.Version,
+            MapWidth = mask.Width,
+            MapHeight = mask.Height,
+            Fog = CreateFogAppearancePayload(),
+            FogOpacity = FogSettings.Opacity,
+            Grid = CreateGridSettingsPayload(),
+            PlayerViewport = playerViewport,
+            Stamps = [.. Stamps],
+        };
+
+    static string FormatWindowTitle(bool isMapLoaded, string projectName, bool isDirty) =>
+        isMapLoaded
+            ? $"{projectName}{(isDirty ? "*" : string.Empty)} - DMap {AppVersion.Version}"
+            : $"DMap {AppVersion.Version}";
 
     /// <summary>Returns the current process working set formatted as "<c>N MB</c>".</summary>
     static string FormatMemoryUsage() =>
@@ -1066,6 +1250,7 @@ public class DmViewModel : ViewModelBase, IDisposable
         if (IsEmpty(dirtyRect))
             return;
 
+        IsDirty = true;
         if (IsUpdatesPaused)
         {
             _hasPendingUpdates = true;
@@ -1082,6 +1267,10 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     void BroadcastGridSettings()
     {
+        IsDirty = true;
+        if (_session is null)
+            return;
+
         if (IsUpdatesPaused)
         {
             _hasPendingGridUpdate = true;
@@ -1093,6 +1282,7 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     void BroadcastStamps()
     {
+        IsDirty = true;
         if (_session is null)
             return;
 
@@ -1112,6 +1302,7 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// </summary>
     void BroadcastFogAppearance()
     {
+        IsDirty = true;
         if (_session is null)
             return;
 
@@ -1150,7 +1341,9 @@ public class DmViewModel : ViewModelBase, IDisposable
 
     void OnFogSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is null
+        if (e.PropertyName is nameof(FogToolSettingsViewModel.Opacity))
+            IsDirty = true;
+        else if (e.PropertyName is null
             or (nameof(FogToolSettingsViewModel.SelectedFogType))
             or (nameof(FogToolSettingsViewModel.Color)))
             BroadcastFogAppearance();
@@ -1188,6 +1381,7 @@ public class DmViewModel : ViewModelBase, IDisposable
     /// </summary>
     void QueueViewportBroadcast()
     {
+        IsDirty = true;
         if (_session is null || _latestViewport is null)
             return;
 

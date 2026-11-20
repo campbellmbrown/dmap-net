@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 
 namespace DMap.Protocol;
 
@@ -70,6 +71,7 @@ public sealed class ViewportPayload : IPayload
     /// <summary>
     /// <see langword="true"/> when this payload contains a valid map-space rectangle.
     /// </summary>
+    [JsonIgnore]
     public bool HasMapRect =>
         IsValidPositive(WidthMap)
         && IsValidPositive(HeightMap)

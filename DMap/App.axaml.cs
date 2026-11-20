@@ -1,3 +1,5 @@
+using System;
+
 using Autofac;
 
 using Avalonia;
@@ -8,8 +10,11 @@ using DMap.Services.Fog;
 using DMap.Services.History;
 using DMap.Services.Maps;
 using DMap.Services.Networking;
+using DMap.Services.Projects;
 using DMap.ViewModels;
 using DMap.Views;
+
+using ReactiveUI;
 
 using Serilog;
 
@@ -41,6 +46,7 @@ public partial class App : Application
             var mainVm = container.Resolve<MainWindowViewModel>();
             var dmVm = container.Resolve<DmViewModel>();
             mainVm.Content = new DmView { DataContext = dmVm };
+            dmVm.WhenAnyValue(x => x.WindowTitle).Subscribe(title => mainVm.Title = title);
 
             desktop.MainWindow = new MainWindow
             {
@@ -62,6 +68,7 @@ public partial class App : Application
     ///   <item><see cref="DiscoveryService"/> — UDP broadcast/listen for session discovery.</item>
     ///   <item><see cref="PlayerClientService"/> — TCP client for connecting to the DM.</item>
     ///   <item><see cref="MapLoader"/> — image/PDF map loader for the DM.</item>
+    ///   <item><see cref="ProjectSerializer"/> — reads and writes <c>.dmap</c> project files.</item>
     /// </list>
     /// </summary>
     static IContainer BuildContainer()
@@ -74,6 +81,7 @@ public partial class App : Application
         builder.RegisterType<DiscoveryService>().As<IDiscoveryService>();
         builder.RegisterType<PlayerClientService>().As<IPlayerClientService>();
         builder.RegisterType<MapLoader>().As<IMapLoader>().SingleInstance();
+        builder.RegisterType<ProjectSerializer>().As<IProjectSerializer>().SingleInstance();
 
         builder.RegisterType<MainWindowViewModel>().AsSelf().SingleInstance();
         builder.RegisterType<DmViewModel>().AsSelf();

@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text.Json.Serialization;
 
 using Avalonia.Media;
 
@@ -19,6 +20,7 @@ public sealed class GridSettingsPayload : IPayload
     public double OffsetX { get; init; }
     public double OffsetY { get; init; }
 
+    [JsonIgnore]
     public Color Color => Color.FromArgb(A, R, G, B);
 
     public byte[] Serialize()
