@@ -10,7 +10,9 @@ permissions:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    # Pinned: Wine in amake/innosetup fails to start on ubuntu-26.04
+    # ("wineserver: socket: Function not implemented").
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v6
