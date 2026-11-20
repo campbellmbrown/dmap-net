@@ -1,8 +1,11 @@
 Changelog
 =========
 
-Unreleased
-----------
+.. Unreleased
+.. ----------
+
+:release-link:`v1.6.0`
+----------------------
 
 * Add project files (``.dmap``) with File > New, Open, Save and Save As. Projects store the map, fog, stamps, grid, fog appearance and player view.
 * Replace File > Open Map with File > New.
