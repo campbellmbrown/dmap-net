@@ -39,7 +39,7 @@ public class ProjectSerializerTests
                 Stamps =
                 [
                     new StampInstance { Id = stampId, TemplateId = "spirit-guardians", X = 1, Y = 2, Width = 3, Height = 4, RotationDegrees = 45 },
-                    new StampInstance { TemplateId = "blue-rectangle" },
+                    new StampInstance { TemplateId = "circle" },
                 ],
             },
             [9, 8, 7],
@@ -66,7 +66,7 @@ public class ProjectSerializerTests
             Assert.That(manifest.Stamps[0].Id, Is.EqualTo(stampId));
             Assert.That(manifest.Stamps[0].TemplateId, Is.EqualTo("spirit-guardians"));
             Assert.That(manifest.Stamps[0].RotationDegrees, Is.EqualTo(45));
-            Assert.That(manifest.Stamps[1].TemplateId, Is.EqualTo("blue-rectangle"));
+            Assert.That(manifest.Stamps[1].TemplateId, Is.EqualTo("circle"));
         });
     }
 
