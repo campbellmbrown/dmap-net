@@ -605,6 +605,17 @@ public class MapCanvas : Control
             OnViewportStateChanged();
     }
 
+    /// <summary>Zooms and centers the view so <paramref name="mapRect"/> fills the canvas.</summary>
+    public void FitViewToMapRect(Rect mapRect)
+    {
+        if (MapImage is not null && _viewport.FitMapRect(mapRect, new Rect(Bounds.Size), MapImage.Size) is not null)
+            OnViewportStateChanged();
+    }
+
+    /// <summary>Returns the part of the map currently visible, or <see langword="null"/> when no map is loaded.</summary>
+    public Rect? GetVisibleMapRect() =>
+        MapImage is null ? null : _viewport.GetVisibleMapRect(Bounds.Size, MapImage.Size);
+
     /// <summary>Refreshes dependent canvas state after the camera changes.</summary>
     void OnViewportStateChanged()
     {

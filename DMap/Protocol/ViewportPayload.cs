@@ -1,6 +1,8 @@
 using System;
 using System.Text.Json.Serialization;
 
+using Avalonia;
+
 namespace DMap.Protocol;
 
 /// <summary>
@@ -76,6 +78,24 @@ public sealed class ViewportPayload : IPayload
         IsValidPositive(WidthMap)
         && IsValidPositive(HeightMap)
         && IsValidNonNegative(PaddingPixels);
+
+    /// <summary>Returns the selected player viewport as a map-space rectangle.</summary>
+    public Rect GetMapRect() =>
+        new(CenterMapX - WidthMap / 2.0, CenterMapY - HeightMap / 2.0, WidthMap, HeightMap);
+
+    /// <summary>Returns a copy of this payload covering <paramref name="mapRect"/>, keeping the other settings.</summary>
+    public ViewportPayload WithMapRect(Rect mapRect) =>
+        new()
+        {
+            CenterMapX = mapRect.Center.X,
+            CenterMapY = mapRect.Center.Y,
+            ZoomLevel = ZoomLevel <= 0 ? 1.0 : ZoomLevel,
+            RotationQuarterTurns = RotationQuarterTurns,
+            WidthMap = mapRect.Width,
+            HeightMap = mapRect.Height,
+            PaddingPixels = Math.Max(0, PaddingPixels),
+            IsPixelSharpnessEnabled = IsPixelSharpnessEnabled,
+        };
 
     public byte[] Serialize()
     {

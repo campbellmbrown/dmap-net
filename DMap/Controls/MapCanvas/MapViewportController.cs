@@ -111,28 +111,49 @@ public sealed class MapViewportController
         }
 
         RotationQuarterTurns = NormalizeRotation(viewport.RotationQuarterTurns);
-        var mapRect = ClampMapRect(GetMapRect(viewport), mapSize.Value);
-        var rotatedRect = GetRotatedBounds(mapRect, mapSize, RotationQuarterTurns);
+        var mapRect = ClampMapRect(viewport.GetMapRect(), mapSize.Value);
         var availableRect = GetAvailablePlayerRect(canvasSize, viewport.PaddingPixels);
+        if (FitMapRect(mapRect, availableRect, mapSize.Value) is { } contentRect)
+            return contentRect;
 
-        if (rotatedRect.Width <= 0 || rotatedRect.Height <= 0 || availableRect.Width <= 0 || availableRect.Height <= 0)
-        {
-            ApplyViewport(viewport, canvasSize, mapSize);
-            return new Rect(canvasSize);
-        }
+        ApplyViewport(viewport, canvasSize, mapSize);
+        return new Rect(canvasSize);
+    }
 
-        ZoomLevel = Math.Min(availableRect.Width / rotatedRect.Width, availableRect.Height / rotatedRect.Height);
+    /// <summary>
+    /// Zooms and centers the camera so <paramref name="mapRect"/> fits inside <paramref name="screenRect"/>,
+    /// keeping the current rotation and the rectangle's aspect ratio.
+    /// </summary>
+    /// <returns>The screen-space area the map rectangle now occupies, or <see langword="null"/> if either rectangle is empty.</returns>
+    public Rect? FitMapRect(Rect mapRect, Rect screenRect, Size mapSize)
+    {
+        var rotatedRect = GetRotatedBounds(mapRect, mapSize, RotationQuarterTurns);
+        if (rotatedRect.Width <= 0 || rotatedRect.Height <= 0 || screenRect.Width <= 0 || screenRect.Height <= 0)
+            return null;
+
+        ZoomLevel = Math.Min(screenRect.Width / rotatedRect.Width, screenRect.Height / rotatedRect.Height);
         var contentWidth = rotatedRect.Width * ZoomLevel;
         var contentHeight = rotatedRect.Height * ZoomLevel;
         var contentRect = new Rect(
-            availableRect.X + (availableRect.Width - contentWidth) / 2.0,
-            availableRect.Y + (availableRect.Height - contentHeight) / 2.0,
+            screenRect.X + (screenRect.Width - contentWidth) / 2.0,
+            screenRect.Y + (screenRect.Height - contentHeight) / 2.0,
             contentWidth,
             contentHeight);
 
         OffsetX = contentRect.X - rotatedRect.X * ZoomLevel;
         OffsetY = contentRect.Y - rotatedRect.Y * ZoomLevel;
         return contentRect;
+    }
+
+    /// <summary>Returns the part of the map visible on the canvas, as a map-space rectangle clipped to the map bounds.</summary>
+    public Rect GetVisibleMapRect(Size canvasSize, Size mapSize)
+    {
+        var visible = GetBounds(
+            ScreenToMap(new Point(0, 0), mapSize),
+            ScreenToMap(new Point(canvasSize.Width, 0), mapSize),
+            ScreenToMap(new Point(canvasSize.Width, canvasSize.Height), mapSize),
+            ScreenToMap(new Point(0, canvasSize.Height), mapSize));
+        return visible.Intersect(new Rect(mapSize));
     }
 
     /// <summary>Rotates the map view while preserving the map point at the canvas center.</summary>
@@ -210,13 +231,6 @@ public sealed class MapViewportController
             : new Size(mapSize.Value.Height, mapSize.Value.Width);
     }
 
-    static Rect GetMapRect(ViewportPayload viewport) =>
-        new(
-            viewport.CenterMapX - viewport.WidthMap / 2.0,
-            viewport.CenterMapY - viewport.HeightMap / 2.0,
-            viewport.WidthMap,
-            viewport.HeightMap);
-
     static Rect ClampMapRect(Rect rect, Size mapSize)
     {
         const double MinSize = 1;
@@ -227,19 +241,19 @@ public sealed class MapViewportController
         return new Rect(x, y, width, height);
     }
 
-    static Rect GetRotatedBounds(Rect mapRect, Size? mapSize, int quarterTurns)
-    {
-        var points = new[]
-        {
+    static Rect GetRotatedBounds(Rect mapRect, Size? mapSize, int quarterTurns) =>
+        GetBounds(
             RotateMapPoint(mapRect.TopLeft, mapSize, quarterTurns),
             RotateMapPoint(mapRect.TopRight, mapSize, quarterTurns),
             RotateMapPoint(mapRect.BottomRight, mapSize, quarterTurns),
-            RotateMapPoint(mapRect.BottomLeft, mapSize, quarterTurns),
-        };
-        var minX = Math.Min(Math.Min(points[0].X, points[1].X), Math.Min(points[2].X, points[3].X));
-        var minY = Math.Min(Math.Min(points[0].Y, points[1].Y), Math.Min(points[2].Y, points[3].Y));
-        var maxX = Math.Max(Math.Max(points[0].X, points[1].X), Math.Max(points[2].X, points[3].X));
-        var maxY = Math.Max(Math.Max(points[0].Y, points[1].Y), Math.Max(points[2].Y, points[3].Y));
+            RotateMapPoint(mapRect.BottomLeft, mapSize, quarterTurns));
+
+    static Rect GetBounds(Point a, Point b, Point c, Point d)
+    {
+        var minX = Math.Min(Math.Min(a.X, b.X), Math.Min(c.X, d.X));
+        var minY = Math.Min(Math.Min(a.Y, b.Y), Math.Min(c.Y, d.Y));
+        var maxX = Math.Max(Math.Max(a.X, b.X), Math.Max(c.X, d.X));
+        var maxY = Math.Max(Math.Max(a.Y, b.Y), Math.Max(c.Y, d.Y));
         return new Rect(minX, minY, maxX - minX, maxY - minY);
     }
 

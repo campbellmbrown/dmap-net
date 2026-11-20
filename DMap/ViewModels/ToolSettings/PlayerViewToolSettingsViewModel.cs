@@ -1,5 +1,6 @@
 using System;
 using System.Reactive;
+using System.Threading.Tasks;
 
 using ReactiveUI;
 
@@ -83,10 +84,27 @@ public sealed class PlayerViewToolSettingsViewModel : ToolSettingsViewModelBase
 
     public ReactiveCommand<Unit, Unit> ResetRotationCommand { get; }
 
-    public PlayerViewToolSettingsViewModel(Action rotateClockwise, Action resetRotation)
+    /// <summary>Resizes the player view to show the entire map.</summary>
+    public ReactiveCommand<Unit, Unit> FitToMapCommand { get; }
+
+    /// <summary>Resizes the player view to match the area visible in the DM view.</summary>
+    public ReactiveCommand<Unit, Unit> FitToDmViewCommand { get; }
+
+    /// <summary>Zooms the DM view so the player view fills it.</summary>
+    public ReactiveCommand<Unit, Unit> ZoomDmViewToPlayerViewCommand { get; }
+
+    public PlayerViewToolSettingsViewModel(
+        Action rotateClockwise,
+        Action resetRotation,
+        Action fitToMap,
+        Func<Task> fitToDmView,
+        Func<Task> zoomDmViewToPlayerView)
     {
         RotateClockwiseCommand = ReactiveCommand.Create(rotateClockwise);
         ResetRotationCommand = ReactiveCommand.Create(resetRotation);
+        FitToMapCommand = ReactiveCommand.Create(fitToMap);
+        FitToDmViewCommand = ReactiveCommand.CreateFromTask(fitToDmView);
+        ZoomDmViewToPlayerViewCommand = ReactiveCommand.CreateFromTask(zoomDmViewToPlayerView);
     }
 
     public void ApplyViewport(double offsetX, double offsetY, double width, double height, double padding, double mapWidth, double mapHeight)

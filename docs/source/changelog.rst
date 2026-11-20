@@ -16,6 +16,7 @@ Changelog
 * Add project files (``.dmap``) with File > New, Open, Save and Save As. Projects store the map, fog, stamps, grid, fog appearance and player view.
 * Replace File > Open Map with File > New.
 * Prompt to save unsaved changes before starting a new project, opening another, or exiting.
+* Add player view buttons to fit the player view to the map or to the DM view, and to zoom the DM view to the player view.
 
 :release-link:`v1.4.0`
 ----------------------

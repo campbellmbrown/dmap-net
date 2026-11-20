@@ -31,6 +31,34 @@
             </Button>
         </Grid>
 
+        <Button Classes="text"
+                Command="{Binding FitToMapCommand}"
+                HorizontalAlignment="Stretch"
+                ToolTip.Tip="Resize the player view to show the entire map">
+            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                <ui:Icon Width="16" Height="16" IconName="maximize" />
+                <TextBlock Text="Fit to Map" />
+            </StackPanel>
+        </Button>
+        <Button Classes="text"
+                Command="{Binding FitToDmViewCommand}"
+                HorizontalAlignment="Stretch"
+                ToolTip.Tip="Resize the player view to match the DM view">
+            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                <ui:Icon Width="16" Height="16" IconName="fullscreen" />
+                <TextBlock Text="Fit to DM View" />
+            </StackPanel>
+        </Button>
+        <Button Classes="text"
+                Command="{Binding ZoomDmViewToPlayerViewCommand}"
+                HorizontalAlignment="Stretch"
+                ToolTip.Tip="Zoom the DM view to the player view">
+            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                <ui:Icon Width="16" Height="16" IconName="focus" />
+                <TextBlock Text="Zoom DM View to Player View" />
+            </StackPanel>
+        </Button>
+
         <Grid ColumnDefinitions="*,Auto">
             <TextBlock Classes="toolSetting" Text="Offset X" VerticalAlignment="Center" />
             <NumericUpDown Classes="toolSetting"

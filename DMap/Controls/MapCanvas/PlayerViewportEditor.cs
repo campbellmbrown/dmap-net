@@ -20,12 +20,7 @@ public sealed class PlayerViewportEditor
 
     public PlayerViewportHandle ActiveHandle => _activeHandle;
 
-    public Rect GetRect(ViewportPayload viewport) =>
-        new(
-            viewport.CenterMapX - viewport.WidthMap / 2.0,
-            viewport.CenterMapY - viewport.HeightMap / 2.0,
-            viewport.WidthMap,
-            viewport.HeightMap);
+    public Rect GetRect(ViewportPayload viewport) => viewport.GetMapRect();
 
     public bool TryBeginDrag(Point mapPosition, ViewportPayload? viewport, double zoomLevel)
     {
@@ -57,7 +52,7 @@ public sealed class PlayerViewportEditor
             ? MoveRect(mapPosition)
             : ResizeRect(mapPosition);
 
-        return CreatePayload(ClampRect(rect, mapSize), current);
+        return current.WithMapRect(ClampRect(rect, mapSize));
     }
 
     public PlayerViewportHandle GetHoverHandle(Point mapPosition, ViewportPayload? viewport, double zoomLevel)
@@ -147,19 +142,6 @@ public sealed class PlayerViewportEditor
 
         return new Rect(left, top, right - left, bottom - top);
     }
-
-    static ViewportPayload CreatePayload(Rect rect, ViewportPayload current) =>
-        new()
-        {
-            CenterMapX = rect.X + rect.Width / 2.0,
-            CenterMapY = rect.Y + rect.Height / 2.0,
-            ZoomLevel = current.ZoomLevel <= 0 ? 1.0 : current.ZoomLevel,
-            RotationQuarterTurns = current.RotationQuarterTurns,
-            WidthMap = rect.Width,
-            HeightMap = rect.Height,
-            PaddingPixels = Math.Max(0, current.PaddingPixels),
-            IsPixelSharpnessEnabled = current.IsPixelSharpnessEnabled,
-        };
 
     static Rect ClampRect(Rect rect, Size mapSize)
     {

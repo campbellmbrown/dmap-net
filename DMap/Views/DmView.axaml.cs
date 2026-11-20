@@ -112,6 +112,16 @@ public partial class DmView : ReactiveUserControl<DmViewModel>
             _activationDisposables.Add(
                 vm.OpenDirectory.RegisterHandler(HandleOpenDirectory));
 
+            _activationDisposables.Add(
+                vm.GetDmVisibleMapRect.RegisterHandler(context => context.SetOutput(canvas.GetVisibleMapRect())));
+
+            _activationDisposables.Add(
+                vm.FitDmViewToMapRect.RegisterHandler(context =>
+                {
+                    canvas.FitViewToMapRect(context.Input);
+                    context.SetOutput(Unit.Default);
+                }));
+
             disposables(Disposable.Create(() =>
             {
                 fogGenerationDialog?.Close();

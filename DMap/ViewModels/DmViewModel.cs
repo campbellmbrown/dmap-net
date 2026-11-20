@@ -439,6 +439,18 @@ public class DmViewModel : ViewModelBase, IDisposable
     public Interaction<string, Unit> OpenDirectory { get; } = new();
 
     /// <summary>
+    /// Interaction that asks the view for the map-space area visible in the DM view, or <see langword="null"/>
+    /// if there is none. Handled in <see cref="Views.DmView"/>.
+    /// </summary>
+    public Interaction<Unit, Rect?> GetDmVisibleMapRect { get; } = new();
+
+    /// <summary>
+    /// Interaction that asks the view to zoom the DM view so the given map-space rectangle fills it.
+    /// Handled in <see cref="Views.DmView"/>.
+    /// </summary>
+    public Interaction<Rect, Unit> FitDmViewToMapRect { get; } = new();
+
+    /// <summary>
     /// Raised after any fog modification (brush, shape, undo, redo, reveal-all, refog-all).
     /// The event argument is the bounding rectangle of the changed region. The view uses
     /// this to update only the affected portion of the fog bitmap rather than rebuilding it entirely.
@@ -497,7 +509,12 @@ public class DmViewModel : ViewModelBase, IDisposable
             ResetSelectedStampSize,
             DeleteSelectedStamp,
             SetSelectedStampAngle);
-        PlayerViewSettings = new PlayerViewToolSettingsViewModel(RotatePlayerViewportClockwise, ResetPlayerViewportRotation);
+        PlayerViewSettings = new PlayerViewToolSettingsViewModel(
+            RotatePlayerViewportClockwise,
+            ResetPlayerViewportRotation,
+            FitPlayerViewportToMap,
+            FitPlayerViewportToDmViewAsync,
+            ZoomDmViewToPlayerViewportAsync);
         CurrentToolSettings = GetCurrentToolSettings(SelectedTool);
 
         FogSettings.PropertyChanged += OnFogSettingsPropertyChanged;
@@ -1138,6 +1155,33 @@ public class DmViewModel : ViewModelBase, IDisposable
             PlayerViewport,
             rotationQuarterTurns: 0,
             paddingPixels: PlayerViewSettings.Padding), queueBroadcast: true);
+    }
+
+    void FitPlayerViewportToMap()
+    {
+        if (MapImage is not null)
+            SetPlayerViewportMapRect(new Rect(MapImage.Size));
+    }
+
+    async Task FitPlayerViewportToDmViewAsync()
+    {
+        if (await GetDmVisibleMapRect.Handle(Unit.Default) is { } visibleRect)
+            SetPlayerViewportMapRect(visibleRect);
+    }
+
+    async Task ZoomDmViewToPlayerViewportAsync()
+    {
+        if (PlayerViewport is not null)
+            await FitDmViewToMapRect.Handle(PlayerViewport.GetMapRect());
+    }
+
+    /// <summary>Moves and resizes the player viewport to <paramref name="mapRect"/>, keeping its other settings.</summary>
+    void SetPlayerViewportMapRect(Rect mapRect)
+    {
+        if (PlayerViewport is null || mapRect.Width < 1 || mapRect.Height < 1)
+            return;
+
+        SetPlayerViewport(PlayerViewport.WithMapRect(mapRect), queueBroadcast: true);
     }
 
     void OnPlayerViewSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
